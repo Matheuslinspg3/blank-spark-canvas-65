@@ -1,6 +1,7 @@
-import { AlertTriangle, Clock, Eye, FileText, Mail, Send, Settings2, Sparkles, Upload } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Clock, Eye, FileText, Mail, Save, Send, Settings2, Sparkles, Upload } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { AiPersonalizer } from "./AiPersonalizer";
@@ -10,8 +11,10 @@ import { EmailPreview } from "./EmailPreview";
 import { ResultsTable } from "./ResultsTable";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -24,6 +27,8 @@ import {
   type Recipient,
   type SendResult,
 } from "@/lib/bulk-email";
+import { STATUS_LABEL, type Campaign, type CampaignPatch, type CampaignStatus } from "@/lib/campaigns";
+import { updateCampaign } from "@/lib/campaigns.functions";
 import { sendBulkEmails } from "@/lib/send-campaign";
 import { AI_COLUMN } from "@/lib/ai-config";
 
@@ -68,24 +73,56 @@ function Step({
   );
 }
 
-export function BulkEmailDashboard() {
-  const [recipients, setRecipients] = useState<Recipient[]>([]);
-  const [csvColumns, setCsvColumns] = useState<string[]>([]);
+export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
+  const save = useServerFn(updateCampaign);
+
+  const [name, setName] = useState(campaign.name);
+  const [status, setStatus] = useState<CampaignStatus>(campaign.status);
+  const [recipients, setRecipients] = useState<Recipient[]>(campaign.recipients ?? []);
+  const [csvColumns, setCsvColumns] = useState<string[]>(
+    Object.keys((campaign.recipients ?? [])[0] ?? {}),
+  );
   const [formData, setFormData] = useState<EmailFormData>({
-    senderName: "",
-    senderEmail: "",
-    subject: "",
-    htmlTemplate: DEFAULT_TEMPLATE,
+    senderName: campaign.sender_name,
+    senderEmail: campaign.sender_email,
+    subject: campaign.subject,
+    htmlTemplate: campaign.html_template || DEFAULT_TEMPLATE,
   });
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [results, setResults] = useState<SendResult[]>([]);
+  const [results, setResults] = useState<SendResult[]>(campaign.results ?? []);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
 
-  // Restore a previously saved template (client-only).
+  // Restore a previously saved template only for a brand-new draft.
   useEffect(() => {
+    if (campaign.html_template) return;
     const saved = localStorage.getItem(TEMPLATE_STORAGE_KEY);
     if (saved) setFormData((prev) => ({ ...prev, htmlTemplate: saved }));
-  }, []);
+  }, [campaign.html_template]);
+
+  const persist = useRef(async (patch: CampaignPatch) => {
+    await save({ data: { id: campaign.id, patch } });
+  });
+
+  // Autosave the draft (debounced) whenever the user edits the job.
+  useEffect(() => {
+    if (loading) return;
+    const timer = window.setTimeout(() => {
+      void persist
+        .current({
+          name,
+          sender_name: formData.senderName,
+          sender_email: formData.senderEmail,
+          subject: formData.subject,
+          html_template: formData.htmlTemplate,
+          recipients,
+          total_count: recipients.length,
+        })
+        .then(() => setSavedAt(new Date()))
+        .catch(() => undefined);
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [name, formData, recipients, loading]);
 
   const currentStep = useMemo(() => {
     if (results.length > 0) return 4;
@@ -116,6 +153,18 @@ export function BulkEmailDashboard() {
     setLoading(true);
     setResults([]);
     setProgress(4);
+    setStatus("enviando");
+    await persist.current({
+      status: "enviando",
+      started_at: new Date().toISOString(),
+      recipients,
+      total_count: recipients.length,
+      name,
+      sender_name: formData.senderName,
+      sender_email: formData.senderEmail,
+      subject: formData.subject,
+      html_template: formData.htmlTemplate,
+    });
 
     // Optimistic progress bar: the backend throttles to 1 email/second.
     const expectedMs = (recipients.length / RATE_LIMIT_PER_SECOND) * 1000;
@@ -127,6 +176,14 @@ export function BulkEmailDashboard() {
       const sendResults = await sendBulkEmails({ recipients, ...formData });
       setResults(sendResults);
       const ok = sendResults.filter((r) => r.success).length;
+      const finalStatus: CampaignStatus = ok === 0 ? "erro" : "concluido";
+      setStatus(finalStatus);
+      await persist.current({
+        status: finalStatus,
+        results: sendResults,
+        sent_count: ok,
+        finished_at: new Date().toISOString(),
+      });
       if (ok === sendResults.length) toast.success(`${ok} e-mails enviados com sucesso`);
       else if (ok === 0) toast.error("Nenhum e-mail pôde ser enviado. Verifique o log.");
       else toast.warning(`${ok} de ${sendResults.length} e-mails enviados`);
@@ -140,14 +197,39 @@ export function BulkEmailDashboard() {
   return (
     <main className="mx-auto w-full max-w-[1200px] space-y-6 px-4 py-10">
       <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-          <Mail className="text-primary size-6" />
-          Disparo Tracker
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Carregue sua lista, personalize o template e dispare e-mails em massa com log completo.
-        </p>
+        <div className="min-w-0 space-y-2">
+          <Button asChild variant="ghost" size="sm" className="-ml-2">
+            <Link to="/disparos">
+              <ArrowLeft className="size-4" />
+              Meus disparos
+            </Link>
+          </Button>
+          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+            <Mail className="text-primary size-6" />
+            Disparo Tracker
+          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              value={name}
+              disabled={loading}
+              onChange={(event) => setName(event.target.value)}
+              className="h-9 max-w-xs"
+              aria-label="Nome do disparo"
+            />
+            <Badge
+              variant={
+                status === "concluido" ? "default" : status === "erro" ? "destructive" : "secondary"
+              }
+            >
+              {STATUS_LABEL[status]}
+            </Badge>
+            {savedAt && (
+              <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
+                <Save className="size-3.5" />
+                Salvo às {savedAt.toLocaleTimeString("pt-BR")}
+              </span>
+            )}
+          </div>
         </div>
         <Button asChild variant="outline" size="sm">
           <Link to="/configuracoes">
