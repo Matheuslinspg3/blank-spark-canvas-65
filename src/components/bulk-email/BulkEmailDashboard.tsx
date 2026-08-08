@@ -20,11 +20,11 @@ import {
   LARGE_BATCH_THRESHOLD,
   RATE_LIMIT_PER_SECOND,
   TEMPLATE_STORAGE_KEY,
-  sendBulkEmails,
   type EmailFormData,
   type Recipient,
   type SendResult,
 } from "@/lib/bulk-email";
+import { sendBulkEmails } from "@/lib/send-campaign";
 import { AI_COLUMN } from "@/lib/ai-config";
 
 /** Numbered step wrapper used by every section of the dashboard. */
