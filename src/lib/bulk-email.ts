@@ -173,24 +173,6 @@ export type SendBulkPayload = {
   senderEmail: string;
 };
 
-/**
- * Dispatches the campaign through the server function that talks to Brevo.
- * Returns one result per recipient, falling back to a per-recipient error
- * entry when the endpoint is unreachable so the UI can always show a log.
- */
-export async function sendBulkEmails(payload: SendBulkPayload): Promise<SendResult[]> {
-  try {
-    const { sendBulkEmailsFn } = await import("./send-email.functions");
-    return await sendBulkEmailsFn({ data: payload });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Erro desconhecido";
-    return payload.recipients.map((recipient) => ({
-      email: recipient['email'] ?? "",
-      success: false,
-      error: message,
-    }));
-  }
-}
 
 
 /** Builds a downloadable CSV log from the send results. */
