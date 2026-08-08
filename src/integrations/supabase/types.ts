@@ -14,7 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      campaigns: {
+        Row: {
+          created_at: string
+          finished_at: string | null
+          html_template: string
+          id: string
+          name: string
+          recipients: Json
+          results: Json
+          sender_email: string
+          sender_name: string
+          sent_count: number
+          started_at: string | null
+          status: string
+          subject: string
+          total_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          finished_at?: string | null
+          html_template?: string
+          id?: string
+          name?: string
+          recipients?: Json
+          results?: Json
+          sender_email?: string
+          sender_name?: string
+          sent_count?: number
+          started_at?: string | null
+          status?: string
+          subject?: string
+          total_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          finished_at?: string | null
+          html_template?: string
+          id?: string
+          name?: string
+          recipients?: Json
+          results?: Json
+          sender_email?: string
+          sender_name?: string
+          sent_count?: number
+          started_at?: string | null
+          status?: string
+          subject?: string
+          total_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
