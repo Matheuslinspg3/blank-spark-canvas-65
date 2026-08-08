@@ -1,0 +1,47 @@
+import type { Recipient, SendResult } from "./bulk-email";
+
+export type CampaignStatus = "rascunho" | "enviando" | "concluido" | "erro";
+
+export type Campaign = {
+  id: string;
+  user_id: string;
+  name: string;
+  status: CampaignStatus;
+  sender_name: string;
+  sender_email: string;
+  subject: string;
+  html_template: string;
+  recipients: Recipient[];
+  results: SendResult[];
+  total_count: number;
+  sent_count: number;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CampaignPatch = Partial<
+  Pick<
+    Campaign,
+    | "name"
+    | "status"
+    | "sender_name"
+    | "sender_email"
+    | "subject"
+    | "html_template"
+    | "recipients"
+    | "results"
+    | "total_count"
+    | "sent_count"
+    | "started_at"
+    | "finished_at"
+  >
+>;
+
+export const STATUS_LABEL: Record<CampaignStatus, string> = {
+  rascunho: "Rascunho",
+  enviando: "Enviando",
+  concluido: "Concluído",
+  erro: "Erro",
+};
