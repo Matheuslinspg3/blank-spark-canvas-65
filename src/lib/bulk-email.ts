@@ -173,43 +173,7 @@ export type SendBulkPayload = {
   senderEmail: string;
 };
 
-/**
- * Dispatches the campaign to the Supabase Edge Function `send-bulk-email`.
- * Returns one result per recipient, falling back to a per-recipient error
- * entry when the endpoint is unreachable so the UI can always show a log.
- */
-export async function sendBulkEmails(payload: SendBulkPayload): Promise<SendResult[]> {
-  const baseUrl = import.meta.env['VITE_SUPABASE_URL'];
-  const anonKey = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'];
 
-  try {
-    const response = await fetch(`${baseUrl}/functions/v1/send-bulk-email`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(anonKey ? { apikey: anonKey, Authorization: `Bearer ${anonKey}` } : {}),
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Falha no envio (HTTP ${response.status})`);
-    }
-
-    const data = (await response.json()) as { results?: SendResult[] };
-    if (!Array.isArray(data.results)) {
-      throw new Error("Resposta inválida do servidor de envio.");
-    }
-    return data.results;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Erro desconhecido";
-    return payload.recipients.map((recipient) => ({
-      email: recipient['email'] ?? "",
-      success: false,
-      error: message,
-    }));
-  }
-}
 
 /** Builds a downloadable CSV log from the send results. */
 export function resultsToCsv(results: SendResult[]): string {
