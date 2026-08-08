@@ -99,7 +99,7 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
             ))}
           </div>
 
-          <div className="overflow-x-auto rounded-lg border">
+          <div className="max-h-80 overflow-auto rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -109,10 +109,10 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recipients.slice(0, 3).map((row, index) => (
+                {recipients.map((row, index) => (
                   <TableRow key={`${row['email']}-${index}`}>
                     {columns.map((column) => (
-                      <TableCell key={column} className="whitespace-nowrap">
+                      <TableCell key={column} className="max-w-md whitespace-pre-wrap">
                         {row[column]}
                       </TableCell>
                     ))}
@@ -122,8 +122,9 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
             </Table>
           </div>
           <p className="text-muted-foreground text-xs">
-            Mostrando as 3 primeiras linhas de {recipients.length}.
+            Mostrando {recipients.length} linhas do CSV.
           </p>
+
         </div>
       )}
     </div>

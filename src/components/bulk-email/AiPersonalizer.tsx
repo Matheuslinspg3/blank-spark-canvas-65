@@ -104,10 +104,24 @@ export function AiPersonalizer({ recipients, disabled, onGenerated }: AiPersonal
 
       {running && <Progress value={(done / Math.max(recipients.length, 1)) * 100} />}
 
+      {generated > 0 && (
+        <div className="max-h-96 space-y-3 overflow-auto rounded-lg border p-4">
+          {recipients
+            .filter((r) => (r[AI_COLUMN] ?? "").trim().length > 0)
+            .map((r, index) => (
+              <div key={`${r["email"]}-${index}`} className="space-y-1 border-b pb-3 last:border-0 last:pb-0">
+                <p className="text-xs font-medium">{r["email"]}</p>
+                <p className="text-muted-foreground text-sm whitespace-pre-wrap">{r[AI_COLUMN]}</p>
+              </div>
+            ))}
+        </div>
+      )}
+
       <p className="text-muted-foreground text-xs">
         Use <code className="font-mono">{`{{${AI_COLUMN}}}`}</code> no assunto ou no template HTML
         para inserir o texto gerado para cada pessoa.
       </p>
+
     </div>
   );
 }
