@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as AuthenticatedDisparosIndexRouteImport } from './routes/_authenticated/disparos/index'
+import { Route as AuthenticatedDisparosIdRouteImport } from './routes/_authenticated/disparos/$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,17 +41,24 @@ const AuthenticatedDisparosIndexRoute =
     path: '/disparos/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDisparosIdRoute = AuthenticatedDisparosIdRouteImport.update({
+  id: '/disparos/$id',
+  path: '/disparos/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/disparos/': typeof AuthenticatedDisparosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/disparos': typeof AuthenticatedDisparosIndexRoute
 }
 export interface FileRoutesById {
@@ -59,19 +67,21 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/_authenticated/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/_authenticated/disparos/': typeof AuthenticatedDisparosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/configuracoes' | '/disparos/'
+  fullPaths: '/' | '/auth' | '/configuracoes' | '/disparos/$id' | '/disparos/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/configuracoes' | '/disparos'
+  to: '/' | '/auth' | '/configuracoes' | '/disparos/$id' | '/disparos'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/configuracoes'
+    | '/_authenticated/disparos/$id'
     | '/_authenticated/disparos/'
   fileRoutesById: FileRoutesById
 }
@@ -119,14 +129,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDisparosIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/disparos/$id': {
+      id: '/_authenticated/disparos/$id'
+      path: '/disparos/$id'
+      fullPath: '/disparos/$id'
+      preLoaderRoute: typeof AuthenticatedDisparosIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDisparosIdRoute: typeof AuthenticatedDisparosIdRoute
   AuthenticatedDisparosIndexRoute: typeof AuthenticatedDisparosIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDisparosIdRoute: AuthenticatedDisparosIdRoute,
   AuthenticatedDisparosIndexRoute: AuthenticatedDisparosIndexRoute,
 }
 
