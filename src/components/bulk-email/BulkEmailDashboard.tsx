@@ -1,7 +1,9 @@
-import { AlertTriangle, Clock, Eye, FileText, Mail, Send, Upload } from "lucide-react";
+import { AlertTriangle, Clock, Eye, FileText, Mail, Send, Settings2, Sparkles, Upload } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { AiPersonalizer } from "./AiPersonalizer";
 import { CSVUploader } from "./CSVUploader";
 import { EmailEditor } from "./EmailEditor";
 import { EmailPreview } from "./EmailPreview";
@@ -23,6 +25,7 @@ import {
   type Recipient,
   type SendResult,
 } from "@/lib/bulk-email";
+import { AI_COLUMN } from "@/lib/ai-config";
 
 /** Numbered step wrapper used by every section of the dashboard. */
 function Step({
@@ -136,7 +139,8 @@ export function BulkEmailDashboard() {
 
   return (
     <main className="mx-auto w-full max-w-[1200px] space-y-6 px-4 py-10">
-      <header className="space-y-2">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           <Mail className="text-primary size-6" />
           Disparo Tracker
@@ -144,6 +148,13 @@ export function BulkEmailDashboard() {
         <p className="text-muted-foreground text-sm">
           Carregue sua lista, personalize o template e dispare e-mails em massa com log completo.
         </p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link to="/configuracoes">
+            <Settings2 className="size-4" />
+            Configurar IA
+          </Link>
+        </Button>
       </header>
 
       <Step
@@ -167,6 +178,23 @@ export function BulkEmailDashboard() {
 
       <Step
         step={2}
+        title="Personalização com IA (opcional)"
+        description="A IA pesquisa cada destinatário e escreve um trecho sob medida."
+        icon={<Sparkles className="size-4" />}
+        active={false}
+      >
+        <AiPersonalizer
+          recipients={recipients}
+          disabled={loading}
+          onGenerated={(rows) => {
+            setRecipients(rows);
+            setCsvColumns((prev) => (prev.includes(AI_COLUMN) ? prev : [...prev, AI_COLUMN]));
+          }}
+        />
+      </Step>
+
+      <Step
+        step={3}
         title="Configure o e-mail"
         description="Remetente, assunto e template HTML com variáveis."
         icon={<FileText className="size-4" />}
@@ -198,7 +226,7 @@ export function BulkEmailDashboard() {
       </Step>
 
       <Step
-        step={3}
+        step={4}
         title="Preview personalizado"
         description="Como o primeiro destinatário vai receber a mensagem."
         icon={<Eye className="size-4" />}
@@ -208,7 +236,7 @@ export function BulkEmailDashboard() {
       </Step>
 
       <Step
-        step={4}
+        step={5}
         title="Enviar"
         description="O envio respeita o limite de 1 e-mail por segundo."
         icon={<Send className="size-4" />}
