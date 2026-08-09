@@ -1,6 +1,7 @@
 import { CheckCircle2, ChevronLeft, ChevronRight, Copy, Save, Sparkles, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
+import { DossierPanel } from "@/components/revisao/DossierPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

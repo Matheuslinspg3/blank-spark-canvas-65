@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { RowFilters } from "@/components/contatos/RowFilters";
+import { DossierPanel } from "@/components/revisao/DossierPanel";
 import { EmailReviewDialog } from "@/components/revisao/EmailReviewDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
