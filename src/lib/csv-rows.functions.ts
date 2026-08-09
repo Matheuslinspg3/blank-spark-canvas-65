@@ -3,7 +3,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { CsvRowEvent, CsvRowEventInput } from "./csv-row-events";
 import type { CsvRow, CsvRowPatch } from "./csv-rows";
-import { extractReadableText } from "./site-scrape.server";
 
 export const logCsvRowEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
