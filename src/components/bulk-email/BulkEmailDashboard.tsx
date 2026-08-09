@@ -260,40 +260,33 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
 
       <Step
         step={2}
-        title="Fila de e-mails"
-        description="Cada e-mail do CSV entra na fila: escreva o texto ou gere com IA."
+        title="Fila de e-mails e template"
+        description="Escreva/gere o texto de cada destinatário e configure remetente, assunto e HTML."
         icon={<Sparkles className="size-4" />}
         active={recipients.length > 0 && currentStep === 2}
       >
-        <RecipientQueue
-          recipients={recipients}
-          disabled={loading}
-          onChange={(rows: Recipient[]) => {
-            setRecipients(rows);
-            setCsvColumns((prev) => (prev.includes(AI_COLUMN) ? prev : [...prev, AI_COLUMN]));
-          }}
-        />
-      </Step>
-
-      <Step
-        step={3}
-        title="Configure o e-mail"
-        description="Remetente, assunto e template HTML com variáveis."
-        icon={<FileText className="size-4" />}
-        active={currentStep === 2}
-      >
-        <Tabs defaultValue="editor">
+        <Tabs defaultValue="fila">
           <TabsList>
-            <TabsTrigger value="editor">
-              <FileText className="size-4" />
-              Editor
+            <TabsTrigger value="fila">
+              <Sparkles className="size-4" />
+              Fila
             </TabsTrigger>
-            <TabsTrigger value="preview">
-              <Eye className="size-4" />
-              Preview
+            <TabsTrigger value="template">
+              <FileText className="size-4" />
+              Remetente e template
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="editor" className="pt-4">
+          <TabsContent value="fila" className="pt-4">
+            <RecipientQueue
+              recipients={recipients}
+              disabled={loading}
+              onChange={(rows: Recipient[]) => {
+                setRecipients(rows);
+                setCsvColumns((prev) => (prev.includes(AI_COLUMN) ? prev : [...prev, AI_COLUMN]));
+              }}
+            />
+          </TabsContent>
+          <TabsContent value="template" className="pt-4">
             <EmailEditor
               formData={formData}
               columns={csvColumns}
@@ -301,21 +294,25 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
               onChange={updateForm}
             />
           </TabsContent>
-          <TabsContent value="preview" className="pt-4">
-            <EmailPreview formData={formData} recipient={recipients[0]} />
-          </TabsContent>
         </Tabs>
       </Step>
 
       <Step
-        step={4}
-        title="Preview personalizado"
-        description="Como o primeiro destinatário vai receber a mensagem."
+        step={3}
+        title="Revisão de cada e-mail"
+        description="Confira e aprove, um a um, exatamente o que cada destinatário vai receber."
         icon={<Eye className="size-4" />}
         active={currentStep === 3}
       >
-        <EmailPreview formData={formData} recipient={recipients[0]} />
+        <FinalReview
+          recipients={recipients}
+          formData={formData}
+          approved={approved}
+          disabled={loading}
+          onApprovedChange={setApproved}
+        />
       </Step>
+
 
       <Step
         step={5}
