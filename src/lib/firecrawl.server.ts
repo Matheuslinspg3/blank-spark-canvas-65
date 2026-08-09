@@ -7,6 +7,11 @@ const GATEWAY = "https://connector-gateway.lovable.dev/firecrawl/v2";
 
 export type ScrapedPage = { url: string; title: string; text: string };
 
+/** Indica se as credenciais do gateway/Firecrawl estão presentes no servidor. */
+export function isFirecrawlConfigured(): boolean {
+  return Boolean(process.env["LOVABLE_API_KEY"] && process.env["FIRECRAWL_API_KEY"]);
+}
+
 function headers() {
   const lovableKey = process.env["LOVABLE_API_KEY"];
   const connectionKey = process.env["FIRECRAWL_API_KEY"];
@@ -88,7 +93,7 @@ export async function searchWeb(query: string, limit = 3): Promise<ScrapedPage[]
     });
     const list = (pick(result, "web") ?? pick(result, "results") ?? result["data"]) as unknown;
     if (!Array.isArray(list)) return [];
-    return list
+    const pages = list
       .map((item) => {
         const entry = item as Record<string, unknown>;
         const url = typeof entry["url"] === "string" ? entry["url"] : "";
@@ -97,10 +102,22 @@ export async function searchWeb(query: string, limit = 3): Promise<ScrapedPage[]
         const description =
           typeof entry["description"] === "string" ? entry["description"] : "";
         const text = clean(markdown || description, 2500);
-        return url && text ? { url, title, text } : null;
+        return url ? { url, title, text } : null;
       })
       .filter((page): page is ScrapedPage => page !== null);
+
+    // A busca costuma devolver só o snippet: abre as páginas mais curtas.
+    const enriched = await Promise.all(
+      pages.map(async (page) => {
+        if (page.text.length >= 400) return page;
+        const full = await scrapePage(page.url, 2500);
+        return full ? { ...full, title: page.title || full.title } : page;
+      }),
+    );
+
+    return enriched.filter((page) => page.text.length > 0);
   } catch {
     return [];
   }
 }
+
