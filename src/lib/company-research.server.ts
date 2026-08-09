@@ -62,25 +62,59 @@ export async function collectResearch(input: {
   nome: string;
   categoria: string;
 }): Promise<CollectedResearch> {
+  if (!isFirecrawlConfigured()) {
+    return {
+      ok: false,
+      material: "",
+      sources: [],
+      reason: "Firecrawl não conectado neste projeto",
+    };
+  }
+
   const domain = input.domain.trim().toLowerCase();
   if (!DOMAIN_RE.test(domain)) {
     return { ok: false, material: "", sources: [], reason: "Domínio inválido" };
   }
 
-  const [site, web] = await Promise.all([
-    scrapePage(`https://${domain}`, 4000),
-    searchWeb(`${domain} ${input.categoria || "empresa"}`, 3),
+  const free = isFreeEmailDomain(domain);
+  const nome = input.nome.trim();
+  const categoria = input.categoria.trim();
+
+  // Domínio de provedor gratuito não é o site da empresa: pesquisa pelo nome.
+  const queries = free
+    ? [
+        nome ? `"${nome}" ${categoria}`.trim() : "",
+        nome ? `${nome} ${categoria} empresa contato site` : "",
+      ].filter(Boolean)
+    : [`${domain} ${categoria || "empresa"}`];
+
+  if (queries.length === 0) {
+    return {
+      ok: false,
+      material: "",
+      sources: [],
+      reason: "E-mail de provedor gratuito e sem nome da empresa para pesquisar",
+    };
+  }
+
+  const [site, ...searches] = await Promise.all([
+    free ? Promise.resolve(null) : scrapePage(`https://${domain}`, 4000),
+    ...queries.map((query) => searchWeb(query, free ? 4 : 3)),
   ]);
 
+  const web = searches.flat() as ScrapedPage[];
   const pages = dedupe([...(site ? [site] : []), ...web]);
   if (pages.length === 0) {
     return {
       ok: false,
       material: "",
       sources: [],
-      reason: "Nenhuma fonte encontrada sobre a empresa",
+      reason: free
+        ? "Nenhuma fonte encontrada pelo nome da empresa"
+        : "Nenhuma fonte encontrada sobre a empresa",
     };
   }
+
 
   const material = pages
     .map((page) => `## ${page.title}\n(${page.url})\n${page.text}`)
