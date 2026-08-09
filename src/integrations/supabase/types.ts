@@ -79,6 +79,8 @@ export type Database = {
           from_status: Database["public"]["Enums"]["csv_row_status"] | null
           id: string
           is_personalized: boolean | null
+          research_ok: boolean | null
+          research_sources_count: number | null
           run_id: string | null
           site_ok: boolean | null
           site_reason: string | null
@@ -92,6 +94,8 @@ export type Database = {
           from_status?: Database["public"]["Enums"]["csv_row_status"] | null
           id?: string
           is_personalized?: boolean | null
+          research_ok?: boolean | null
+          research_sources_count?: number | null
           run_id?: string | null
           site_ok?: boolean | null
           site_reason?: string | null
@@ -105,6 +109,8 @@ export type Database = {
           from_status?: Database["public"]["Enums"]["csv_row_status"] | null
           id?: string
           is_personalized?: boolean | null
+          research_ok?: boolean | null
+          research_sources_count?: number | null
           run_id?: string | null
           site_ok?: boolean | null
           site_reason?: string | null
@@ -132,6 +138,8 @@ export type Database = {
           id: string
           is_personalized: boolean
           nome: string
+          research: Json | null
+          research_sources: Json
           site_content: string | null
           status: Database["public"]["Enums"]["csv_row_status"]
           updated_at: string
@@ -147,6 +155,8 @@ export type Database = {
           id?: string
           is_personalized?: boolean
           nome?: string
+          research?: Json | null
+          research_sources?: Json
           site_content?: string | null
           status?: Database["public"]["Enums"]["csv_row_status"]
           updated_at?: string
@@ -162,6 +172,8 @@ export type Database = {
           id?: string
           is_personalized?: boolean
           nome?: string
+          research?: Json | null
+          research_sources?: Json
           site_content?: string | null
           status?: Database["public"]["Enums"]["csv_row_status"]
           updated_at?: string
