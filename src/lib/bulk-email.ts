@@ -106,13 +106,36 @@ export function parseCsv(text: string): ParsedCsv {
 /* Templating                                                                  */
 /* -------------------------------------------------------------------------- */
 
-/** Replaces {{coluna}} placeholders with the recipient's values (vazio quando não existe). */
+function titleCase(value: string): string {
+  return value
+    .split(/[.\-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+/**
+ * Valores derivados do e-mail quando a coluna não existe no CSV: evita que o
+ * preview mostre "Olá, !" quando o arquivo só tem a coluna email.
+ */
+function fallbackValue(key: string, recipient: Recipient): string {
+  const email = recipient["email"] ?? "";
+  const [local = "", domain = ""] = email.split("@");
+  if (key === "nome") return titleCase(local);
+  if (key === "empresa") return titleCase(domain.replace(/\.(com|net|org)(\.[a-z]{2})?$/i, ""));
+  return "";
+}
+
+/** Replaces {{coluna}} placeholders with the recipient's values. */
 export function interpolate(template: string, recipient: Recipient | undefined): string {
   if (!recipient) return template;
-  return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_match, key: string) => {
-    return recipient[key.toLowerCase()] ?? "";
+  return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_match, raw: string) => {
+    const key = raw.toLowerCase();
+    const value = (recipient[key] ?? "").trim();
+    return value || fallbackValue(key, recipient);
   });
 }
+
 
 /** Coluna do texto gerado na fila (passo 2). */
 const AI_TEXT_COLUMN = "ia_conteudo";
@@ -167,8 +190,9 @@ export const DEFAULT_TEMPLATE = `<!doctype html>
       </tr>
       <tr>
         <td style="padding:32px;color:#1f2937;font-size:15px;line-height:1.6;">
-          <p style="margin:0 0 16px;">Preparamos algo especial para você e para o time da <strong>{{empresa}}</strong>.</p>
+          <p style="margin:0 0 16px;white-space:pre-wrap;">{{ia_conteudo}}</p>
           <p style="margin:0 0 24px;">Clique no botão abaixo para conferir os detalhes.</p>
+
           <a href="https://exemplo.com" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;">Ver novidade</a>
         </td>
       </tr>
