@@ -416,11 +416,12 @@ function ContatosPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">2. Geração com IA</CardTitle>
+          <CardTitle className="text-base">2. Pesquisa e geração com IA</CardTitle>
           <CardDescription>
-            Busca o site do domínio do e-mail (5s de timeout) e escreve o texto; sem site válido, o
-            e-mail é genérico.
+            Cada contato passa por duas fases: pesquisa na web (site da empresa + busca) e escrita
+            do e-mail com base no dossiê. Sem pesquisa confiável, o texto sai genérico.
           </CardDescription>
+
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
