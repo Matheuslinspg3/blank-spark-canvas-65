@@ -1,4 +1,17 @@
-import { AlertTriangle, ArrowLeft, Clock, Eye, FileText, Mail, Save, Send, Settings2, Sparkles, Upload } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Clock,
+  Eye,
+  FileText,
+  Mail,
+  Save,
+  Send,
+  Settings2,
+  Sparkles,
+  TestTube2,
+  Upload,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -11,6 +24,16 @@ import { FinalReview } from "./FinalReview";
 import { ResultsTable } from "./ResultsTable";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,17 +42,21 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  buildReportCsv,
   DEFAULT_TEMPLATE,
+  downloadFile,
   LARGE_BATCH_THRESHOLD,
   RATE_LIMIT_PER_SECOND,
   TEMPLATE_STORAGE_KEY,
   type EmailFormData,
   type Recipient,
+  type Reviews,
   type SendResult,
 } from "@/lib/bulk-email";
 import { STATUS_LABEL, type Campaign, type CampaignPatch, type CampaignStatus } from "@/lib/campaigns";
 import { updateCampaign } from "@/lib/campaigns.functions";
 import { sendBulkEmails } from "@/lib/send-campaign";
+import { sendTestEmailFn } from "@/lib/send-email.functions";
 import { AI_COLUMN } from "@/lib/ai-config";
 
 /** Numbered step wrapper used by every section of the dashboard. */
@@ -75,6 +102,7 @@ function Step({
 
 export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
   const save = useServerFn(updateCampaign);
+  const sendTest = useServerFn(sendTestEmailFn);
 
   const [name, setName] = useState(campaign.name);
   const [status, setStatus] = useState<CampaignStatus>(campaign.status);
@@ -89,10 +117,15 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
     htmlTemplate: campaign.html_template || DEFAULT_TEMPLATE,
   });
   const [loading, setLoading] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<SendResult[]>(campaign.results ?? []);
+  const [sentAt, setSentAt] = useState<string | null>(campaign.finished_at);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
-  const [approved, setApproved] = useState<string[]>([]);
+  const [reviews, setReviews] = useState<Reviews>(campaign.reviews ?? {});
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [testEmail, setTestEmail] = useState("");
+  const [testing, setTesting] = useState(false);
 
   // Restore a previously saved template only for a brand-new draft.
   useEffect(() => {
@@ -117,17 +150,18 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
           subject: formData.subject,
           html_template: formData.htmlTemplate,
           recipients,
+          reviews,
           total_count: recipients.length,
         })
         .then(() => setSavedAt(new Date()))
         .catch(() => undefined);
     }, 900);
     return () => window.clearTimeout(timer);
-  }, [name, formData, recipients, loading]);
+  }, [name, formData, recipients, reviews, loading]);
 
   const approvedRecipients = useMemo(
-    () => recipients.filter((row) => approved.includes(row["email"] ?? "")),
-    [recipients, approved],
+    () => recipients.filter((row) => reviews[row["email"] ?? ""]?.status === "aprovado"),
+    [recipients, reviews],
   );
 
   const currentStep = useMemo(() => {
@@ -151,21 +185,39 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
     return null;
   }
 
-  async function handleSend() {
+  function requestSend() {
     const error = validate();
     if (error) {
       toast.error(error);
       return;
     }
+    setConfirmOpen(true);
+  }
 
+  /** Roda o envio de uma lista e devolve os resultados, com barra de progresso. */
+  async function dispatch(list: Recipient[]): Promise<SendResult[]> {
+    const expectedMs = (list.length / RATE_LIMIT_PER_SECOND) * 1000;
+    setProgress(4);
+    const ticker = window.setInterval(() => {
+      setProgress((prev) => Math.min(prev + 100 / Math.max(expectedMs / 400, 1), 95));
+    }, 400);
+    try {
+      return await sendBulkEmails({ recipients: list, ...formData });
+    } finally {
+      window.clearInterval(ticker);
+      setProgress(100);
+    }
+  }
+
+  async function handleSend() {
     setLoading(true);
     setResults([]);
-    setProgress(4);
     setStatus("enviando");
     await persist.current({
       status: "enviando",
       started_at: new Date().toISOString(),
       recipients,
+      reviews,
       total_count: recipients.length,
       name,
       sender_name: formData.senderName,
@@ -174,33 +226,97 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
       html_template: formData.htmlTemplate,
     });
 
-    // Optimistic progress bar: the backend throttles to 1 email/second.
-    const expectedMs = (approvedRecipients.length / RATE_LIMIT_PER_SECOND) * 1000;
-    const ticker = window.setInterval(() => {
-      setProgress((prev) => Math.min(prev + 100 / Math.max(expectedMs / 400, 1), 95));
-    }, 400);
-
     try {
-      const sendResults = await sendBulkEmails({ recipients: approvedRecipients, ...formData });
+      const sendResults = await dispatch(approvedRecipients);
       setResults(sendResults);
       const ok = sendResults.filter((r) => r.success).length;
       const finalStatus: CampaignStatus = ok === 0 ? "erro" : "concluido";
+      const finishedAt = new Date().toISOString();
       setStatus(finalStatus);
+      setSentAt(finishedAt);
       await persist.current({
         status: finalStatus,
         results: sendResults,
         sent_count: ok,
-        finished_at: new Date().toISOString(),
+        finished_at: finishedAt,
       });
       if (ok === sendResults.length) toast.success(`${ok} e-mails enviados com sucesso`);
-      else if (ok === 0) toast.error("Nenhum e-mail pôde ser enviado. Verifique o log.");
+      else if (ok === 0) toast.error("Nenhum e-mail pôde ser enviado. Verifique o relatório de falhas.");
       else toast.warning(`${ok} de ${sendResults.length} e-mails enviados`);
     } finally {
-      window.clearInterval(ticker);
-      setProgress(100);
       setLoading(false);
     }
   }
+
+  /** Reenvia apenas os e-mails que falharam e funde o resultado no log. */
+  async function handleRetryFailed() {
+    const failedEmails = new Set(results.filter((r) => !r.success).map((r) => r.email));
+    const list = recipients.filter((row) => failedEmails.has(row["email"] ?? ""));
+    if (list.length === 0) return;
+
+    setRetrying(true);
+    try {
+      const retried = await dispatch(list);
+      const byEmail = new Map(retried.map((r) => [r.email, r]));
+      const merged = results.map((r) => byEmail.get(r.email) ?? r);
+      setResults(merged);
+      const ok = merged.filter((r) => r.success).length;
+      const finishedAt = new Date().toISOString();
+      const finalStatus: CampaignStatus = ok === 0 ? "erro" : "concluido";
+      setStatus(finalStatus);
+      setSentAt(finishedAt);
+      await persist.current({
+        status: finalStatus,
+        results: merged,
+        sent_count: ok,
+        finished_at: finishedAt,
+      });
+      const recovered = retried.filter((r) => r.success).length;
+      if (recovered > 0) toast.success(`${recovered} e-mails reenviados com sucesso`);
+      else toast.error("As falhas persistiram no reenvio.");
+    } finally {
+      setRetrying(false);
+    }
+  }
+
+  async function handleTestEmail() {
+    const target = testEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(target)) {
+      toast.error("Informe um e-mail válido para o teste.");
+      return;
+    }
+    if (!formData.senderEmail.trim()) {
+      toast.error("Informe o e-mail do remetente antes do teste.");
+      return;
+    }
+    const sample = approvedRecipients[0] ?? recipients[0];
+    if (!sample) {
+      toast.error("Carregue um CSV para gerar o e-mail de teste.");
+      return;
+    }
+
+    setTesting(true);
+    try {
+      const result = await sendTest({ data: { to: target, recipient: sample, ...formData } });
+      if (result.success) toast.success(`E-mail de teste enviado para ${target}`);
+      else toast.error(result.error ?? "Não foi possível enviar o teste.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível enviar o teste.");
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  function exportReport() {
+    downloadFile(
+      `relatorio-disparo-${new Date().toISOString().slice(0, 10)}.csv`,
+      buildReportCsv(recipients, reviews, results, sentAt),
+    );
+  }
+
+  const rejectedCount = recipients.filter(
+    (row) => reviews[row["email"] ?? ""]?.status === "rejeitado",
+  ).length;
 
   return (
     <main className="mx-auto w-full max-w-[1200px] space-y-6 px-4 py-10">
@@ -308,28 +424,57 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
       <Step
         step={3}
         title="Revisão de cada e-mail"
-        description="Confira e aprove, um a um, exatamente o que cada destinatário vai receber."
+        description="Confira o assunto e o corpo, e aprove ou rejeite um a um. O status fica salvo no banco."
         icon={<Eye className="size-4" />}
         active={currentStep === 3}
       >
         <FinalReview
           recipients={recipients}
           formData={formData}
-          approved={approved}
+          reviews={reviews}
           disabled={loading}
-          onApprovedChange={setApproved}
+          onReviewsChange={setReviews}
         />
       </Step>
-
 
       <Step
         step={4}
         title="Enviar"
-        description="O envio respeita o limite de 1 e-mail por segundo."
+        description="Teste antes, confirme e acompanhe as falhas com reenvio."
         icon={<Send className="size-4" />}
         active={currentStep === 4}
       >
         <div className="space-y-4">
+          <div className="space-y-2 rounded-lg border p-3">
+            <p className="flex items-center gap-2 text-sm font-medium">
+              <TestTube2 className="size-4" />
+              Enviar e-mail de teste
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Usa os dados do primeiro destinatário aprovado para montar o e-mail.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Input
+                type="email"
+                value={testEmail}
+                placeholder="voce@empresa.com"
+                className="h-9 max-w-xs"
+                disabled={loading || testing}
+                onChange={(event) => setTestEmail(event.target.value)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={loading || testing}
+                onClick={() => void handleTestEmail()}
+              >
+                <TestTube2 className="size-4" />
+                {testing ? "Enviando teste…" : "Enviar teste"}
+              </Button>
+            </div>
+          </div>
+
           {approvedRecipients.length > LARGE_BATCH_THRESHOLD && (
             <Alert>
               <AlertTriangle className="size-4" />
@@ -342,10 +487,10 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
             </Alert>
           )}
 
-          {loading && <Progress value={progress} />}
+          {(loading || retrying) && <Progress value={progress} />}
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button size="lg" className="min-w-56" disabled={loading} onClick={() => void handleSend()}>
+            <Button size="lg" className="min-w-56" disabled={loading} onClick={requestSend}>
               <Send className="size-4" />
               {loading ? "Enviando…" : `Enviar ${approvedRecipients.length} e-mails aprovados`}
             </Button>
@@ -361,11 +506,60 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
                 reputação do domínio.
               </TooltipContent>
             </Tooltip>
+            {recipients.length > 0 && (
+              <Button type="button" variant="ghost" size="sm" onClick={exportReport}>
+                Exportar relatório CSV
+              </Button>
+            )}
           </div>
 
-          {results.length > 0 && <ResultsTable results={results} />}
+          {results.length > 0 && (
+            <ResultsTable
+              results={results}
+              retrying={retrying}
+              onRetryFailed={() => void handleRetryFailed()}
+              onExportReport={exportReport}
+            />
+          )}
         </div>
       </Step>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar disparo</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-1 text-sm">
+                <p>
+                  Serão enviados <strong>{approvedRecipients.length}</strong> e-mails aprovados
+                  {rejeitadosLabel(rejectedCount)}.
+                </p>
+                <p>
+                  Remetente: <strong>{formData.senderName || "—"}</strong> &lt;{formData.senderEmail}&gt;
+                </p>
+                <p>
+                  Assunto: <strong>{formData.subject}</strong>
+                </p>
+                <p className="text-muted-foreground">
+                  Tempo estimado: ~
+                  {Math.max(1, Math.ceil(approvedRecipients.length / RATE_LIMIT_PER_SECOND / 60))} min.
+                  Esta ação não pode ser desfeita.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void handleSend()}>
+              Confirmar e enviar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
+}
+
+function rejeitadosLabel(count: number) {
+  return count > 0 ? ` (${count} rejeitados serão ignorados)` : "";
 }
