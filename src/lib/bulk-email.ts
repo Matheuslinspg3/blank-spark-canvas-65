@@ -194,3 +194,53 @@ export function downloadFile(filename: string, content: string, type = "text/csv
   link.click();
   URL.revokeObjectURL(url);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Review + relatório                                                          */
+/* -------------------------------------------------------------------------- */
+
+export type ReviewStatus = "aprovado" | "rejeitado";
+export type ReviewEntry = { status: ReviewStatus; at: string };
+export type Reviews = Record<string, ReviewEntry>;
+
+function csvCell(value: string): string {
+  return `"${(value ?? "").replace(/"/g, '""')}"`;
+}
+
+function formatDate(value: string | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toLocaleString("pt-BR");
+}
+
+/**
+ * Relatório completo pós-disparo: um registro por destinatário com o status
+ * final (aprovado, rejeitado, enviado, erro) e as datas correspondentes.
+ */
+export function buildReportCsv(
+  recipients: Recipient[],
+  reviews: Reviews,
+  results: SendResult[],
+  sentAt?: string | null,
+): string {
+  const byEmail = new Map(results.map((result) => [result.email, result]));
+  const header = "email,nome,status,decidido_em,enviado_em,message_id,erro";
+
+  const lines = recipients.map((recipient) => {
+    const email = recipient["email"] ?? "";
+    const review = reviews[email];
+    const result = byEmail.get(email);
+    const status = result ? (result.success ? "enviado" : "erro") : (review?.status ?? "pendente");
+    return [
+      csvCell(email),
+      csvCell(recipient["nome"] ?? ""),
+      csvCell(status),
+      csvCell(formatDate(review?.at)),
+      csvCell(result ? formatDate(sentAt) : ""),
+      csvCell(result?.messageId ?? ""),
+      csvCell(result?.error ?? ""),
+    ].join(",");
+  });
+
+  return [header, ...lines].join("\n");
+}
