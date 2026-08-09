@@ -3,6 +3,8 @@
  * de CSV e a geração de e-mails com IA.
  */
 
+import type { CompanyDossier, ResearchSource } from "./company-research";
+
 export type CsvRowStatus = "pendente" | "processando" | "gerado" | "erro";
 
 export type CsvRow = {
@@ -17,6 +19,8 @@ export type CsvRow = {
   is_personalized: boolean;
   approved: boolean;
   error_message: string | null;
+  research: CompanyDossier | null;
+  research_sources: ResearchSource[];
   created_at: string;
   updated_at: string;
 };
@@ -30,8 +34,11 @@ export type CsvRowPatch = Partial<
     | "is_personalized"
     | "approved"
     | "error_message"
+    | "research"
+    | "research_sources"
   >
 >;
+
 
 export const CSV_ROW_STATUS_LABEL: Record<CsvRowStatus, string> = {
   pendente: "Pendente",
