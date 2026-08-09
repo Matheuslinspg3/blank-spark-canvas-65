@@ -2,7 +2,7 @@
  * Server-only Brevo sender. Calls are routed through the Lovable connector
  * gateway, which injects the Brevo credentials of the linked connection.
  */
-import { interpolate, type SendBulkPayload, type SendResult } from "./bulk-email";
+import { interpolate, renderEmailHtml, type SendBulkPayload, type SendResult } from "./bulk-email";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/brevo";
 /** Brevo is called at most once per second to respect the campaign rate limit. */
@@ -58,7 +58,7 @@ export async function sendCampaignViaBrevo(payload: SendBulkPayload): Promise<Se
           sender: { name: payload.senderName, email: payload.senderEmail },
           to: [{ email }],
           subject: interpolate(payload.subject, recipient),
-          htmlContent: interpolate(payload.htmlTemplate, recipient),
+          htmlContent: renderEmailHtml(payload.htmlTemplate, recipient),
         }),
       });
 

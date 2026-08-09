@@ -2,7 +2,7 @@ import { Code2, Eye } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { interpolate, type EmailFormData, type Recipient } from "@/lib/bulk-email";
+import { interpolate, renderEmailHtml, type EmailFormData, type Recipient } from "@/lib/bulk-email";
 
 type EmailPreviewProps = {
   formData: EmailFormData;
@@ -13,7 +13,7 @@ export function EmailPreview({ formData, recipient }: EmailPreviewProps) {
   const [mode, setMode] = useState<"rendered" | "code">("rendered");
 
   const subject = interpolate(formData.subject, recipient);
-  const html = interpolate(formData.htmlTemplate, recipient);
+  const html = renderEmailHtml(formData.htmlTemplate, recipient);
 
   return (
     <div className="space-y-4">

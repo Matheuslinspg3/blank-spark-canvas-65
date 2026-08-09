@@ -106,14 +106,35 @@ export function parseCsv(text: string): ParsedCsv {
 /* Templating                                                                  */
 /* -------------------------------------------------------------------------- */
 
-/** Replaces {{coluna}} placeholders with the recipient's values. */
+/** Replaces {{coluna}} placeholders with the recipient's values (vazio quando não existe). */
 export function interpolate(template: string, recipient: Recipient | undefined): string {
   if (!recipient) return template;
-  return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (match, key: string) => {
-    const value = recipient[key.toLowerCase()];
-    return value !== undefined && value !== "" ? value : match;
+  return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_match, key: string) => {
+    return recipient[key.toLowerCase()] ?? "";
   });
 }
+
+/** Coluna do texto gerado na fila (passo 2). */
+const AI_TEXT_COLUMN = "ia_conteudo";
+
+/**
+ * Renderiza o HTML final de um destinatário. Se o template não usar
+ * {{ia_conteudo}}, o texto da fila é inserido automaticamente no início do
+ * corpo para que a personalização nunca se perca.
+ */
+export function renderEmailHtml(template: string, recipient: Recipient | undefined): string {
+  const html = interpolate(template, recipient);
+  const text = (recipient?.[AI_TEXT_COLUMN] ?? "").trim();
+  if (!text || template.includes(AI_TEXT_COLUMN)) return html;
+
+  const block = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1f2937;max-width:600px;margin:0 auto 16px;padding:0 8px;white-space:pre-wrap;">${escapeHtml(
+    text,
+  )}</div>`;
+
+  if (/<body[^>]*>/i.test(html)) return html.replace(/(<body[^>]*>)/i, `$1${block}`);
+  return `${block}${html}`;
+}
+
 
 /** Escapes user CSV values that land inside the preview iframe/HTML. */
 export function escapeHtml(value: string): string {
