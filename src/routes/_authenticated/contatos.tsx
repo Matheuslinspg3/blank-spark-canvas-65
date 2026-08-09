@@ -1,19 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import {
   CheckCircle2,
   Download,
+  History,
   Loader2,
+  RefreshCcw,
   Sparkles,
   Trash2,
   TriangleAlert,
   Upload,
   Users,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 
+import { RowFilters } from "@/components/contatos/RowFilters";
+import { RowHistoryDialog } from "@/components/contatos/RowHistoryDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import { callAi, isAiConfigured, loadAiSettings } from "@/lib/ai-config";
 import { downloadFile, parseCsv } from "@/lib/bulk-email";
+import { formatDateTime, summarizeRuns, type CsvRowEventInput } from "@/lib/csv-row-events";
 import {
   CSV_ROW_STATUS_LABEL,
   EMAIL_WRITER_SYSTEM_PROMPT,
@@ -43,11 +50,21 @@ import {
   deleteCsvRow,
   fetchSiteText,
   importCsvRows,
+  listCsvRowEvents,
   listCsvRows,
+  logCsvRowEvent,
   updateCsvRow,
 } from "@/lib/csv-rows.functions";
 
+const searchSchema = z.object({
+  q: fallback(z.string(), "").default(""),
+  categoria: fallback(z.string(), "todos").default("todos"),
+  status: fallback(z.string(), "todos").default("todos"),
+  personalizado: fallback(z.string(), "todos").default("todos"),
+});
+
 export const Route = createFileRoute("/_authenticated/contatos")({
+  validateSearch: zodValidator(searchSchema),
   head: () => ({
     meta: [
       { title: "Contatos e geração com IA — Disparo Tracker" },
@@ -74,23 +91,40 @@ function statusVariant(status: CsvRowStatus) {
   return "secondary" as const;
 }
 
+const STATUS_OPTIONS = (Object.keys(CSV_ROW_STATUS_LABEL) as CsvRowStatus[]).map((status) => ({
+  value: status,
+  label: CSV_ROW_STATUS_LABEL[status],
+}));
+
 function ContatosPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const search = Route.useSearch();
   const inputRef = useRef<HTMLInputElement>(null);
   const stopRef = useRef(false);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [historyRow, setHistoryRow] = useState<CsvRow | null>(null);
 
   const fetchRows = useServerFn(listCsvRows);
+  const fetchEvents = useServerFn(listCsvRowEvents);
   const importRows = useServerFn(importCsvRows);
   const updateRow = useServerFn(updateCsvRow);
   const removeRow = useServerFn(deleteCsvRow);
   const scrapeSite = useServerFn(fetchSiteText);
+  const logEvent = useServerFn(logCsvRowEvent);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["csv-rows"],
     queryFn: () => fetchRows(),
   });
+
+  const { data: events = [] } = useQuery({
+    queryKey: ["csv-row-events"],
+    queryFn: () => fetchEvents(),
+  });
+
+  const runs = useMemo(() => summarizeRuns(events).slice(0, 5), [events]);
 
   const counts = {
     pendente: rows.filter((r) => r.status === "pendente").length,
@@ -98,6 +132,28 @@ function ContatosPage() {
     gerado: rows.filter((r) => r.status === "gerado").length,
     erro: rows.filter((r) => r.status === "erro").length,
   };
+
+  const categorias = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.categoria).filter(Boolean))).sort(),
+    [rows],
+  );
+
+  const filteredRows = useMemo(() => {
+    const term = search.q.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (term && !`${row.nome} ${row.email}`.toLowerCase().includes(term)) return false;
+      if (search.categoria !== "todos" && row.categoria !== search.categoria) return false;
+      if (search.status !== "todos" && row.status !== search.status) return false;
+      if (search.personalizado === "sim" && !row.is_personalized) return false;
+      if (search.personalizado === "nao" && row.is_personalized) return false;
+      return true;
+    });
+  }, [rows, search]);
+
+  type SearchValue = z.infer<typeof searchSchema>;
+  function patchSearch(patch: Partial<SearchValue>) {
+    void navigate({ search: (prev: SearchValue) => ({ ...prev, ...patch }) });
+  }
 
   const importMutation = useMutation({
     mutationFn: (payload: { nome: string; email: string; categoria: string }[]) =>
@@ -130,26 +186,50 @@ function ContatosPage() {
     }
   }
 
+  /** Registra um evento no histórico sem interromper o processamento. */
+  async function record(event: CsvRowEventInput) {
+    await logEvent({ data: { event } }).catch(() => undefined);
+  }
+
   /** Processa uma linha: busca o site, valida e gera o e-mail com a IA. */
-  async function processRow(row: CsvRow) {
+  async function processRow(row: CsvRow, runId: string) {
     const settings = loadAiSettings();
-    await updateRow({ data: { id: row.id, patch: { status: "processando" } } });
+    const fromStatus = row.status;
+    await updateRow({ data: { id: row.id, patch: { status: "processando", error_message: null } } });
+    await record({
+      csv_row_id: row.id,
+      run_id: runId,
+      from_status: fromStatus,
+      to_status: "processando",
+    });
 
     let siteContent: string | null = null;
+    let siteOk = false;
+    let siteReason = "Sem domínio no e-mail";
     const domain = domainFromEmail(row.email);
     if (domain) {
       try {
         const result = await scrapeSite({ data: { domain } });
-        if (result.ok && isTrustworthyContent(result.text)) siteContent = result.text;
-      } catch {
-        siteContent = null;
+        if (result.ok && isTrustworthyContent(result.text)) {
+          siteContent = result.text;
+          siteOk = true;
+          siteReason = "";
+        } else {
+          siteReason = result.ok ? "Conteúdo não confiável" : result.reason;
+        }
+      } catch (error) {
+        siteReason = error instanceof Error ? error.message : "Falha ao acessar o site";
       }
     }
 
     const personalized = siteContent !== null;
     const validContent = siteContent ?? "";
     const prompt = personalized
-      ? buildPersonalizedPrompt({ nome: row.nome, categoria: row.categoria, siteContent: validContent })
+      ? buildPersonalizedPrompt({
+          nome: row.nome,
+          categoria: row.categoria,
+          siteContent: validContent,
+        })
       : buildGenericPrompt({ nome: row.nome, categoria: row.categoria });
 
     try {
@@ -166,49 +246,69 @@ function ContatosPage() {
           },
         },
       });
+      await record({
+        csv_row_id: row.id,
+        run_id: runId,
+        from_status: "processando",
+        to_status: "gerado",
+        is_personalized: personalized,
+        site_ok: siteOk,
+        site_reason: siteReason || null,
+      });
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Falha na IA";
       await updateRow({
         data: {
           id: row.id,
           patch: {
             status: "erro",
             site_content: siteContent,
-            error_message: error instanceof Error ? error.message : "Falha na IA",
+            error_message: message,
           },
         },
+      });
+      await record({
+        csv_row_id: row.id,
+        run_id: runId,
+        from_status: "processando",
+        to_status: "erro",
+        site_ok: siteOk,
+        site_reason: siteReason || null,
+        error_message: message,
       });
     }
   }
 
-  async function handleProcess() {
+  async function runBatch(target: CsvRow[]) {
     if (!isAiConfigured(loadAiSettings())) {
       toast.error("Configure a base URL e a API key da IA em /configuracoes.");
       return;
     }
-    const pending = rows.filter((r) => r.status === "pendente" || r.status === "erro");
-    if (pending.length === 0) {
-      toast.info("Nenhuma linha pendente.");
+    if (target.length === 0) {
+      toast.info("Nenhuma linha para processar.");
       return;
     }
 
+    const runId = crypto.randomUUID();
     stopRef.current = false;
     setProcessing(true);
-    setProgress({ done: 0, total: pending.length });
+    setProgress({ done: 0, total: target.length });
 
     let cursor = 0;
-    const next = () => (cursor < pending.length ? cursor++ : -1);
+    const next = () => (cursor < target.length ? cursor++ : -1);
 
     const worker = async () => {
       for (let i = next(); i !== -1; i = next()) {
         if (stopRef.current) return;
         // Uma linha com erro nunca interrompe o lote.
-        await processRow(pending[i]!).catch(() => undefined);
+        await processRow(target[i]!, runId).catch(() => undefined);
         setProgress((p) => ({ ...p, done: p.done + 1 }));
       }
     };
 
-    await Promise.all(Array.from({ length: Math.min(2, pending.length) }, worker));
+    await Promise.all(Array.from({ length: Math.min(2, target.length) }, worker));
     await queryClient.invalidateQueries({ queryKey: ["csv-rows"] });
+    await queryClient.invalidateQueries({ queryKey: ["csv-row-events"] });
     setProcessing(false);
     toast.success("Processamento finalizado");
   }
@@ -286,7 +386,10 @@ function ContatosPage() {
             <Badge variant="destructive">Erros: {counts.erro}</Badge>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button disabled={processing || rows.length === 0} onClick={() => void handleProcess()}>
+            <Button
+              disabled={processing || counts.pendente === 0}
+              onClick={() => void runBatch(rows.filter((r) => r.status === "pendente"))}
+            >
               {processing ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
@@ -294,7 +397,15 @@ function ContatosPage() {
               )}
               {processing
                 ? `Processando ${progress.done}/${progress.total}…`
-                : "Processar pendentes"}
+                : `Processar pendentes (${counts.pendente})`}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={processing || counts.erro === 0}
+              onClick={() => void runBatch(rows.filter((r) => r.status === "erro"))}
+            >
+              <RefreshCcw className="size-4" />
+              Reprocessar erros ({counts.erro})
             </Button>
             {processing && (
               <Button
@@ -307,8 +418,39 @@ function ContatosPage() {
               </Button>
             )}
           </div>
-          {processing && (
-            <Progress value={(progress.done / Math.max(progress.total, 1)) * 100} />
+          {processing && <Progress value={(progress.done / Math.max(progress.total, 1)) * 100} />}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <History className="size-4" />
+            Últimas execuções
+          </CardTitle>
+          <CardDescription>Resumo de cada lote de geração.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {runs.length === 0 ? (
+            <p className="text-muted-foreground text-sm">Nenhuma execução registrada ainda.</p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {runs.map((run) => (
+                <li
+                  key={run.run_id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+                >
+                  <span className="text-muted-foreground">
+                    {formatDateTime(run.started_at)} → {formatDateTime(run.finished_at)}
+                  </span>
+                  <span className="flex flex-wrap gap-1.5">
+                    <Badge variant="secondary">{run.rows} linhas</Badge>
+                    <Badge>{run.gerado} gerados</Badge>
+                    {run.erro > 0 && <Badge variant="destructive">{run.erro} erros</Badge>}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
         </CardContent>
       </Card>
@@ -318,11 +460,26 @@ function ContatosPage() {
           <CardTitle className="text-base">Lista de contatos</CardTitle>
           <CardDescription>{rows.length} contatos importados.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <RowFilters
+            value={search}
+            categorias={categorias}
+            statusOptions={STATUS_OPTIONS}
+            shown={filteredRows.length}
+            total={rows.length}
+            onChange={patchSearch}
+            onClear={() =>
+              patchSearch({ q: "", categoria: "todos", status: "todos", personalizado: "todos" })
+            }
+          />
           {isLoading ? (
             <p className="text-muted-foreground text-sm">Carregando…</p>
-          ) : rows.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Nenhum contato importado ainda.</p>
+          ) : filteredRows.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              {rows.length === 0
+                ? "Nenhum contato importado ainda."
+                : "Nenhum contato corresponde aos filtros."}
+            </p>
           ) : (
             <div className="max-h-[32rem] overflow-auto rounded-lg border">
               <Table>
@@ -336,7 +493,7 @@ function ContatosPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.map((row) => (
+                  {filteredRows.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell className="font-medium">{row.nome || "—"}</TableCell>
                       <TableCell className="text-muted-foreground">{row.email}</TableCell>
@@ -358,13 +515,24 @@ function ContatosPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => deleteMutation.mutate(row.id)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Histórico"
+                            onClick={() => setHistoryRow(row)}
+                          >
+                            <History className="size-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Remover"
+                            onClick={() => deleteMutation.mutate(row.id)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -374,6 +542,12 @@ function ContatosPage() {
           )}
         </CardContent>
       </Card>
+
+      <RowHistoryDialog
+        row={historyRow}
+        events={events}
+        onOpenChange={(open) => !open && setHistoryRow(null)}
+      />
     </main>
   );
 }

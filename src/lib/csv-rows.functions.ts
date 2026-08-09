@@ -1,8 +1,34 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { CsvRowEvent, CsvRowEventInput } from "./csv-row-events";
 import type { CsvRow, CsvRowPatch } from "./csv-rows";
 import { extractReadableText } from "./site-scrape.server";
+
+export const logCsvRowEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { event: CsvRowEventInput }) => input)
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("csv_row_events")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .insert({ ...data.event, user_id: context.userId } as any);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const listCsvRowEvents = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("csv_row_events")
+      .select("*")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as unknown as CsvRowEvent[];
+  });
 
 export const listCsvRows = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

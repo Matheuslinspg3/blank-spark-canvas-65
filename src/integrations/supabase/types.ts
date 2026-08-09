@@ -71,6 +71,56 @@ export type Database = {
         }
         Relationships: []
       }
+      csv_row_events: {
+        Row: {
+          created_at: string
+          csv_row_id: string
+          error_message: string | null
+          from_status: Database["public"]["Enums"]["csv_row_status"] | null
+          id: string
+          is_personalized: boolean | null
+          run_id: string | null
+          site_ok: boolean | null
+          site_reason: string | null
+          to_status: Database["public"]["Enums"]["csv_row_status"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          csv_row_id: string
+          error_message?: string | null
+          from_status?: Database["public"]["Enums"]["csv_row_status"] | null
+          id?: string
+          is_personalized?: boolean | null
+          run_id?: string | null
+          site_ok?: boolean | null
+          site_reason?: string | null
+          to_status: Database["public"]["Enums"]["csv_row_status"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          csv_row_id?: string
+          error_message?: string | null
+          from_status?: Database["public"]["Enums"]["csv_row_status"] | null
+          id?: string
+          is_personalized?: boolean | null
+          run_id?: string | null
+          site_ok?: boolean | null
+          site_reason?: string | null
+          to_status?: Database["public"]["Enums"]["csv_row_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "csv_row_events_csv_row_id_fkey"
+            columns: ["csv_row_id"]
+            isOneToOne: false
+            referencedRelation: "csv_rows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       csv_rows: {
         Row: {
           approved: boolean
