@@ -191,10 +191,11 @@ function ContatosPage() {
     await logEvent({ data: { event } }).catch(() => undefined);
   }
 
-  /** Processa uma linha: busca o site, valida e gera o e-mail com a IA. */
+  /** Processa uma linha: pesquisa a empresa, monta o dossiê e escreve o e-mail. */
   async function processRow(row: CsvRow, runId: string) {
     const settings = loadAiSettings();
     const fromStatus = row.status;
+    setPhase((prev) => ({ ...prev, [row.id]: "pesquisando" }));
     await updateRow({ data: { id: row.id, patch: { status: "processando", error_message: null } } });
     await record({
       csv_row_id: row.id,
@@ -203,34 +204,52 @@ function ContatosPage() {
       to_status: "processando",
     });
 
-    let siteContent: string | null = null;
-    let siteOk = false;
-    let siteReason = "Sem domínio no e-mail";
+    let dossier: CompanyDossier | null = null;
+    let sources: ResearchSource[] = [];
+    let material = "";
+    let researchOk = false;
+    let researchReason = "Sem domínio no e-mail";
     const domain = domainFromEmail(row.email);
+
     if (domain) {
       try {
-        const result = await scrapeSite({ data: { domain } });
-        if (result.ok && isTrustworthyContent(result.text)) {
-          siteContent = result.text;
-          siteOk = true;
-          siteReason = "";
-        } else {
-          siteReason = result.ok ? "Conteúdo não confiável" : result.reason;
+        const collected = await research({
+          data: { domain, nome: row.nome, categoria: row.categoria },
+        });
+        sources = collected.sources;
+        researchReason = collected.reason;
+        material = collected.material;
+        if (collected.ok) {
+          const raw = await callAi(
+            settings,
+            buildResearchPrompt({
+              nome: row.nome,
+              email: row.email,
+              categoria: row.categoria,
+              material,
+            }),
+            RESEARCH_SYSTEM_PROMPT,
+          );
+          const parsed = parseDossier(raw);
+          if (isUsefulDossier(parsed)) {
+            dossier = parsed;
+            researchOk = true;
+            researchReason = "";
+          } else {
+            researchReason = "Pesquisa sem fatos suficientes";
+          }
         }
       } catch (error) {
-        siteReason = error instanceof Error ? error.message : "Falha ao acessar o site";
+        researchReason = error instanceof Error ? error.message : "Falha na pesquisa";
       }
     }
 
-    const personalized = siteContent !== null;
-    const validContent = siteContent ?? "";
+    const personalized = dossier !== null;
     const prompt = personalized
-      ? buildPersonalizedPrompt({
-          nome: row.nome,
-          categoria: row.categoria,
-          siteContent: validContent,
-        })
+      ? buildPersonalizedPrompt({ nome: row.nome, categoria: row.categoria, dossier })
       : buildGenericPrompt({ nome: row.nome, categoria: row.categoria });
+
+    setPhase((prev) => ({ ...prev, [row.id]: "escrevendo" }));
 
     try {
       const content = await callAi(settings, prompt, EMAIL_WRITER_SYSTEM_PROMPT);
@@ -239,9 +258,11 @@ function ContatosPage() {
           id: row.id,
           patch: {
             status: "gerado",
-            site_content: siteContent,
+            site_content: material ? material.slice(0, 6000) : null,
             generated_email: content,
             is_personalized: personalized,
+            research: dossier,
+            research_sources: sources,
             error_message: null,
           },
         },
@@ -252,8 +273,10 @@ function ContatosPage() {
         from_status: "processando",
         to_status: "gerado",
         is_personalized: personalized,
-        site_ok: siteOk,
-        site_reason: siteReason || null,
+        site_ok: researchOk,
+        site_reason: researchReason || null,
+        research_ok: researchOk,
+        research_sources_count: sources.length,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Falha na IA";
@@ -262,7 +285,8 @@ function ContatosPage() {
           id: row.id,
           patch: {
             status: "erro",
-            site_content: siteContent,
+            research: dossier,
+            research_sources: sources,
             error_message: message,
           },
         },
@@ -272,12 +296,21 @@ function ContatosPage() {
         run_id: runId,
         from_status: "processando",
         to_status: "erro",
-        site_ok: siteOk,
-        site_reason: siteReason || null,
+        site_ok: researchOk,
+        site_reason: researchReason || null,
+        research_ok: researchOk,
+        research_sources_count: sources.length,
         error_message: message,
+      });
+    } finally {
+      setPhase((prev) => {
+        const next = { ...prev };
+        delete next[row.id];
+        return next;
       });
     }
   }
+
 
   async function runBatch(target: CsvRow[]) {
     if (!isAiConfigured(loadAiSettings())) {
