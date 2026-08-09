@@ -71,6 +71,54 @@ export type Database = {
         }
         Relationships: []
       }
+      csv_rows: {
+        Row: {
+          approved: boolean
+          categoria: string
+          created_at: string
+          email: string
+          error_message: string | null
+          generated_email: string | null
+          id: string
+          is_personalized: boolean
+          nome: string
+          site_content: string | null
+          status: Database["public"]["Enums"]["csv_row_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved?: boolean
+          categoria?: string
+          created_at?: string
+          email: string
+          error_message?: string | null
+          generated_email?: string | null
+          id?: string
+          is_personalized?: boolean
+          nome?: string
+          site_content?: string | null
+          status?: Database["public"]["Enums"]["csv_row_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved?: boolean
+          categoria?: string
+          created_at?: string
+          email?: string
+          error_message?: string | null
+          generated_email?: string | null
+          id?: string
+          is_personalized?: boolean
+          nome?: string
+          site_content?: string | null
+          status?: Database["public"]["Enums"]["csv_row_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -79,7 +127,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      csv_row_status: "pendente" | "processando" | "gerado" | "erro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -206,6 +254,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      csv_row_status: ["pendente", "processando", "gerado", "erro"],
+    },
   },
 } as const

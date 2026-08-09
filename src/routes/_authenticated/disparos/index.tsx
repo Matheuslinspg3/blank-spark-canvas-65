@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { FilePlus2, LogOut, Mail, Settings2, Trash2 } from "lucide-react";
+import { FilePlus2, LogOut, Mail, Settings2, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -72,6 +72,13 @@ function CampaignsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" asChild>
+            <Link to="/contatos">
+              <Users className="size-4" />
+              Contatos e IA
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+
             <Link to="/configuracoes">
               <Settings2 className="size-4" />
               Configurar IA
