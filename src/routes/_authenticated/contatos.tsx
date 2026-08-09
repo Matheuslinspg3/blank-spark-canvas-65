@@ -150,8 +150,9 @@ function ContatosPage() {
     });
   }, [rows, search]);
 
-  function patchSearch(patch: Partial<z.infer<typeof searchSchema>>) {
-    void navigate({ search: (prev) => ({ ...prev, ...patch }) });
+  type SearchValue = z.infer<typeof searchSchema>;
+  function patchSearch(patch: Partial<SearchValue>) {
+    void navigate({ search: (prev: SearchValue) => ({ ...prev, ...patch }) });
   }
 
   const importMutation = useMutation({
