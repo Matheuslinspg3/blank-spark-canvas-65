@@ -74,12 +74,17 @@ export function EmailReviewDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {row && (
+          <DossierPanel dossier={row.research} sources={row.research_sources ?? []} />
+        )}
+
         <Textarea
-          rows={20}
+          rows={18}
           className="text-sm leading-relaxed"
           value={text}
           onChange={(e) => onTextChange(e.target.value)}
         />
+
 
         <DialogFooter className="flex-wrap gap-2 sm:justify-between">
           <div className="flex gap-2">
