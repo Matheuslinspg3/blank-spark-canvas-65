@@ -544,9 +544,18 @@ function ContatosPage() {
                       <TableCell className="text-muted-foreground">{row.categoria || "—"}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
-                          <Badge variant={statusVariant(row.status)}>
-                            {CSV_ROW_STATUS_LABEL[row.status]}
-                          </Badge>
+                          {phase[row.id] ? (
+                            <Badge variant="secondary" className="gap-1.5">
+                              <Loader2 className="size-3 animate-spin" />
+                              {phase[row.id] === "pesquisando"
+                                ? "Pesquisando empresa…"
+                                : "Escrevendo e-mail…"}
+                            </Badge>
+                          ) : (
+                            <Badge variant={statusVariant(row.status)}>
+                              {CSV_ROW_STATUS_LABEL[row.status]}
+                            </Badge>
+                          )}
                           {row.status === "gerado" &&
                             (row.is_personalized ? (
                               <CheckCircle2 className="size-3.5 text-emerald-500" />
@@ -554,10 +563,16 @@ function ContatosPage() {
                               <TriangleAlert className="size-3.5 text-amber-500" />
                             ))}
                         </div>
+                        {row.research_sources?.length > 0 && (
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            {row.research_sources.length} fontes pesquisadas
+                          </p>
+                        )}
                         {row.error_message && (
                           <p className="text-destructive mt-1 text-xs">{row.error_message}</p>
                         )}
                       </TableCell>
+
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           <Button
