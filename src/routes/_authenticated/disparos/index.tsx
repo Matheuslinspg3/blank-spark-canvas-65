@@ -72,6 +72,13 @@ function CampaignsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" asChild>
+            <Link to="/contatos">
+              <Users className="size-4" />
+              Contatos e IA
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+
             <Link to="/configuracoes">
               <Settings2 className="size-4" />
               Configurar IA
