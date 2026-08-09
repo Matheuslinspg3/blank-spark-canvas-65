@@ -255,9 +255,10 @@ function ContatosPage() {
     }
 
     const personalized = dossier !== null;
-    const prompt = personalized
+    const prompt = dossier
       ? buildPersonalizedPrompt({ nome: row.nome, categoria: row.categoria, dossier })
       : buildGenericPrompt({ nome: row.nome, categoria: row.categoria });
+
 
     setPhase((prev) => ({ ...prev, [row.id]: "escrevendo" }));
 
