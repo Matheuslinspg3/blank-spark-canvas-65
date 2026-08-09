@@ -23,6 +23,7 @@ export type Database = {
           name: string
           recipients: Json
           results: Json
+          reviews: Json
           sender_email: string
           sender_name: string
           sent_count: number
@@ -41,6 +42,7 @@ export type Database = {
           name?: string
           recipients?: Json
           results?: Json
+          reviews?: Json
           sender_email?: string
           sender_name?: string
           sent_count?: number
@@ -59,6 +61,7 @@ export type Database = {
           name?: string
           recipients?: Json
           results?: Json
+          reviews?: Json
           sender_email?: string
           sender_name?: string
           sent_count?: number

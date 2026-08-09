@@ -1,4 +1,4 @@
-import type { Recipient, SendResult } from "./bulk-email";
+import type { Recipient, Reviews, SendResult } from "./bulk-email";
 
 export type CampaignStatus = "rascunho" | "enviando" | "concluido" | "erro";
 
@@ -13,6 +13,7 @@ export type Campaign = {
   html_template: string;
   recipients: Recipient[];
   results: SendResult[];
+  reviews: Reviews;
   total_count: number;
   sent_count: number;
   started_at: string | null;
@@ -32,6 +33,7 @@ export type CampaignPatch = Partial<
     | "html_template"
     | "recipients"
     | "results"
+    | "reviews"
     | "total_count"
     | "sent_count"
     | "started_at"
