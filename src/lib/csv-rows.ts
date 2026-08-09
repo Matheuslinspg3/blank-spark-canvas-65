@@ -3,7 +3,7 @@
  * de CSV e a geração de e-mails com IA.
  */
 
-import type { CompanyDossier, ResearchSource } from "./company-research";
+import { dossierToText, type CompanyDossier, type ResearchSource } from "./company-research";
 
 export type CsvRowStatus = "pendente" | "processando" | "gerado" | "erro";
 
