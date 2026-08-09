@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
-import { AiPersonalizer } from "./AiPersonalizer";
+import { RecipientQueue } from "./RecipientQueue";
 import { CSVUploader } from "./CSVUploader";
 import { EmailEditor } from "./EmailEditor";
 import { EmailPreview } from "./EmailPreview";
@@ -260,15 +260,15 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
 
       <Step
         step={2}
-        title="Personalização com IA (opcional)"
-        description="A IA pesquisa cada destinatário e escreve um trecho sob medida."
+        title="Fila de e-mails"
+        description="Cada e-mail do CSV entra na fila: escreva o texto ou gere com IA."
         icon={<Sparkles className="size-4" />}
-        active={false}
+        active={recipients.length > 0 && currentStep === 2}
       >
-        <AiPersonalizer
+        <RecipientQueue
           recipients={recipients}
           disabled={loading}
-          onGenerated={(rows) => {
+          onChange={(rows: Recipient[]) => {
             setRecipients(rows);
             setCsvColumns((prev) => (prev.includes(AI_COLUMN) ? prev : [...prev, AI_COLUMN]));
           }}
