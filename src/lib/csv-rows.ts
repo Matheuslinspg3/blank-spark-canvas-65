@@ -84,27 +84,29 @@ export function domainFromEmail(email: string): string | null {
   return domain;
 }
 
-/** Prompt para e-mail personalizado, com trava contra invenção de dados. */
+/** Prompt de redação a partir do dossiê da pesquisa. */
 export function buildPersonalizedPrompt(row: {
   nome: string;
   categoria: string;
-  siteContent: string;
+  dossier: CompanyDossier;
 }): string {
   return `Escreva um e-mail comercial curto (máx. 150 palavras) em português do Brasil para:
-- Nome: ${row.nome || "(não informado)"}
+- Nome do contato: ${row.nome || "(não informado)"}
 - Categoria/segmento: ${row.categoria || "(não informado)"}
 
-Conteúdo real extraído do site da empresa (use APENAS estas informações como referência factual):
+Dossiê da empresa, resultado de pesquisa na web (use APENAS estes fatos):
 """
-${row.siteContent}
+${dossierToText(row.dossier)}
 """
 
 Regras obrigatórias:
-- NÃO invente informações, números, clientes, produtos ou fatos que não estejam no texto acima.
-- Se algo não estiver no texto, simplesmente não mencione.
-- Tom profissional e direto, com uma abertura personalizada mostrando que você leu o site.
+- Abra o e-mail ancorando em UM fato concreto do dossiê (o que a empresa faz, um serviço ou um sinal recente).
+- NÃO invente informações, números, clientes, produtos ou fatos que não estejam no dossiê.
+- Se algo não estiver no dossiê, simplesmente não mencione.
+- Tom profissional e direto, terminando com um convite claro para conversar.
 - Devolva apenas o corpo do e-mail em texto puro, sem assunto e sem HTML.`;
 }
+
 
 /** Prompt de fallback genérico (sem dados do site). */
 export function buildGenericPrompt(row: { nome: string; categoria: string }): string {
