@@ -7,6 +7,11 @@ const GATEWAY = "https://connector-gateway.lovable.dev/firecrawl/v2";
 
 export type ScrapedPage = { url: string; title: string; text: string };
 
+/** Indica se as credenciais do gateway/Firecrawl estão presentes no servidor. */
+export function isFirecrawlConfigured(): boolean {
+  return Boolean(process.env["LOVABLE_API_KEY"] && process.env["FIRECRAWL_API_KEY"]);
+}
+
 function headers() {
   const lovableKey = process.env["LOVABLE_API_KEY"];
   const connectionKey = process.env["FIRECRAWL_API_KEY"];
