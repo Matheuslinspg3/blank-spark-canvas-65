@@ -55,9 +55,13 @@ export function RowHistoryDialog({ row, events, onOpenChange }: Props) {
                 </div>
                 {event.site_ok !== null && (
                   <p className="text-muted-foreground mt-1 text-xs">
-                    Site: {event.site_ok ? "conteúdo válido" : `sem dados (${event.site_reason || "—"})`}
+                    Pesquisa:{" "}
+                    {event.site_ok
+                      ? `dossiê gerado a partir de ${event.research_sources_count ?? 0} fontes`
+                      : `sem dados (${event.site_reason || "—"})`}
                   </p>
                 )}
+
                 {event.error_message && (
                   <p className="text-destructive mt-1 text-xs">Erro: {event.error_message}</p>
                 )}
