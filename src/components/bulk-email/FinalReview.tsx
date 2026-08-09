@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   interpolate,
+  renderEmailHtml,
   type EmailFormData,
   type Recipient,
   type Reviews,
@@ -98,7 +99,7 @@ export function FinalReview({
   }
 
   const subject = interpolate(formData.subject, current);
-  const html = interpolate(formData.htmlTemplate, current);
+  const html = renderEmailHtml(formData.htmlTemplate, current);
   const missingAi =
     Boolean(formData.htmlTemplate.includes(AI_COLUMN) || formData.subject.includes(AI_COLUMN)) &&
     !current?.[AI_COLUMN];
