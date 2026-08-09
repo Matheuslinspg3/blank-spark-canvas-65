@@ -88,32 +88,3 @@ export const deleteCsvRow = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Busca o site do domínio e devolve o texto limpo (timeout de 5s). */
-export const fetchSiteText = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: { domain: string }) => input)
-  .handler(async ({ data }) => {
-    const domain = data.domain.trim().toLowerCase();
-    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) {
-      return { ok: false as const, text: "", reason: "Domínio inválido" };
-    }
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    try {
-      const response = await fetch(`https://${domain}`, {
-        signal: controller.signal,
-        redirect: "follow",
-        headers: { "user-agent": "Mozilla/5.0 (compatible; DisparoTracker/1.0)" },
-      });
-      if (!response.ok) {
-        return { ok: false as const, text: "", reason: `HTTP ${response.status}` };
-      }
-      const html = await response.text();
-      return { ok: true as const, text: extractReadableText(html), reason: "" };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Falha ao acessar o site";
-      return { ok: false as const, text: "", reason: message };
-    } finally {
-      clearTimeout(timeout);
-    }
-  });
