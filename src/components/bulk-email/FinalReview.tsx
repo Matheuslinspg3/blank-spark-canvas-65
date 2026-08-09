@@ -1,34 +1,50 @@
-import { Check, ChevronLeft, ChevronRight, Code2, Eye, Search, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Code2, Eye, Search, Undo2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { interpolate, type EmailFormData, type Recipient } from "@/lib/bulk-email";
+import {
+  interpolate,
+  type EmailFormData,
+  type Recipient,
+  type Reviews,
+  type ReviewStatus,
+} from "@/lib/bulk-email";
 import { AI_COLUMN } from "@/lib/ai-config";
 
 type FinalReviewProps = {
   recipients: Recipient[];
   formData: EmailFormData;
-  approved: string[];
+  reviews: Reviews;
   disabled?: boolean;
-  onApprovedChange: (emails: string[]) => void;
+  onReviewsChange: (reviews: Reviews) => void;
 };
 
-/** Step 3: review the exact email each recipient is going to receive. */
+/** Passo 3: revisar, aprovar ou rejeitar o e-mail exato de cada destinatário. */
 export function FinalReview({
   recipients,
   formData,
-  approved,
+  reviews,
   disabled,
-  onApprovedChange,
+  onReviewsChange,
 }: FinalReviewProps) {
   const [index, setIndex] = useState(0);
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"rendered" | "code">("rendered");
+  const [history, setHistory] = useState<Reviews[]>([]);
 
-  const approvedSet = useMemo(() => new Set(approved), [approved]);
+  const counts = useMemo(() => {
+    let aprovados = 0;
+    let rejeitados = 0;
+    for (const row of recipients) {
+      const status = reviews[row["email"] ?? ""]?.status;
+      if (status === "aprovado") aprovados += 1;
+      if (status === "rejeitado") rejeitados += 1;
+    }
+    return { aprovados, rejeitados, pendentes: recipients.length - aprovados - rejeitados };
+  }, [recipients, reviews]);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -40,12 +56,37 @@ export function FinalReview({
 
   const current = filtered[Math.min(index, Math.max(filtered.length - 1, 0))];
   const currentEmail = current?.["email"] ?? "";
+  const currentStatus = reviews[currentEmail]?.status;
 
-  function toggle(email: string) {
-    const next = new Set(approvedSet);
-    if (next.has(email)) next.delete(email);
-    else next.add(email);
-    onApprovedChange([...next]);
+  function commit(next: Reviews) {
+    setHistory((prev) => [...prev.slice(-19), reviews]);
+    onReviewsChange(next);
+  }
+
+  function decide(email: string, status: ReviewStatus) {
+    if (!email) return;
+    const next = { ...reviews };
+    if (next[email]?.status === status) delete next[email];
+    else next[email] = { status, at: new Date().toISOString() };
+    commit(next);
+  }
+
+  function decideFiltered(status: ReviewStatus) {
+    const at = new Date().toISOString();
+    const next = { ...reviews };
+    for (const row of filtered) {
+      const email = row["email"] ?? "";
+      if (email) next[email] = { status, at };
+    }
+    commit(next);
+  }
+
+  function undo() {
+    setHistory((prev) => {
+      const last = prev[prev.length - 1];
+      if (last) onReviewsChange(last);
+      return prev.slice(0, -1);
+    });
   }
 
   if (recipients.length === 0) {
@@ -58,36 +99,46 @@ export function FinalReview({
 
   const subject = interpolate(formData.subject, current);
   const html = interpolate(formData.htmlTemplate, current);
-  const missingAi = Boolean(
-    formData.htmlTemplate.includes(AI_COLUMN) || formData.subject.includes(AI_COLUMN),
-  ) && !current?.[AI_COLUMN];
+  const missingAi =
+    Boolean(formData.htmlTemplate.includes(AI_COLUMN) || formData.subject.includes(AI_COLUMN)) &&
+    !current?.[AI_COLUMN];
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <Badge variant="secondary">
-            {approvedSet.size} de {recipients.length} aprovados
-          </Badge>
+          <Badge variant="secondary">{counts.aprovados} aprovados</Badge>
+          <Badge variant="destructive">{counts.rejeitados} rejeitados</Badge>
+          <Badge variant="outline">{counts.pendentes} pendentes</Badge>
           <Button
             type="button"
             size="sm"
             variant="outline"
-            disabled={disabled}
-            onClick={() => onApprovedChange(recipients.map((r) => r["email"] ?? ""))}
+            disabled={disabled || filtered.length === 0}
+            onClick={() => decideFiltered("aprovado")}
           >
             <Check className="size-4" />
-            Aprovar todos
+            Aprovar filtrados ({filtered.length})
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={disabled || filtered.length === 0}
+            onClick={() => decideFiltered("rejeitado")}
+          >
+            <X className="size-4" />
+            Rejeitar filtrados ({filtered.length})
           </Button>
           <Button
             type="button"
             size="sm"
             variant="ghost"
-            disabled={disabled}
-            onClick={() => onApprovedChange([])}
+            disabled={disabled || history.length === 0}
+            onClick={undo}
           >
-            <X className="size-4" />
-            Limpar
+            <Undo2 className="size-4" />
+            Desfazer
           </Button>
         </div>
         <Button
@@ -119,6 +170,7 @@ export function FinalReview({
             <ul className="divide-y">
               {filtered.map((row, i) => {
                 const email = row["email"] ?? "";
+                const status = reviews[email]?.status;
                 const isCurrent = i === Math.min(index, filtered.length - 1);
                 return (
                   <li key={`${email}-${i}`}>
@@ -131,12 +183,18 @@ export function FinalReview({
                     >
                       <span
                         className={`flex size-5 shrink-0 items-center justify-center rounded-full border ${
-                          approvedSet.has(email)
+                          status === "aprovado"
                             ? "bg-primary text-primary-foreground border-primary"
-                            : "text-muted-foreground"
+                            : status === "rejeitado"
+                              ? "bg-destructive text-destructive-foreground border-destructive"
+                              : "text-muted-foreground"
                         }`}
                       >
-                        {approvedSet.has(email) ? <Check className="size-3" /> : null}
+                        {status === "aprovado" ? (
+                          <Check className="size-3" />
+                        ) : status === "rejeitado" ? (
+                          <X className="size-3" />
+                        ) : null}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-medium">{row["nome"] || email}</span>
@@ -187,11 +245,20 @@ export function FinalReview({
               <Button
                 type="button"
                 disabled={disabled || !currentEmail}
-                variant={approvedSet.has(currentEmail) ? "secondary" : "default"}
-                onClick={() => toggle(currentEmail)}
+                variant={currentStatus === "aprovado" ? "secondary" : "default"}
+                onClick={() => decide(currentEmail, "aprovado")}
               >
                 <Check className="size-4" />
-                {approvedSet.has(currentEmail) ? "Aprovado" : "Aprovar"}
+                {currentStatus === "aprovado" ? "Aprovado" : "Aprovar"}
+              </Button>
+              <Button
+                type="button"
+                disabled={disabled || !currentEmail}
+                variant={currentStatus === "rejeitado" ? "secondary" : "outline"}
+                onClick={() => decide(currentEmail, "rejeitado")}
+              >
+                <X className="size-4" />
+                {currentStatus === "rejeitado" ? "Rejeitado" : "Rejeitar"}
               </Button>
             </div>
           </div>
