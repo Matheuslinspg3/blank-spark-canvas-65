@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { RecipientQueue } from "./RecipientQueue";
 import { CSVUploader } from "./CSVUploader";
 import { EmailEditor } from "./EmailEditor";
-import { EmailPreview } from "./EmailPreview";
+import { FinalReview } from "./FinalReview";
 import { ResultsTable } from "./ResultsTable";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -92,6 +92,7 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<SendResult[]>(campaign.results ?? []);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [approved, setApproved] = useState<string[]>([]);
 
   // Restore a previously saved template only for a brand-new draft.
   useEffect(() => {
@@ -124,12 +125,18 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
     return () => window.clearTimeout(timer);
   }, [name, formData, recipients, loading]);
 
+  const approvedRecipients = useMemo(
+    () => recipients.filter((row) => approved.includes(row["email"] ?? "")),
+    [recipients, approved],
+  );
+
   const currentStep = useMemo(() => {
     if (results.length > 0) return 4;
     if (recipients.length === 0) return 1;
     if (!formData.subject.trim() || !formData.htmlTemplate.trim()) return 2;
-    return 3;
-  }, [recipients.length, formData.subject, formData.htmlTemplate, results.length]);
+    if (approvedRecipients.length === 0) return 3;
+    return 4;
+  }, [recipients.length, formData.subject, formData.htmlTemplate, results.length, approvedRecipients.length]);
 
   function updateForm(patch: Partial<EmailFormData>) {
     setFormData((prev) => ({ ...prev, ...patch }));
@@ -140,6 +147,7 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
     if (!formData.subject.trim()) return "Informe o assunto do e-mail.";
     if (!formData.htmlTemplate.trim()) return "Informe o template HTML.";
     if (!formData.senderEmail.trim()) return "Informe o e-mail do remetente.";
+    if (approvedRecipients.length === 0) return "Aprove ao menos um e-mail no passo 3.";
     return null;
   }
 
@@ -167,13 +175,13 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
     });
 
     // Optimistic progress bar: the backend throttles to 1 email/second.
-    const expectedMs = (recipients.length / RATE_LIMIT_PER_SECOND) * 1000;
+    const expectedMs = (approvedRecipients.length / RATE_LIMIT_PER_SECOND) * 1000;
     const ticker = window.setInterval(() => {
       setProgress((prev) => Math.min(prev + 100 / Math.max(expectedMs / 400, 1), 95));
     }, 400);
 
     try {
-      const sendResults = await sendBulkEmails({ recipients, ...formData });
+      const sendResults = await sendBulkEmails({ recipients: approvedRecipients, ...formData });
       setResults(sendResults);
       const ok = sendResults.filter((r) => r.success).length;
       const finalStatus: CampaignStatus = ok === 0 ? "erro" : "concluido";
@@ -260,40 +268,33 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
 
       <Step
         step={2}
-        title="Fila de e-mails"
-        description="Cada e-mail do CSV entra na fila: escreva o texto ou gere com IA."
+        title="Fila de e-mails e template"
+        description="Escreva/gere o texto de cada destinatário e configure remetente, assunto e HTML."
         icon={<Sparkles className="size-4" />}
         active={recipients.length > 0 && currentStep === 2}
       >
-        <RecipientQueue
-          recipients={recipients}
-          disabled={loading}
-          onChange={(rows: Recipient[]) => {
-            setRecipients(rows);
-            setCsvColumns((prev) => (prev.includes(AI_COLUMN) ? prev : [...prev, AI_COLUMN]));
-          }}
-        />
-      </Step>
-
-      <Step
-        step={3}
-        title="Configure o e-mail"
-        description="Remetente, assunto e template HTML com variáveis."
-        icon={<FileText className="size-4" />}
-        active={currentStep === 2}
-      >
-        <Tabs defaultValue="editor">
+        <Tabs defaultValue="fila">
           <TabsList>
-            <TabsTrigger value="editor">
-              <FileText className="size-4" />
-              Editor
+            <TabsTrigger value="fila">
+              <Sparkles className="size-4" />
+              Fila
             </TabsTrigger>
-            <TabsTrigger value="preview">
-              <Eye className="size-4" />
-              Preview
+            <TabsTrigger value="template">
+              <FileText className="size-4" />
+              Remetente e template
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="editor" className="pt-4">
+          <TabsContent value="fila" className="pt-4">
+            <RecipientQueue
+              recipients={recipients}
+              disabled={loading}
+              onChange={(rows: Recipient[]) => {
+                setRecipients(rows);
+                setCsvColumns((prev) => (prev.includes(AI_COLUMN) ? prev : [...prev, AI_COLUMN]));
+              }}
+            />
+          </TabsContent>
+          <TabsContent value="template" className="pt-4">
             <EmailEditor
               formData={formData}
               columns={csvColumns}
@@ -301,37 +302,41 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
               onChange={updateForm}
             />
           </TabsContent>
-          <TabsContent value="preview" className="pt-4">
-            <EmailPreview formData={formData} recipient={recipients[0]} />
-          </TabsContent>
         </Tabs>
       </Step>
 
       <Step
-        step={4}
-        title="Preview personalizado"
-        description="Como o primeiro destinatário vai receber a mensagem."
+        step={3}
+        title="Revisão de cada e-mail"
+        description="Confira e aprove, um a um, exatamente o que cada destinatário vai receber."
         icon={<Eye className="size-4" />}
         active={currentStep === 3}
       >
-        <EmailPreview formData={formData} recipient={recipients[0]} />
+        <FinalReview
+          recipients={recipients}
+          formData={formData}
+          approved={approved}
+          disabled={loading}
+          onApprovedChange={setApproved}
+        />
       </Step>
 
+
       <Step
-        step={5}
+        step={4}
         title="Enviar"
         description="O envio respeita o limite de 1 e-mail por segundo."
         icon={<Send className="size-4" />}
         active={currentStep === 4}
       >
         <div className="space-y-4">
-          {recipients.length > LARGE_BATCH_THRESHOLD && (
+          {approvedRecipients.length > LARGE_BATCH_THRESHOLD && (
             <Alert>
               <AlertTriangle className="size-4" />
               <AlertTitle>Lote grande</AlertTitle>
               <AlertDescription>
-                Você está prestes a enviar {recipients.length} e-mails de uma vez. Isso pode levar
-                cerca de {Math.ceil(recipients.length / RATE_LIMIT_PER_SECOND / 60)} minutos e
+                Você está prestes a enviar {approvedRecipients.length} e-mails de uma vez. Isso pode levar
+                cerca de {Math.ceil(approvedRecipients.length / RATE_LIMIT_PER_SECOND / 60)} minutos e
                 aumenta o risco de bloqueio por spam.
               </AlertDescription>
             </Alert>
@@ -342,7 +347,7 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
           <div className="flex flex-wrap items-center gap-3">
             <Button size="lg" className="min-w-56" disabled={loading} onClick={() => void handleSend()}>
               <Send className="size-4" />
-              {loading ? "Enviando…" : `Enviar ${recipients.length} e-mails`}
+              {loading ? "Enviando…" : `Enviar ${approvedRecipients.length} e-mails aprovados`}
             </Button>
             <Tooltip>
               <TooltipTrigger asChild>
