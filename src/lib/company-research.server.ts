@@ -1,5 +1,5 @@
 import type { ScrapedPage } from "./firecrawl.server";
-import { scrapePage, searchWeb } from "./firecrawl.server";
+import { isFirecrawlConfigured, scrapePage, searchWeb } from "./firecrawl.server";
 
 export type CollectedResearch = {
   ok: boolean;
