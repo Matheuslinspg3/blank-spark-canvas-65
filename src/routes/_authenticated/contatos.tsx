@@ -147,8 +147,9 @@ function ContatosPage() {
     }
 
     const personalized = siteContent !== null;
+    const validContent = siteContent ?? "";
     const prompt = personalized
-      ? buildPersonalizedPrompt({ nome: row.nome, categoria: row.categoria, siteContent })
+      ? buildPersonalizedPrompt({ nome: row.nome, categoria: row.categoria, siteContent: validContent })
       : buildGenericPrompt({ nome: row.nome, categoria: row.categoria });
 
     try {
