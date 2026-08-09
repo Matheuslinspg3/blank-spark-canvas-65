@@ -113,14 +113,16 @@ function ContatosPage() {
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [historyRow, setHistoryRow] = useState<CsvRow | null>(null);
+  const [phase, setPhase] = useState<Record<string, "pesquisando" | "escrevendo">>({});
 
   const fetchRows = useServerFn(listCsvRows);
   const fetchEvents = useServerFn(listCsvRowEvents);
   const importRows = useServerFn(importCsvRows);
   const updateRow = useServerFn(updateCsvRow);
   const removeRow = useServerFn(deleteCsvRow);
-  const scrapeSite = useServerFn(fetchSiteText);
+  const research = useServerFn(researchCompany);
   const logEvent = useServerFn(logCsvRowEvent);
+
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["csv-rows"],
