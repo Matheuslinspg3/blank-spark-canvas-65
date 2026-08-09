@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { RowFilters } from "@/components/contatos/RowFilters";
+import { DossierPanel } from "@/components/revisao/DossierPanel";
 import { EmailReviewDialog } from "@/components/revisao/EmailReviewDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -199,12 +200,18 @@ function RevisaoPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
+                <DossierPanel
+                  dossier={row.research}
+                  sources={row.research_sources ?? []}
+                  compact
+                />
                 <Textarea
                   rows={10}
                   className="text-sm leading-relaxed"
                   value={textOf(row)}
                   onChange={(e) => setDrafts((prev) => ({ ...prev, [row.id]: e.target.value }))}
                 />
+
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
                     variant="outline"

@@ -10,6 +10,8 @@ export type CsvRowEvent = {
   is_personalized: boolean | null;
   site_ok: boolean | null;
   site_reason: string | null;
+  research_ok: boolean | null;
+  research_sources_count: number | null;
   error_message: string | null;
   created_at: string;
 };
@@ -22,8 +24,11 @@ export type CsvRowEventInput = {
   is_personalized?: boolean | null;
   site_ok?: boolean | null;
   site_reason?: string | null;
+  research_ok?: boolean | null;
+  research_sources_count?: number | null;
   error_message?: string | null;
 };
+
 
 export type RunSummary = {
   run_id: string;

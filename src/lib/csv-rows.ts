@@ -3,6 +3,8 @@
  * de CSV e a geração de e-mails com IA.
  */
 
+import { dossierToText, type CompanyDossier, type ResearchSource } from "./company-research";
+
 export type CsvRowStatus = "pendente" | "processando" | "gerado" | "erro";
 
 export type CsvRow = {
@@ -17,6 +19,8 @@ export type CsvRow = {
   is_personalized: boolean;
   approved: boolean;
   error_message: string | null;
+  research: CompanyDossier | null;
+  research_sources: ResearchSource[];
   created_at: string;
   updated_at: string;
 };
@@ -30,8 +34,11 @@ export type CsvRowPatch = Partial<
     | "is_personalized"
     | "approved"
     | "error_message"
+    | "research"
+    | "research_sources"
   >
 >;
+
 
 export const CSV_ROW_STATUS_LABEL: Record<CsvRowStatus, string> = {
   pendente: "Pendente",
@@ -77,27 +84,29 @@ export function domainFromEmail(email: string): string | null {
   return domain;
 }
 
-/** Prompt para e-mail personalizado, com trava contra invenção de dados. */
+/** Prompt de redação a partir do dossiê da pesquisa. */
 export function buildPersonalizedPrompt(row: {
   nome: string;
   categoria: string;
-  siteContent: string;
+  dossier: CompanyDossier;
 }): string {
   return `Escreva um e-mail comercial curto (máx. 150 palavras) em português do Brasil para:
-- Nome: ${row.nome || "(não informado)"}
+- Nome do contato: ${row.nome || "(não informado)"}
 - Categoria/segmento: ${row.categoria || "(não informado)"}
 
-Conteúdo real extraído do site da empresa (use APENAS estas informações como referência factual):
+Dossiê da empresa, resultado de pesquisa na web (use APENAS estes fatos):
 """
-${row.siteContent}
+${dossierToText(row.dossier)}
 """
 
 Regras obrigatórias:
-- NÃO invente informações, números, clientes, produtos ou fatos que não estejam no texto acima.
-- Se algo não estiver no texto, simplesmente não mencione.
-- Tom profissional e direto, com uma abertura personalizada mostrando que você leu o site.
+- Abra o e-mail ancorando em UM fato concreto do dossiê (o que a empresa faz, um serviço ou um sinal recente).
+- NÃO invente informações, números, clientes, produtos ou fatos que não estejam no dossiê.
+- Se algo não estiver no dossiê, simplesmente não mencione.
+- Tom profissional e direto, terminando com um convite claro para conversar.
 - Devolva apenas o corpo do e-mail em texto puro, sem assunto e sem HTML.`;
 }
+
 
 /** Prompt de fallback genérico (sem dados do site). */
 export function buildGenericPrompt(row: { nome: string; categoria: string }): string {
