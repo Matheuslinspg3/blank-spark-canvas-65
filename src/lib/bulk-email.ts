@@ -106,13 +106,36 @@ export function parseCsv(text: string): ParsedCsv {
 /* Templating                                                                  */
 /* -------------------------------------------------------------------------- */
 
-/** Replaces {{coluna}} placeholders with the recipient's values (vazio quando não existe). */
+function titleCase(value: string): string {
+  return value
+    .split(/[.\-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+/**
+ * Valores derivados do e-mail quando a coluna não existe no CSV: evita que o
+ * preview mostre "Olá, !" quando o arquivo só tem a coluna email.
+ */
+function fallbackValue(key: string, recipient: Recipient): string {
+  const email = recipient["email"] ?? "";
+  const [local = "", domain = ""] = email.split("@");
+  if (key === "nome") return titleCase(local);
+  if (key === "empresa") return titleCase(domain.replace(/\.(com|net|org)(\.[a-z]{2})?$/i, ""));
+  return "";
+}
+
+/** Replaces {{coluna}} placeholders with the recipient's values. */
 export function interpolate(template: string, recipient: Recipient | undefined): string {
   if (!recipient) return template;
-  return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_match, key: string) => {
-    return recipient[key.toLowerCase()] ?? "";
+  return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_match, raw: string) => {
+    const key = raw.toLowerCase();
+    const value = (recipient[key] ?? "").trim();
+    return value || fallbackValue(key, recipient);
   });
 }
+
 
 /** Coluna do texto gerado na fila (passo 2). */
 const AI_TEXT_COLUMN = "ia_conteudo";
