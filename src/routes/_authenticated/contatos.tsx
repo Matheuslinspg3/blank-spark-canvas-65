@@ -34,6 +34,15 @@ import {
 } from "@/components/ui/table";
 import { callAi, isAiConfigured, loadAiSettings } from "@/lib/ai-config";
 import { downloadFile, parseCsv } from "@/lib/bulk-email";
+import {
+  RESEARCH_SYSTEM_PROMPT,
+  buildResearchPrompt,
+  isUsefulDossier,
+  parseDossier,
+  type CompanyDossier,
+  type ResearchSource,
+} from "@/lib/company-research";
+import { researchCompany } from "@/lib/company-research.functions";
 import { formatDateTime, summarizeRuns, type CsvRowEventInput } from "@/lib/csv-row-events";
 import {
   CSV_ROW_STATUS_LABEL,
@@ -42,19 +51,18 @@ import {
   buildGenericPrompt,
   buildPersonalizedPrompt,
   domainFromEmail,
-  isTrustworthyContent,
   type CsvRow,
   type CsvRowStatus,
 } from "@/lib/csv-rows";
 import {
   deleteCsvRow,
-  fetchSiteText,
   importCsvRows,
   listCsvRowEvents,
   listCsvRows,
   logCsvRowEvent,
   updateCsvRow,
 } from "@/lib/csv-rows.functions";
+
 
 const searchSchema = z.object({
   q: fallback(z.string(), "").default(""),
