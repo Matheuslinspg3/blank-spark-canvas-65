@@ -114,27 +114,170 @@ function titleCase(value: string): string {
     .join(" ");
 }
 
+/** Provedores de e-mail gratuitos: o domínio não é o nome da empresa. */
+const FREE_EMAIL_DOMAINS = [
+  "gmail.com",
+  "googlemail.com",
+  "outlook.com",
+  "outlook.com.br",
+  "hotmail.com",
+  "hotmail.com.br",
+  "live.com",
+  "msn.com",
+  "yahoo.com",
+  "yahoo.com.br",
+  "icloud.com",
+  "me.com",
+  "bol.com.br",
+  "uol.com.br",
+  "terra.com.br",
+  "ig.com.br",
+  "globo.com",
+  "zipmail.com.br",
+  "protonmail.com",
+  "proton.me",
+];
+
+/** Caixas genéricas: não são nome de pessoa, então a saudação fica neutra. */
+const GENERIC_LOCAL_PARTS = [
+  "imprensa",
+  "contato",
+  "contatos",
+  "comercial",
+  "vendas",
+  "sac",
+  "suporte",
+  "atendimento",
+  "financeiro",
+  "marketing",
+  "rh",
+  "faleconosco",
+  "fale",
+  "info",
+  "admin",
+  "adm",
+  "diretoria",
+  "presidencia",
+  "presidente",
+  "juridico",
+  "compras",
+  "noreply",
+  "no-reply",
+  "naoresponda",
+  "hello",
+  "hi",
+  "team",
+  "equipe",
+  "press",
+  "media",
+  "support",
+  "sales",
+  "contact",
+];
+
+function isGenericLocalPart(local: string): boolean {
+  const normalized = local
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z]/g, "");
+  return GENERIC_LOCAL_PARTS.some((term) => normalized === term.replace(/[^a-z]/g, ""));
+}
+
 /**
- * Valores derivados do e-mail quando a coluna não existe no CSV: evita que o
- * preview mostre "Olá, !" quando o arquivo só tem a coluna email.
+ * Valores derivados do e-mail quando a coluna não existe no CSV. Caixas
+ * genéricas (imprensa@, contato@) e provedores gratuitos não viram nome nem
+ * empresa — nesses casos o placeholder fica vazio e a saudação é limpa depois.
  */
 function fallbackValue(key: string, recipient: Recipient): string {
   const email = recipient["email"] ?? "";
   const [local = "", domain = ""] = email.split("@");
-  if (key === "nome") return titleCase(local);
-  if (key === "empresa") return titleCase(domain.replace(/\.(com|net|org)(\.[a-z]{2})?$/i, ""));
+  if (key === "nome") {
+    if (!local || isGenericLocalPart(local)) return "";
+    return titleCase(local);
+  }
+  if (key === "empresa") {
+    const host = domain.toLowerCase();
+    if (!host || FREE_EMAIL_DOMAINS.includes(host)) return "";
+    return titleCase(host.replace(/\.(com|net|org|co)(\.[a-z]{2})?$/i, ""));
+  }
   return "";
+}
+
+/**
+ * Remove sobras de saudação quando o nome/empresa ficou vazio:
+ * "Olá, !" vira "Olá!", "para a ." desaparece.
+ */
+function tidyInterpolated(text: string): string {
+  return text
+    .replace(/,\s*(?=[!?.,])/g, "")
+    .replace(/\s+([!?.,;:])/g, "$1")
+    .replace(/\b(?:para|da|de|do|na|no|a|à)\s+(?:a\s+|o\s+)?(?=[.,!?;:])/gi, "")
+    .replace(/[ \t]{2,}/g, " ");
 }
 
 /** Replaces {{coluna}} placeholders with the recipient's values. */
 export function interpolate(template: string, recipient: Recipient | undefined): string {
   if (!recipient) return template;
-  return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_match, raw: string) => {
+  const filled = template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_match, raw: string) => {
     const key = raw.toLowerCase();
     const value = (recipient[key] ?? "").trim();
     return value || fallbackValue(key, recipient);
   });
+  return tidyInterpolated(filled);
 }
+
+/** Palavras/sinais que empurram o e-mail para a aba Promoções do Gmail. */
+const PROMO_SUBJECT_TERMS = [
+  "novidade",
+  "oferta",
+  "desconto",
+  "promoção",
+  "promocao",
+  "grátis",
+  "gratis",
+  "imperdível",
+  "imperdivel",
+  "exclusivo",
+  "última chance",
+  "ultima chance",
+  "cupom",
+  "black friday",
+  "off",
+];
+
+/** Devolve os gatilhos promocionais encontrados no assunto. */
+export function promoSubjectWarnings(subject: string): string[] {
+  const value = subject.trim();
+  if (!value) return [];
+  const lower = value.toLowerCase();
+  const found = PROMO_SUBJECT_TERMS.filter((term) => lower.includes(term));
+  const letters = value.replace(/[^A-Za-zÀ-ÿ]/g, "");
+  if (letters.length >= 4 && letters === letters.toUpperCase()) found.push("texto em CAIXA ALTA");
+  if (/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(value)) found.push("emoji");
+  if (value.includes("!!")) found.push("excesso de exclamação");
+  return [...new Set(found)];
+}
+
+/** Versão em texto puro do HTML, enviada junto para melhorar a entrega. */
+export function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|tr|h[1-6]|li)>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 
 
 /** Coluna do texto gerado na fila (passo 2). */
