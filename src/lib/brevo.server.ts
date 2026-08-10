@@ -70,9 +70,6 @@ export async function sendCampaignViaBrevo(payload: SendBulkPayload): Promise<Se
           // Versão em texto puro + sem rastreio: sinais que ajudam o e-mail a
           // cair na caixa principal em vez da aba Promoções.
           textContent: htmlToPlainText(htmlContent),
-          headers: { "X-Mailin-custom": "type=transactional" },
-          params: {},
-          tags: ["transacional"],
         }),
       });
 
