@@ -191,6 +191,8 @@ function ConfiguracoesPage() {
         </CardContent>
       </Card>
 
+      <SendersCard />
+
       <Alert>
         <KeyRound className="size-4" />
         <AlertTitle>Sobre segurança</AlertTitle>
@@ -202,3 +204,108 @@ function ConfiguracoesPage() {
     </main>
   );
 }
+
+function SendersCard() {
+  const [config, setConfig] = useState<SendersConfig>(EMPTY_SENDERS);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    setConfig(loadSenders());
+  }, []);
+
+  function persist(next: SendersConfig) {
+    setConfig(next);
+    saveSenders(next);
+  }
+
+  function handleAdd() {
+    const trimmed = email.trim().toLowerCase();
+    if (!isValidEmail(trimmed)) {
+      toast.error("Informe um e-mail válido.");
+      return;
+    }
+    if (config.list.some((s) => s.email === trimmed)) {
+      toast.error("Esse remetente já está na lista.");
+      return;
+    }
+    persist({
+      list: [...config.list, { name: name.trim(), email: trimmed }],
+      defaultEmail: config.defaultEmail || trimmed,
+    });
+    setName("");
+    setEmail("");
+    toast.success("Remetente adicionado");
+  }
+
+  function handleRemove(target: string) {
+    const list = config.list.filter((s) => s.email !== target);
+    persist({
+      list,
+      defaultEmail: config.defaultEmail === target ? (list[0]?.email ?? "") : config.defaultEmail,
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <MailCheck className="size-4" />
+          Remetentes verificados (Brevo)
+        </CardTitle>
+        <CardDescription>
+          Cadastre aqui apenas os endereços já verificados na Brevo (Senders &amp; IPs → Senders).
+          Com a lista preenchida, o disparo só permite escolher um deles.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-2 sm:grid-cols-[1fr_1.4fr_auto]">
+          <Input
+            value={name}
+            placeholder="Nome (ex.: Equipe Acme)"
+            onChange={(e) => setName(e.target.value)}
+          />
+          <Input
+            type="email"
+            value={email}
+            placeholder="contato@suaempresa.com"
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Button onClick={handleAdd}>Adicionar</Button>
+        </div>
+
+        {config.list.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            Nenhum remetente cadastrado — o disparo continua pedindo o e-mail digitado.
+          </p>
+        ) : (
+          <ul className="divide-y rounded-lg border">
+            {config.list.map((sender) => (
+              <li key={sender.email} className="flex items-center gap-3 p-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{sender.name || sender.email}</p>
+                  <p className="text-muted-foreground truncate text-xs">{sender.email}</p>
+                </div>
+                {config.defaultEmail === sender.email ? (
+                  <span className="text-primary text-xs font-medium">Padrão</span>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => persist({ ...config, defaultEmail: sender.email })}
+                  >
+                    Tornar padrão
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" onClick={() => handleRemove(sender.email)}>
+                  <Trash2 className="size-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
