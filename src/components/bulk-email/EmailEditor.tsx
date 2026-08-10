@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TEMPLATE_STORAGE_KEY, type EmailFormData } from "@/lib/bulk-email";
+import { SenderFields } from "./SenderFields";
 
 type EmailEditorProps = {
   formData: EmailFormData;
