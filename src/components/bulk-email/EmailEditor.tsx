@@ -64,7 +64,10 @@ export function EmailEditor({ formData, columns, disabled, onChange }: EmailEdit
 
       <TemplateGenerator
         disabled={disabled}
-        onGenerated={(html) => onChange({ htmlTemplate: html })}
+        defaultSignerName={formData.senderName}
+        onGenerated={({ html, subject }) =>
+          onChange({ htmlTemplate: html, ...(subject ? { subject } : {}) })
+        }
       />
 
 
