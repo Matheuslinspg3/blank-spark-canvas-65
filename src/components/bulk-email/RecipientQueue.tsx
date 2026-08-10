@@ -26,7 +26,9 @@ import {
   loadAiSettings,
   type AiSettings,
 } from "@/lib/ai-config";
-import type { Recipient } from "@/lib/bulk-email";
+import { DYNAMIC_FIELDS, type Recipient } from "@/lib/bulk-email";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type RecipientQueueProps = {
   recipients: Recipient[];
@@ -62,6 +64,10 @@ export function RecipientQueue({ recipients, disabled, onChange }: RecipientQueu
     const status = statuses[index];
     if (status === "gerando" || status === "erro") return status;
     return (recipients[index]?.[AI_COLUMN] ?? "").trim().length > 0 ? "ok" : "pendente";
+  }
+
+  function setField(index: number, field: string, value: string) {
+    onChange(latest.current.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
   }
 
   function setText(index: number, text: string) {
@@ -216,6 +222,23 @@ export function RecipientQueue({ recipients, disabled, onChange }: RecipientQueu
                   {status === "ok" ? "Regerar" : "Gerar com IA"}
                 </Button>
               </div>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {DYNAMIC_FIELDS.map((field) => (
+                  <div key={field} className="space-y-1">
+                    <Label htmlFor={`${field}-${index}`} className="text-muted-foreground text-xs capitalize">
+                      {field}
+                    </Label>
+                    <Input
+                      id={`${field}-${index}`}
+                      className="h-8 text-xs"
+                      value={recipient[field] ?? ""}
+                      disabled={disabled}
+                      placeholder={field === "cargo" ? "Diretor" : field === "empresa" ? "Acme" : "Ana"}
+                      onChange={(event) => setField(index, field, event.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
               <Textarea
                 value={recipient[AI_COLUMN] ?? ""}
                 disabled={disabled || status === "gerando"}
@@ -232,8 +255,11 @@ export function RecipientQueue({ recipients, disabled, onChange }: RecipientQueu
       </div>
 
       <p className="text-muted-foreground text-xs">
-        Use <code className="font-mono">{`{{${AI_COLUMN}}}`}</code> no assunto ou no template HTML
-        para inserir o texto da fila de cada pessoa.
+        Use <code className="font-mono">{`{{${AI_COLUMN}}}`}</code>,{" "}
+        {DYNAMIC_FIELDS.map((field) => (
+          <code key={field} className="font-mono">{`{{${field}}} `}</code>
+        ))}
+        no assunto ou no template HTML para inserir os dados de cada pessoa.
       </p>
     </div>
   );

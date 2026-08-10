@@ -7,6 +7,7 @@ import {
   Mail,
   Save,
   Send,
+  ClipboardCheck,
   Settings2,
   Sparkles,
   TestTube2,
@@ -17,6 +18,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { ApprovalChecklist } from "./ApprovalChecklist";
 import { RecipientQueue } from "./RecipientQueue";
 import { CSVUploader } from "./CSVUploader";
 import { EmailEditor } from "./EmailEditor";
@@ -49,7 +51,9 @@ import {
   LARGE_BATCH_THRESHOLD,
   RATE_LIMIT_PER_SECOND,
   TEMPLATE_STORAGE_KEY,
+  VARIANT_COLUMN,
   type EmailFormData,
+  type EmailVariant,
   type Recipient,
   type Reviews,
   type SendResult,
@@ -128,6 +132,8 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [testing, setTesting] = useState(false);
+  const [abVariants, setAbVariants] = useState<EmailVariant[]>([]);
+  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
 
   // Restore a previously saved template only for a brand-new draft.
   useEffect(() => {
@@ -177,16 +183,27 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
     [recipients, reviews],
   );
 
+  const checklistDone = ["tom", "clareza", "personalizacao", "spam"].every((id) => checklist[id]);
+
   const currentStep = useMemo(() => {
-    if (results.length > 0) return 4;
+    if (results.length > 0) return 5;
     if (recipients.length === 0) return 1;
     if (!formData.subject.trim() || !formData.htmlTemplate.trim()) return 2;
     if (approvedRecipients.length === 0) return 3;
-    return 4;
-  }, [recipients.length, formData.subject, formData.htmlTemplate, results.length, approvedRecipients.length]);
+    if (!checklistDone) return 4;
+    return 5;
+  }, [
+    recipients.length,
+    formData.subject,
+    formData.htmlTemplate,
+    results.length,
+    approvedRecipients.length,
+    checklistDone,
+  ]);
 
   function updateForm(patch: Partial<EmailFormData>) {
     setFormData((prev) => ({ ...prev, ...patch }));
+    if (patch.subject !== undefined || patch.htmlTemplate !== undefined) setChecklist({});
   }
 
   function validate(): string | null {
@@ -195,6 +212,7 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
     if (!formData.htmlTemplate.trim()) return "Informe o template HTML.";
     if (!formData.senderEmail.trim()) return "Informe o e-mail do remetente.";
     if (approvedRecipients.length === 0) return "Aprove ao menos um e-mail no passo 3.";
+    if (!checklistDone) return "Confirme os quatro itens do checklist no passo 4.";
     return null;
   }
 
@@ -215,6 +233,27 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
       setProgress((prev) => Math.min(prev + 100 / Math.max(expectedMs / 400, 1), 95));
     }, 400);
     try {
+      if (abVariants.length >= 2) {
+        const buckets: Recipient[][] = abVariants.map(() => []);
+        list.forEach((row, index) => {
+          const slot = index % abVariants.length;
+          buckets[slot]!.push({ ...row, [VARIANT_COLUMN]: abVariants[slot]!.label });
+        });
+        const batches = await Promise.all(
+          buckets.map((bucket, slot) =>
+            bucket.length === 0
+              ? Promise.resolve([] as SendResult[])
+              : sendBulkEmails({
+                  recipients: bucket,
+                  senderName: formData.senderName,
+                  senderEmail: formData.senderEmail,
+                  subject: abVariants[slot]!.subject || formData.subject,
+                  htmlTemplate: abVariants[slot]!.html,
+                }),
+          ),
+        );
+        return batches.flat();
+      }
       return await sendBulkEmails({ recipients: list, ...formData });
     } finally {
       window.clearInterval(ticker);
@@ -222,7 +261,23 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
     }
   }
 
+  /** Marca no CSV qual variação A/B cada destinatário aprovado recebeu. */
+  function tagVariants() {
+    if (abVariants.length < 2) return;
+    const slotByEmail = new Map<string, string>();
+    approvedRecipients.forEach((row, index) => {
+      slotByEmail.set(row["email"] ?? "", abVariants[index % abVariants.length]!.label);
+    });
+    setRecipients((prev) =>
+      prev.map((row) => {
+        const label = slotByEmail.get(row["email"] ?? "");
+        return label ? { ...row, [VARIANT_COLUMN]: label } : row;
+      }),
+    );
+  }
+
   async function handleSend() {
+    tagVariants();
     setLoading(true);
     setResults([]);
     setStatus("enviando");
@@ -429,6 +484,7 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
               columns={csvColumns}
               disabled={loading}
               onChange={updateForm}
+              onAbChange={setAbVariants}
             />
           </TabsContent>
         </Tabs>
@@ -452,10 +508,26 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
 
       <Step
         step={4}
+        title="Prévia e aprovação"
+        description="Confira o e-mail renderizado e confirme o checklist antes de enviar ou baixar."
+        icon={<ClipboardCheck className="size-4" />}
+        active={currentStep === 4}
+      >
+        <ApprovalChecklist
+          formData={formData}
+          recipients={approvedRecipients.length > 0 ? approvedRecipients : recipients}
+          disabled={loading}
+          confirmed={checklist}
+          onConfirmedChange={setChecklist}
+        />
+      </Step>
+
+      <Step
+        step={5}
         title="Enviar"
         description="Teste antes, confirme e acompanhe as falhas com reenvio."
         icon={<Send className="size-4" />}
-        active={currentStep === 4}
+        active={currentStep === 5}
       >
         <div className="space-y-4">
           <div className="space-y-2 rounded-lg border p-3">
@@ -509,10 +581,38 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
             </Alert>
           )}
 
+          {!checklistDone && (
+            <Alert>
+              <ClipboardCheck className="size-4" />
+              <AlertTitle>Checklist pendente</AlertTitle>
+              <AlertDescription>
+                Confirme os quatro itens do passo 4 (tom, clareza, personalização e risco de spam)
+                para liberar o envio.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {abVariants.length >= 2 && (
+            <Alert>
+              <Sparkles className="size-4" />
+              <AlertTitle>Teste A/B ativo</AlertTitle>
+              <AlertDescription>
+                Os aprovados serão divididos entre {abVariants.length} variações (
+                {abVariants.map((v) => v.label).join(", ")}). O relatório mostra qual cada pessoa
+                recebeu.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {(loading || retrying) && <Progress value={progress} />}
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button size="lg" className="min-w-56" disabled={loading} onClick={requestSend}>
+            <Button
+              size="lg"
+              className="min-w-56"
+              disabled={loading || !checklistDone}
+              onClick={requestSend}
+            >
               <Send className="size-4" />
               {loading ? "Enviando…" : `Enviar ${approvedRecipients.length} e-mails aprovados`}
             </Button>
