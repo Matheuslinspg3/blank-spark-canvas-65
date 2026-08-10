@@ -59,6 +59,7 @@ import { updateCampaign } from "@/lib/campaigns.functions";
 import { sendBulkEmails } from "@/lib/send-campaign";
 import { sendTestEmailFn } from "@/lib/send-email.functions";
 import { AI_COLUMN } from "@/lib/ai-config";
+import { defaultSender, loadSenders } from "@/lib/senders";
 
 /** Numbered step wrapper used by every section of the dashboard. */
 function Step({
