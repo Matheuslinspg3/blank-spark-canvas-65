@@ -135,6 +135,17 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
     if (saved) setFormData((prev) => ({ ...prev, htmlTemplate: saved }));
   }, [campaign.html_template]);
 
+  // Pré-seleciona o remetente verificado padrão em disparos sem remetente.
+  useEffect(() => {
+    if (campaign.sender_email) return;
+    const sender = defaultSender(loadSenders());
+    if (sender) {
+      setFormData((prev) => ({ ...prev, senderName: sender.name, senderEmail: sender.email }));
+    }
+  }, [campaign.sender_email]);
+
+
+
   const persist = useRef(async (patch: CampaignPatch) => {
     await save({ data: { id: campaign.id, patch } });
   });
