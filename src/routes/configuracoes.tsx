@@ -18,6 +18,13 @@ import {
   testAiConnection,
   type AiSettings,
 } from "@/lib/ai-config";
+import {
+  EMPTY_SENDERS,
+  isValidEmail,
+  loadSenders,
+  saveSenders,
+  type SendersConfig,
+} from "@/lib/senders";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({
