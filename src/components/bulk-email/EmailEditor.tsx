@@ -1,4 +1,4 @@
-import { Info, Save } from "lucide-react";
+import { Info, Save, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -7,8 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { TEMPLATE_STORAGE_KEY, type EmailFormData } from "@/lib/bulk-email";
+import {
+  promoSubjectWarnings,
+  TEMPLATE_STORAGE_KEY,
+  type EmailFormData,
+} from "@/lib/bulk-email";
 import { SenderFields } from "./SenderFields";
+import { TemplateGenerator } from "./TemplateGenerator";
 
 type EmailEditorProps = {
   formData: EmailFormData;
@@ -18,6 +23,8 @@ type EmailEditorProps = {
 };
 
 export function EmailEditor({ formData, columns, disabled, onChange }: EmailEditorProps) {
+  const promoWarnings = promoSubjectWarnings(formData.subject);
+
   function saveTemplate() {
     try {
       localStorage.setItem(TEMPLATE_STORAGE_KEY, formData.htmlTemplate);
@@ -43,10 +50,23 @@ export function EmailEditor({ formData, columns, disabled, onChange }: EmailEdit
           id="subject"
           value={formData.subject}
           disabled={disabled}
-          placeholder="{{nome}}, temos uma novidade para a {{empresa}}"
+          placeholder="{{nome}}, uma ideia para a {{empresa}}"
           onChange={(e) => onChange({ subject: e.target.value })}
         />
+        {promoWarnings.length > 0 && (
+          <p className="text-muted-foreground flex items-start gap-1.5 text-xs">
+            <TriangleAlert className="text-destructive mt-0.5 size-3 shrink-0" />
+            Gatilhos de promoção no assunto ({promoWarnings.join(", ")}) — costumam empurrar o
+            e-mail para a aba Promoções do Gmail.
+          </p>
+        )}
       </div>
+
+      <TemplateGenerator
+        disabled={disabled}
+        onGenerated={(html) => onChange({ htmlTemplate: html })}
+      />
+
 
       <Alert>
         <Info className="size-4" />
