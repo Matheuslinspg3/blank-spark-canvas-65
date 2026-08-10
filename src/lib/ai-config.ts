@@ -3,6 +3,8 @@
  * dados do CSV. As credenciais ficam apenas no navegador (localStorage).
  */
 
+import { CAFCM_PROPOSAL_CONTEXT } from "./cafcm-proposal";
+
 export type AiSettings = {
   baseUrl: string;
   apiKey: string;
@@ -15,9 +17,13 @@ export const AI_SETTINGS_KEY = "bulk-email:ai-settings";
 /** Coluna criada no CSV com o texto gerado pela IA. */
 export const AI_COLUMN = "ia_conteudo";
 
-export const DEFAULT_RESEARCH_PROMPT = `Você é um redator de e-mails comerciais em português do Brasil.
-Com base nos dados do destinatário abaixo, pesquise mentalmente o contexto da pessoa/empresa
-e escreva um parágrafo curto (no máximo 3 frases) altamente personalizado para abrir o e-mail.
+export const DEFAULT_RESEARCH_PROMPT = `Você é um redator de e-mails comerciais em português do Brasil, escrevendo em nome da CAFCM.
+
+${CAFCM_PROPOSAL_CONTEXT}
+
+Com base nos dados do destinatário abaixo, use o contexto da empresa/pessoa e escreva um parágrafo
+curto (no máximo 3 frases) altamente personalizado para abrir o e-mail, conectando a realidade do
+destinatário à proposta de jovem aprendiz da CAFCM.
 Não use saudação, assinatura ou HTML — devolva apenas o texto do parágrafo.`;
 
 export const DEFAULT_AI_SETTINGS: AiSettings = {
