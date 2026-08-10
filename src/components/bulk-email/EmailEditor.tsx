@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TEMPLATE_STORAGE_KEY, type EmailFormData } from "@/lib/bulk-email";
+import { SenderFields } from "./SenderFields";
 
 type EmailEditorProps = {
   formData: EmailFormData;
@@ -28,29 +29,13 @@ export function EmailEditor({ formData, columns, disabled, onChange }: EmailEdit
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="senderName">Nome do remetente</Label>
-          <Input
-            id="senderName"
-            value={formData.senderName}
-            disabled={disabled}
-            placeholder="Equipe Acme"
-            onChange={(e) => onChange({ senderName: e.target.value })}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="senderEmail">E-mail do remetente</Label>
-          <Input
-            id="senderEmail"
-            type="email"
-            value={formData.senderEmail}
-            disabled={disabled}
-            placeholder="contato@suaempresa.com"
-            onChange={(e) => onChange({ senderEmail: e.target.value })}
-          />
-        </div>
-      </div>
+      <SenderFields
+        senderName={formData.senderName}
+        senderEmail={formData.senderEmail}
+        disabled={disabled}
+        onChange={onChange}
+      />
+
 
       <div className="space-y-2">
         <Label htmlFor="subject">Assunto</Label>

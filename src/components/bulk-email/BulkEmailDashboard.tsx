@@ -22,6 +22,7 @@ import { CSVUploader } from "./CSVUploader";
 import { EmailEditor } from "./EmailEditor";
 import { FinalReview } from "./FinalReview";
 import { ResultsTable } from "./ResultsTable";
+import { SenderFields } from "./SenderFields";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -58,6 +59,7 @@ import { updateCampaign } from "@/lib/campaigns.functions";
 import { sendBulkEmails } from "@/lib/send-campaign";
 import { sendTestEmailFn } from "@/lib/send-email.functions";
 import { AI_COLUMN } from "@/lib/ai-config";
+import { defaultSender, loadSenders } from "@/lib/senders";
 
 /** Numbered step wrapper used by every section of the dashboard. */
 function Step({
@@ -133,6 +135,17 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
     const saved = localStorage.getItem(TEMPLATE_STORAGE_KEY);
     if (saved) setFormData((prev) => ({ ...prev, htmlTemplate: saved }));
   }, [campaign.html_template]);
+
+  // Pré-seleciona o remetente verificado padrão em disparos sem remetente.
+  useEffect(() => {
+    if (campaign.sender_email) return;
+    const sender = defaultSender(loadSenders());
+    if (sender) {
+      setFormData((prev) => ({ ...prev, senderName: sender.name, senderEmail: sender.email }));
+    }
+  }, [campaign.sender_email]);
+
+
 
   const persist = useRef(async (patch: CampaignPatch) => {
     await save({ data: { id: campaign.id, patch } });
@@ -454,25 +467,14 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
               Usa os dados do primeiro destinatário aprovado para montar o e-mail. O remetente é o
               endereço que aparece como "De:" — precisa ser um e-mail verificado na Brevo.
             </p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Input
-                value={formData.senderName}
-                placeholder="Nome do remetente (ex.: Equipe Acme)"
-                className="h-9"
-                aria-label="Nome do remetente"
-                disabled={loading || testing}
-                onChange={(event) => updateForm({ senderName: event.target.value })}
-              />
-              <Input
-                type="email"
-                value={formData.senderEmail}
-                placeholder="E-mail do remetente (ex.: contato@acme.com)"
-                className="h-9"
-                aria-label="E-mail do remetente"
-                disabled={loading || testing}
-                onChange={(event) => updateForm({ senderEmail: event.target.value })}
-              />
-            </div>
+            <SenderFields
+              senderName={formData.senderName}
+              senderEmail={formData.senderEmail}
+              disabled={loading || testing}
+              compact
+              onChange={updateForm}
+            />
+
             <div className="flex flex-wrap gap-2">
               <Input
                 type="email"
