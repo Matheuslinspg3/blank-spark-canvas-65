@@ -19,7 +19,7 @@ import { SpamCheckPanel } from "./SpamCheckPanel";
 type ApprovalChecklistProps = {
   formData: EmailFormData;
   recipients: Recipient[];
-  disabled?: boolean;
+  disabled?: boolean | undefined;
   confirmed: Record<string, boolean>;
   onConfirmedChange: (value: Record<string, boolean>) => void;
 };

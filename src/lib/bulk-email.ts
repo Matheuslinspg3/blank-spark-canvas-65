@@ -420,7 +420,7 @@ export function buildReportCsv(
   sentAt?: string | null,
 ): string {
   const byEmail = new Map(results.map((result) => [result.email, result]));
-  const header = "email,nome,status,decidido_em,enviado_em,message_id,erro";
+  const header = "email,nome,empresa,cargo,variacao,status,decidido_em,enviado_em,message_id,erro";
 
   const lines = recipients.map((recipient) => {
     const email = recipient["email"] ?? "";
@@ -430,6 +430,9 @@ export function buildReportCsv(
     return [
       csvCell(email),
       csvCell(recipient["nome"] ?? ""),
+      csvCell(recipient["empresa"] ?? ""),
+      csvCell(recipient["cargo"] ?? ""),
+      csvCell(recipient[VARIANT_COLUMN] ?? ""),
       csvCell(status),
       csvCell(formatDate(review?.at)),
       csvCell(result ? formatDate(sentAt) : ""),
