@@ -202,11 +202,25 @@ function isGenericLocalPart(local: string): boolean {
  * genéricas (imprensa@, contato@) e provedores gratuitos não viram nome nem
  * empresa — nesses casos o placeholder fica vazio e a saudação é limpa depois.
  */
+/**
+ * Só aceita o local part como nome quando ele realmente parece um nome:
+ * sem dígitos e com partes curtas ("joao.silva" sim, "matheuslinskr" não).
+ */
+function looksLikeName(local: string): boolean {
+  if (/\d/.test(local)) return false;
+  const parts = local
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+  if (parts.length === 0 || parts.length > 3) return false;
+  return parts.every((part) => /^[a-zA-Z]{2,12}$/.test(part));
+}
+
 function fallbackValue(key: string, recipient: Recipient): string {
   const email = recipient["email"] ?? "";
   const [local = "", domain = ""] = email.split("@");
   if (key === "nome") {
-    if (!local || isGenericLocalPart(local)) return "";
+    if (!local || isGenericLocalPart(local) || !looksLikeName(local)) return "";
     return titleCase(local);
   }
   if (key === "empresa") {
