@@ -12,7 +12,9 @@ import {
   TEMPLATE_STORAGE_KEY,
   type EmailFormData,
 } from "@/lib/bulk-email";
+import type { EmailVariant } from "@/lib/bulk-email";
 import { SenderFields } from "./SenderFields";
+import { SpamCheckPanel } from "./SpamCheckPanel";
 import { TemplateGenerator } from "./TemplateGenerator";
 
 type EmailEditorProps = {
@@ -20,9 +22,16 @@ type EmailEditorProps = {
   columns: string[];
   disabled: boolean;
   onChange: (patch: Partial<EmailFormData>) => void;
+  onAbChange?: ((variants: EmailVariant[]) => void) | undefined;
 };
 
-export function EmailEditor({ formData, columns, disabled, onChange }: EmailEditorProps) {
+export function EmailEditor({
+  formData,
+  columns,
+  disabled,
+  onChange,
+  onAbChange,
+}: EmailEditorProps) {
   const promoWarnings = promoSubjectWarnings(formData.subject);
 
   function saveTemplate() {
@@ -65,11 +74,19 @@ export function EmailEditor({ formData, columns, disabled, onChange }: EmailEdit
       <TemplateGenerator
         disabled={disabled}
         defaultSignerName={formData.senderName}
+        onAbChange={onAbChange}
         onGenerated={({ html, subject }) =>
           onChange({ htmlTemplate: html, ...(subject ? { subject } : {}) })
         }
       />
 
+
+      <SpamCheckPanel
+        subject={formData.subject}
+        html={formData.htmlTemplate}
+        disabled={disabled}
+        onFixed={({ subject, html }) => onChange({ subject, htmlTemplate: html })}
+      />
 
       <Alert>
         <Info className="size-4" />
