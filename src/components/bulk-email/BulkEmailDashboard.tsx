@@ -285,8 +285,8 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
       toast.error("Informe um e-mail válido para o teste.");
       return;
     }
-    if (!formData.senderEmail.trim()) {
-      toast.error("Informe o e-mail do remetente antes do teste.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.senderEmail.trim())) {
+      toast.error("Preencha o e-mail do remetente (o endereço que aparece como 'De:') antes do teste.");
       return;
     }
     const sample = approvedRecipients[0] ?? recipients[0];
@@ -451,8 +451,28 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
               Enviar e-mail de teste
             </p>
             <p className="text-muted-foreground text-xs">
-              Usa os dados do primeiro destinatário aprovado para montar o e-mail.
+              Usa os dados do primeiro destinatário aprovado para montar o e-mail. O remetente é o
+              endereço que aparece como "De:" — precisa ser um e-mail verificado na Brevo.
             </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Input
+                value={formData.senderName}
+                placeholder="Nome do remetente (ex.: Equipe Acme)"
+                className="h-9"
+                aria-label="Nome do remetente"
+                disabled={loading || testing}
+                onChange={(event) => updateForm({ senderName: event.target.value })}
+              />
+              <Input
+                type="email"
+                value={formData.senderEmail}
+                placeholder="E-mail do remetente (ex.: contato@acme.com)"
+                className="h-9"
+                aria-label="E-mail do remetente"
+                disabled={loading || testing}
+                onChange={(event) => updateForm({ senderEmail: event.target.value })}
+              />
+            </div>
             <div className="flex flex-wrap gap-2">
               <Input
                 type="email"
