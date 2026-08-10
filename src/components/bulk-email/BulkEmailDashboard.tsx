@@ -285,8 +285,8 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
       toast.error("Informe um e-mail válido para o teste.");
       return;
     }
-    if (!formData.senderEmail.trim()) {
-      toast.error("Informe o e-mail do remetente antes do teste.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.senderEmail.trim())) {
+      toast.error("Preencha o e-mail do remetente (o endereço que aparece como 'De:') antes do teste.");
       return;
     }
     const sample = approvedRecipients[0] ?? recipients[0];
