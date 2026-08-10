@@ -19,6 +19,19 @@ export type EmailFormData = {
   htmlTemplate: string;
 };
 
+/** Variação de e-mail (assunto + corpo) usada nos testes A/B. */
+export type EmailVariant = {
+  label: string;
+  subject: string;
+  html: string;
+};
+
+/** Campos dinâmicos que podem ser preenchidos por destinatário. */
+export const DYNAMIC_FIELDS = ["nome", "empresa", "cargo"] as const;
+
+/** Coluna que registra qual variação A/B foi usada em cada destinatário. */
+export const VARIANT_COLUMN = "variacao";
+
 /** Rate limit applied by the backend when dispatching the campaign. */
 export const RATE_LIMIT_PER_SECOND = 1;
 /** Above this size we warn the user before sending. */

@@ -11,9 +11,9 @@ import { analyzeSpamRisk, SPAM_LEVEL_LABEL } from "@/lib/spam-check";
 type SpamCheckPanelProps = {
   subject: string;
   html: string;
-  disabled?: boolean;
+  disabled?: boolean | undefined;
   /** Quando informado, habilita o botão "Corrigir com IA". */
-  onFixed?: (patch: { subject: string; html: string }) => void;
+  onFixed?: ((patch: { subject: string; html: string }) => void) | undefined;
 };
 
 const SYSTEM_PROMPT = `Você reescreve e-mails B2B em português do Brasil para que o Gmail os entregue na caixa principal, não em Promoções.
