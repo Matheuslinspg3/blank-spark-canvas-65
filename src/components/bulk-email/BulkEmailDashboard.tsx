@@ -22,6 +22,7 @@ import { CSVUploader } from "./CSVUploader";
 import { EmailEditor } from "./EmailEditor";
 import { FinalReview } from "./FinalReview";
 import { ResultsTable } from "./ResultsTable";
+import { SenderFields } from "./SenderFields";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
