@@ -43,7 +43,7 @@ export function SenderFields({
         {!compact && <Label htmlFor="senderPick">Remetente verificado</Label>}
         <Select
           value={config.list.some((s) => s.email === senderEmail) ? senderEmail : ""}
-          disabled={disabled}
+          disabled={disabled ?? false}
           onValueChange={(email) => {
             const sender = config.list.find((s) => s.email === email);
             onChange({ senderEmail: email, senderName: sender?.name ?? senderName });
