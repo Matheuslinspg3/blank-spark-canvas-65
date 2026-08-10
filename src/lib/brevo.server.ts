@@ -2,7 +2,13 @@
  * Server-only Brevo sender. Calls are routed through the Lovable connector
  * gateway, which injects the Brevo credentials of the linked connection.
  */
-import { interpolate, renderEmailHtml, type SendBulkPayload, type SendResult } from "./bulk-email";
+import {
+  htmlToPlainText,
+  interpolate,
+  renderEmailHtml,
+  type SendBulkPayload,
+  type SendResult,
+} from "./bulk-email";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/brevo";
 /** Brevo is called at most once per second to respect the campaign rate limit. */
@@ -46,6 +52,8 @@ export async function sendCampaignViaBrevo(payload: SendBulkPayload): Promise<Se
 
     if (index > 0) await sleep(DELAY_MS);
 
+    const htmlContent = renderEmailHtml(payload.htmlTemplate, recipient);
+
     try {
       const response = await fetch(`${GATEWAY_URL}/smtp/email`, {
         method: "POST",
@@ -58,7 +66,13 @@ export async function sendCampaignViaBrevo(payload: SendBulkPayload): Promise<Se
           sender: { name: payload.senderName, email: payload.senderEmail },
           to: [{ email }],
           subject: interpolate(payload.subject, recipient),
-          htmlContent: renderEmailHtml(payload.htmlTemplate, recipient),
+          htmlContent,
+          // Versão em texto puro + sem rastreio: sinais que ajudam o e-mail a
+          // cair na caixa principal em vez da aba Promoções.
+          textContent: htmlToPlainText(htmlContent),
+          headers: { "X-Mailin-custom": "type=transactional" },
+          params: {},
+          tags: ["transacional"],
         }),
       });
 
