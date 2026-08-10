@@ -321,33 +321,28 @@ bruno@exemplo.com,Bruno Lima,Contoso
 carla@exemplo.com,Carla Dias,Globex
 `;
 
+/**
+ * Template padrão em formato de carta: sem faixa colorida, sem botão de
+ * campanha e sem rodapé de newsletter — o formato que o Gmail costuma
+ * classificar como e-mail pessoal em vez de promoção.
+ */
 export const DEFAULT_TEMPLATE = `<!doctype html>
 <html>
-  <body style="margin:0;padding:24px;background:#f4f5fb;font-family:Arial,Helvetica,sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;">
-      <tr>
-        <td style="background:#4f46e5;padding:28px 32px;color:#ffffff;">
-          <h1 style="margin:0;font-size:22px;">Olá, {{nome}}!</h1>
-          <p style="margin:6px 0 0;opacity:.85;font-size:14px;">Uma novidade para a {{empresa}}</p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:32px;color:#1f2937;font-size:15px;line-height:1.6;">
-          <p style="margin:0 0 16px;white-space:pre-wrap;">{{ia_conteudo}}</p>
-          <p style="margin:0 0 24px;">Clique no botão abaixo para conferir os detalhes.</p>
+  <body style="margin:0;padding:16px;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#111827;">
+    <div style="max-width:560px;margin:0 auto;font-size:15px;line-height:1.65;">
+      <p style="margin:0 0 16px;">Olá, {{nome}}!</p>
 
-          <a href="https://exemplo.com" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;">Ver novidade</a>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:20px 32px;background:#f9fafb;color:#6b7280;font-size:12px;">
-          Você recebeu este e-mail porque faz parte da nossa lista.<br />
-          <a href="#" style="color:#6b7280;">Cancelar inscrição</a>
-        </td>
-      </tr>
-    </table>
+      <div style="margin:0 0 16px;white-space:pre-wrap;">{{ia_conteudo}}</div>
+
+      <p style="margin:0 0 16px;">Se fizer sentido, respondo com mais detalhes por aqui mesmo.</p>
+
+      <p style="margin:24px 0 0;">Abraço,<br />
+      Seu Nome<br />
+      <span style="color:#6b7280;">Cargo · Sua Empresa</span></p>
+    </div>
   </body>
 </html>`;
+
 
 /* -------------------------------------------------------------------------- */
 /* Backend                                                                     */
