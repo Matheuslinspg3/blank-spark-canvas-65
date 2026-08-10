@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Bot, KeyRound, Loader2, Save, Trash2, Zap } from "lucide-react";
+import { ArrowLeft, Bot, KeyRound, Loader2, MailCheck, Save, Trash2, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
