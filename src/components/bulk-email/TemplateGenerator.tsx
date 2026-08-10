@@ -16,10 +16,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { callAi, isAiConfigured, loadAiSettings } from "@/lib/ai-config";
 import type { EmailVariant } from "@/lib/bulk-email";
+import { CAFCM_PROPOSAL_CONTEXT } from "@/lib/cafcm-proposal";
 import { analyzeSpamRisk, SPAM_LEVEL_LABEL } from "@/lib/spam-check";
 
 const SYSTEM_PROMPT = `Você escreve e-mails B2B em português do Brasil que parecem escritos à mão por uma pessoa real.
-Você devolve APENAS um objeto JSON válido, sem explicações e sem cercas de código.`;
+Você devolve APENAS um objeto JSON válido, sem explicações e sem cercas de código.
+
+${CAFCM_PROPOSAL_CONTEXT}`;
 
 const OBJECTIVES = [
   { value: "", label: "Não especificar" },
