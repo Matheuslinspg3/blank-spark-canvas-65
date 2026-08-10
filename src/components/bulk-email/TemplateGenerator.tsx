@@ -131,11 +131,11 @@ function parseVariants(raw: string): EmailVariant[] {
 
 type TemplateGeneratorProps = {
   disabled: boolean;
-  defaultSignerName?: string;
+  defaultSignerName?: string | undefined;
   /** Aplica a variação escolhida como template da campanha. */
   onGenerated: (result: { html: string; subject: string }) => void;
   /** Variações marcadas para teste A/B (2 ou mais) ou [] para envio único. */
-  onAbChange?: (variants: EmailVariant[]) => void;
+  onAbChange?: ((variants: EmailVariant[]) => void) | undefined;
 };
 
 /** Gera 2+ variações de assunto e corpo a partir do objetivo, público e e-mail base. */

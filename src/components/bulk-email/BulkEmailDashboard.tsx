@@ -183,6 +183,8 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
     [recipients, reviews],
   );
 
+  const checklistDone = ["tom", "clareza", "personalizacao", "spam"].every((id) => checklist[id]);
+
   const currentStep = useMemo(() => {
     if (results.length > 0) return 5;
     if (recipients.length === 0) return 1;
@@ -203,8 +205,6 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
     setFormData((prev) => ({ ...prev, ...patch }));
     if (patch.subject !== undefined || patch.htmlTemplate !== undefined) setChecklist({});
   }
-
-  const checklistDone = ["tom", "clareza", "personalizacao", "spam"].every((id) => checklist[id]);
 
   function validate(): string | null {
     if (recipients.length === 0) return "Carregue um CSV com a coluna 'email'.";
