@@ -208,9 +208,18 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
   async function handleTest() {
     const target = testEmail.trim();
     const sample = recipients.find(isReady);
-    if (!target) return toast.error("Informe um e-mail para o teste.");
-    if (!sample) return toast.error("Gere ao menos um e-mail antes de testar.");
-    if (!senderEmail.trim()) return toast.error("Escolha o remetente verificado.");
+    if (!target) {
+      toast.error("Informe um e-mail para o teste.");
+      return;
+    }
+    if (!sample) {
+      toast.error("Gere ao menos um e-mail antes de testar.");
+      return;
+    }
+    if (!senderEmail.trim()) {
+      toast.error("Escolha o remetente verificado.");
+      return;
+    }
 
     setTesting(true);
     try {
@@ -238,8 +247,14 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
 
   async function handleSend() {
     const ready = recipients.filter(isReady);
-    if (ready.length === 0) return toast.error("Nenhum e-mail pronto para enviar.");
-    if (!senderEmail.trim()) return toast.error("Escolha o remetente verificado.");
+    if (ready.length === 0) {
+      toast.error("Nenhum e-mail pronto para enviar.");
+      return;
+    }
+    if (!senderEmail.trim()) {
+      toast.error("Escolha o remetente verificado.");
+      return;
+    }
 
     setSending(true);
     setStatus("enviando");
