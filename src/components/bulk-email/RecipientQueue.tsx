@@ -28,6 +28,7 @@ import {
   type AiSettings,
 } from "@/lib/ai-config";
 import { DYNAMIC_FIELDS, type Recipient } from "@/lib/bulk-email";
+import { CAFCM_PROPOSAL_CONTEXT } from "@/lib/cafcm-proposal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
