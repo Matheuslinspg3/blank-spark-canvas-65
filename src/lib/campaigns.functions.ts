@@ -31,10 +31,12 @@ export const getCampaign = createServerFn({ method: "GET" })
 
 export const createCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { name?: string; mode?: "completo" | "simples" }) => input ?? {})
+  .inputValidator((input: { name?: string; mode?: "completo" | "simples" | "molde" }) => input ?? {})
   .handler(async ({ data, context }) => {
-    const mode = data.mode === "simples" ? "simples" : "completo";
-    const prefix = mode === "simples" ? "Disparo simples" : "Disparo";
+    const mode =
+      data.mode === "simples" ? "simples" : data.mode === "molde" ? "molde" : "completo";
+    const prefix =
+      mode === "simples" ? "Disparo simples" : mode === "molde" ? "Disparo com molde" : "Disparo";
     const { data: row, error } = await context.supabase
       .from("campaigns")
       .insert({

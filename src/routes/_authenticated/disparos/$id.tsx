@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 
 import { BulkEmailDashboard } from "@/components/bulk-email/BulkEmailDashboard";
 import { SimpleDispatch } from "@/components/bulk-email/SimpleDispatch";
+import { TemplateDispatch } from "@/components/bulk-email/TemplateDispatch";
 import { getCampaign } from "@/lib/campaigns.functions";
 
 export const Route = createFileRoute("/_authenticated/disparos/$id")({
@@ -27,5 +28,6 @@ function CampaignPage() {
   }
 
   if (data.mode === "simples") return <SimpleDispatch campaign={data} />;
+  if (data.mode === "molde") return <TemplateDispatch campaign={data} />;
   return <BulkEmailDashboard campaign={data} />;
 }
