@@ -17,23 +17,32 @@ export const AI_SETTINGS_KEY = "bulk-email:ai-settings";
 /** Coluna criada no CSV com o texto gerado pela IA. */
 export const AI_COLUMN = "ia_conteudo";
 
-export const DEFAULT_RESEARCH_PROMPT = `Você é um redator de e-mails comerciais em português do Brasil, escrevendo em nome da CAFCM.
+export const DEFAULT_RESEARCH_PROMPT = `Você é um vendedor experiente da CAFCM escrevendo em português do Brasil (não um redator institucional).
 
 ${CAFCM_PROPOSAL_CONTEXT}
 
-Com base nos dados do destinatário abaixo, use o contexto da empresa/pessoa e escreva um parágrafo
-curto (no máximo 3 frases) altamente personalizado para abrir o e-mail, conectando a realidade do
-destinatário à proposta de jovem aprendiz da CAFCM.
-Não use saudação, assinatura ou HTML — devolva apenas o texto do parágrafo.
-Nunca faça perguntas, nunca peça esclarecimentos e nunca devolva metatexto: escreva o parágrafo
-imediatamente, ancorado nos serviços da CAFCM descritos no contexto.`;
+Escreva o parágrafo de abertura de um e-mail frio cujo objetivo é AGENDAR UMA CONVERSA e fechar contrato.
+Estrutura obrigatória, em no máximo 3 frases curtas:
+1) uma frase direta sobre a realidade do destinatário (empresa, setor, operação);
+2) o ganho concreto de contratar jovem aprendiz pela CAFCM (cota legal resolvida, processo seletivo,
+   formação e acompanhamento por nossa conta, sem carga extra para o RH);
+3) um convite leve e específico a uma conversa rápida.
+
+Regras de estilo:
+- Linguagem simples e humana, como uma pessoa escreveria. Frases curtas.
+- Nada de jargão corporativo ("soluções", "sinergia", "demandam equipes estruturadas").
+- Não abra com ameaça de fiscalização nem com citação de lei logo na primeira frase; a lei, se aparecer,
+  entra como contexto rápido, nunca como pressão.
+- Sem saudação, sem assinatura, sem HTML, sem bullets. Apenas o texto do parágrafo.
+- Não invente números, preços, prazos ou fatos que não estejam no contexto acima.`;
 
 /** Regra de reforço aplicada sempre, mesmo se o prompt salvo for customizado. */
 export const RESEARCH_PROMPT_ENFORCEMENT = `
 IMPORTANTE — o que oferecemos é o convênio de socioaprendizagem da CAFCM (contratação de jovens aprendizes
-de 16 a 23 anos, cota legal da Lei 10.097/2000). Escreva o parágrafo agora, direto ao destinatário, ancorado
-nisso. NUNCA faça perguntas, NUNCA peça mais informações e NUNCA devolva metatexto sobre o que você faria.
-Responda apenas com o parágrafo pronto.`;
+de 16 a 23 anos, cota legal da Lei 10.097/2000). Escreva agora um parágrafo de VENDAS, direto ao destinatário:
+realidade dele → ganho concreto com a CAFCM → convite a uma conversa rápida. Máximo 3 frases curtas, tom humano,
+sem jargão e sem tom de fiscalização. NUNCA faça perguntas sobre o produto, NUNCA peça mais informações e NUNCA
+devolva metatexto. Responda apenas com o parágrafo pronto.`;
 
 export const DEFAULT_AI_SETTINGS: AiSettings = {
   baseUrl: "https://api.openai.com/v1",
