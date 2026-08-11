@@ -2,11 +2,16 @@ import type { Recipient, Reviews, SendResult } from "./bulk-email";
 
 export type CampaignStatus = "rascunho" | "enviando" | "concluido" | "erro";
 
+/** "completo" = fluxo de 5 etapas; "simples" = disparo rápido com IA. */
+export type CampaignMode = "completo" | "simples";
+
 export type Campaign = {
   id: string;
   user_id: string;
   name: string;
   status: CampaignStatus;
+  mode: CampaignMode;
+  brief: string;
   sender_name: string;
   sender_email: string;
   subject: string;
@@ -27,6 +32,7 @@ export type CampaignPatch = Partial<
     Campaign,
     | "name"
     | "status"
+    | "brief"
     | "sender_name"
     | "sender_email"
     | "subject"

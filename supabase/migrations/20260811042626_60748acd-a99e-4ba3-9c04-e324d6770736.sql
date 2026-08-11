@@ -1,0 +1,3 @@
+ALTER TABLE public.campaigns
+  ADD COLUMN IF NOT EXISTS mode text NOT NULL DEFAULT 'completo',
+  ADD COLUMN IF NOT EXISTS brief text NOT NULL DEFAULT '';
