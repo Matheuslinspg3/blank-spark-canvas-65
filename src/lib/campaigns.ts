@@ -32,6 +32,7 @@ export type CampaignPatch = Partial<
     Campaign,
     | "name"
     | "status"
+    | "brief"
     | "sender_name"
     | "sender_email"
     | "subject"
