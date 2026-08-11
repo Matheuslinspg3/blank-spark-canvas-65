@@ -32,6 +32,15 @@ export function parseBrief(raw: string | null | undefined): SimpleBrief {
   }
 }
 
+/** Ângulos de abordagem: cada destinatário recebe um, para os e-mails não saírem iguais. */
+export const SIMPLE_ANGLES = [
+  "Comece falando da operação/rotina específica desse negócio e do tipo de gente que ele precisa no dia a dia.",
+  "Comece por uma dor concreta de contratação (rotatividade, dificuldade de achar gente, treinar do zero).",
+  "Comece contando, em uma frase, como outras empresas parecidas dessa região resolveram isso com a CAFCM.",
+  "Comece por uma pergunta curta e direta sobre como eles contratam hoje.",
+  "Comece pelo ganho prático (equipe formada sob medida, menos burocracia para o RH) sem citar lei logo de cara.",
+] as const;
+
 /** Prompt de sistema: sempre ancorado na proposta comercial da CAFCM. */
 export function buildSimpleSystemPrompt(brief: SimpleBrief): string {
   const signature = [brief.senderName.trim(), brief.senderRole.trim()]
@@ -45,32 +54,43 @@ ${CAFCM_PROPOSAL_CONTEXT}
 PROPOSTA DESTE DISPARO (definida pelo remetente):
 ${brief.proposal.trim() || "Apresentar o convênio de socioaprendizagem da CAFCM e agendar uma conversa."}
 
-Escreva um e-mail completo e humano para o destinatário informado, com base nos dados dele.
+Escreva um e-mail único, humano e específico para este destinatário, com base nos dados dele.
 
-Regras:
-- Assunto curto (máx. 60 caracteres), sem CAIXA ALTA, sem emoji, sem "!!", sem palavras de promoção
-  (oferta, desconto, grátis, imperdível, exclusivo).
-- Corpo em texto puro, no máximo 6 linhas curtas: saudação, realidade do destinatário,
-  ganho concreto com a CAFCM, convite a uma conversa rápida.
-- Assine sempre como: ${signature || "o remetente informado"}.
-- Tom simples e direto, como uma pessoa escreveria. Sem jargão corporativo, sem HTML, sem bullets,
-  sem tom de fiscalização e sem placeholders do tipo "[seu nome]".
-- Não invente números, preços, prazos ou fatos que não estejam no contexto acima.
+Regras de escrita:
+- Assunto curto (máx. 55 caracteres), em letra normal, sem CAIXA ALTA, sem emoji, sem "!!" e sem
+  palavras de promoção (oferta, desconto, grátis, imperdível, exclusivo). O assunto deve mencionar
+  algo do destinatário (nome da empresa, segmento ou cidade) — nunca um assunto genérico.
+- Corpo em texto puro, 3 a 5 linhas curtas no total. Frases de gente, não de folheto.
+- Fale do negócio do destinatário antes de falar da CAFCM.
+- Termine com um convite leve e variado a uma conversa.
+- Assine em linhas separadas apenas com: ${signature || "o remetente informado"} e "CAFCM".
+- Não invente números, preços, prazos, telefones, e-mails ou fatos fora do contexto acima.
+- Sem HTML, sem bullets, sem jargão corporativo, sem tom de fiscalização, sem placeholders "[seu nome]".
+
+Proibido (torna o e-mail padronizado e queima o disparo):
+- Citar percentuais ou artigos de lei ("5% a 15%", "Lei 10.097", "obrigatoriedade", "MTE") no primeiro
+  parágrafo. No máximo uma menção leve à aprendizagem profissional, depois do gancho.
+- Frases prontas como "A CAFCM cuida de tudo", "formação profissional, acompanhamento psicossocial e
+  documentação", "ficar em dia com o MTE", "Podemos agendar 15 minutos esta semana?", "talentos que
+  conhecem sua operação".
+- Repetir a mesma estrutura/abertura de outros e-mails: varie saudação, gancho e fechamento.
 ${RESEARCH_PROMPT_ENFORCEMENT}
 
 Responda APENAS com um JSON válido, sem cercas de código, no formato:
 {"assunto": "...", "corpo": "..."}`;
 }
 
-export function buildSimpleUserPrompt(recipient: Recipient): string {
+export function buildSimpleUserPrompt(recipient: Recipient, index = 0): string {
   const lines = Object.entries(recipient)
     .filter(
       ([key, value]) =>
         key !== SIMPLE_SUBJECT_COLUMN && key !== SIMPLE_BODY_COLUMN && (value ?? "").trim().length > 0,
     )
     .map(([key, value]) => `- ${key}: ${value}`);
-  return `Dados do destinatário:\n${lines.join("\n")}`;
+  const angle = SIMPLE_ANGLES[index % SIMPLE_ANGLES.length];
+  return `Dados do destinatário:\n${lines.join("\n")}\n\nÂngulo obrigatório para este e-mail: ${angle}\nEscreva de um jeito diferente dos e-mails anteriores deste disparo.`;
 }
+
 
 /** Extrai { assunto, corpo } da resposta do modelo, tolerando cercas de código. */
 export function parseSimpleEmail(raw: string): { subject: string; body: string } {
