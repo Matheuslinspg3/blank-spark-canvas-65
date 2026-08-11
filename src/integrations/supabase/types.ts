@@ -16,10 +16,12 @@ export type Database = {
     Tables: {
       campaigns: {
         Row: {
+          brief: string
           created_at: string
           finished_at: string | null
           html_template: string
           id: string
+          mode: string
           name: string
           recipients: Json
           results: Json
@@ -35,10 +37,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          brief?: string
           created_at?: string
           finished_at?: string | null
           html_template?: string
           id?: string
+          mode?: string
           name?: string
           recipients?: Json
           results?: Json
@@ -54,10 +58,12 @@ export type Database = {
           user_id: string
         }
         Update: {
+          brief?: string
           created_at?: string
           finished_at?: string | null
           html_template?: string
           id?: string
+          mode?: string
           name?: string
           recipients?: Json
           results?: Json
