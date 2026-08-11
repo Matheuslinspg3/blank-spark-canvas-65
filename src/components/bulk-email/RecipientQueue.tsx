@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   AI_COLUMN,
   DEFAULT_AI_SETTINGS,
+  RESEARCH_PROMPT_ENFORCEMENT,
   buildRecipientPrompt,
   callAi,
   isAiConfigured,
