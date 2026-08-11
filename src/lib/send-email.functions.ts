@@ -1,11 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { sendCampaignViaBrevo } from "./brevo.server";
+import { sendCampaignViaBrevo, sendSimpleCampaignViaBrevo, type SimpleSendPayload } from "./brevo.server";
 import type { Recipient, SendBulkPayload } from "./bulk-email";
 
 export const sendBulkEmailsFn = createServerFn({ method: "POST" })
   .inputValidator((data: SendBulkPayload) => data)
   .handler(async ({ data }) => sendCampaignViaBrevo(data));
+
+/** Disparo simples: assunto e corpo já prontos por destinatário. */
+export const sendSimpleEmailsFn = createServerFn({ method: "POST" })
+  .inputValidator((data: SimpleSendPayload) => data)
+  .handler(async ({ data }) => sendSimpleCampaignViaBrevo(data));
 
 export type SendTestPayload = {
   to: string;
