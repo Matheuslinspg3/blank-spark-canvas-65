@@ -81,7 +81,11 @@ export function RecipientQueue({ recipients, disabled, onChange }: RecipientQueu
     if (!recipient) return;
     setStatuses((prev) => ({ ...prev, [index]: "gerando" }));
     try {
-      const content = await callAi(settings, buildRecipientPrompt(recipient));
+      const content = await callAi(
+        settings,
+        buildRecipientPrompt(recipient),
+        `${settings.researchPrompt.trim()}\n\n${RESEARCH_PROMPT_ENFORCEMENT}`,
+      );
       onChange(latest.current.map((r, i) => (i === index ? { ...r, [AI_COLUMN]: content } : r)));
       setStatuses((prev) => ({ ...prev, [index]: "ok" }));
       setErrors((prev) => ({ ...prev, [index]: "" }));
