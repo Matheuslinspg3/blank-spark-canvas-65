@@ -31,15 +31,19 @@ export const getCampaign = createServerFn({ method: "GET" })
 
 export const createCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { name?: string }) => input ?? {})
+  .inputValidator((input: { name?: string; mode?: "completo" | "simples" }) => input ?? {})
   .handler(async ({ data, context }) => {
+    const mode = data.mode === "simples" ? "simples" : "completo";
+    const prefix = mode === "simples" ? "Disparo simples" : "Disparo";
     const { data: row, error } = await context.supabase
       .from("campaigns")
       .insert({
         user_id: context.userId,
-        name: data.name?.trim() || `Disparo ${new Date().toLocaleString("pt-BR")}`,
+        name: data.name?.trim() || `${prefix} ${new Date().toLocaleString("pt-BR")}`,
         status: "rascunho",
-      })
+        mode,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any)
       .select("*")
       .single();
     if (error) throw new Error(error.message);
