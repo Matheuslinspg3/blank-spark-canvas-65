@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
 import { BulkEmailDashboard } from "@/components/bulk-email/BulkEmailDashboard";
+import { SimpleDispatch } from "@/components/bulk-email/SimpleDispatch";
 import { getCampaign } from "@/lib/campaigns.functions";
 
 export const Route = createFileRoute("/_authenticated/disparos/$id")({
@@ -25,5 +26,6 @@ function CampaignPage() {
     return <p className="text-destructive p-10 text-sm">Não foi possível carregar este disparo.</p>;
   }
 
+  if (data.mode === "simples") return <SimpleDispatch campaign={data} />;
   return <BulkEmailDashboard campaign={data} />;
 }
