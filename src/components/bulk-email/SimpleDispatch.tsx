@@ -143,7 +143,7 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
     try {
       const raw = await callAi(
         settings,
-        buildSimpleUserPrompt(recipient),
+        buildSimpleUserPrompt(recipient, index),
         buildSimpleSystemPrompt(brief),
       );
       const { subject, body } = parseSimpleEmail(raw);
