@@ -100,3 +100,97 @@ export async function sendCampaignViaBrevo(payload: SendBulkPayload): Promise<Se
 
   return results;
 }
+
+export type SimpleSendPayload = {
+  senderName: string;
+  senderEmail: string;
+  /** Um item por destinatário, com assunto e HTML já prontos. */
+  messages: { email: string; subject: string; html: string }[];
+};
+
+/**
+ * Disparo simples: cada destinatário tem assunto e corpo próprios, gerados
+ * pela IA. Mesmo rate limit de 1 e-mail por segundo.
+ */
+export async function sendSimpleCampaignViaBrevo(
+  payload: SimpleSendPayload,
+): Promise<SendResult[]> {
+  const lovableApiKey = process.env["LOVABLE_API_KEY"];
+  const brevoKey = process.env["BREVO_API_KEY"];
+
+  if (!lovableApiKey || !brevoKey) {
+    return payload.messages.map((message) => ({
+      email: message.email,
+      success: false,
+      error: "Conexão com a Brevo não configurada.",
+    }));
+  }
+
+  if (!isEmail(payload.senderEmail)) {
+    return payload.messages.map((message) => ({
+      email: message.email,
+      success: false,
+      error: "E-mail do remetente inválido.",
+    }));
+  }
+
+  const results: SendResult[] = [];
+
+  for (const [index, message] of payload.messages.entries()) {
+    const email = message.email.trim();
+
+    if (!isEmail(email)) {
+      results.push({ email, success: false, error: "E-mail inválido." });
+      continue;
+    }
+    if (!message.subject.trim() || !message.html.trim()) {
+      results.push({ email, success: false, error: "Assunto ou texto vazio." });
+      continue;
+    }
+
+    if (index > 0) await sleep(DELAY_MS);
+
+    try {
+      const response = await fetch(`${GATEWAY_URL}/smtp/email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${lovableApiKey}`,
+          "X-Connection-Api-Key": brevoKey,
+        },
+        body: JSON.stringify({
+          sender: { name: payload.senderName, email: payload.senderEmail },
+          to: [{ email }],
+          subject: message.subject.trim(),
+          htmlContent: message.html,
+          textContent: htmlToPlainText(message.html),
+        }),
+      });
+
+      const body = await response.text();
+
+      if (!response.ok) {
+        console.error(`Brevo send failed [${response.status}]: ${body}`);
+        results.push({ email, success: false, error: `Brevo ${response.status}: ${body}` });
+        continue;
+      }
+
+      let messageId: string | undefined;
+      try {
+        messageId = (JSON.parse(body) as { messageId?: string }).messageId;
+      } catch {
+        messageId = undefined;
+      }
+
+      results.push({ email, success: true, ...(messageId ? { messageId } : {}) });
+    } catch (error) {
+      results.push({
+        email,
+        success: false,
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+    }
+  }
+
+  return results;
+}
