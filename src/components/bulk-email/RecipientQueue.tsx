@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   AI_COLUMN,
   DEFAULT_AI_SETTINGS,
+  RESEARCH_PROMPT_ENFORCEMENT,
   buildRecipientPrompt,
   callAi,
   isAiConfigured,
@@ -27,6 +28,7 @@ import {
   type AiSettings,
 } from "@/lib/ai-config";
 import { DYNAMIC_FIELDS, type Recipient } from "@/lib/bulk-email";
+import { CAFCM_PROPOSAL_CONTEXT } from "@/lib/cafcm-proposal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -80,7 +82,11 @@ export function RecipientQueue({ recipients, disabled, onChange }: RecipientQueu
     if (!recipient) return;
     setStatuses((prev) => ({ ...prev, [index]: "gerando" }));
     try {
-      const content = await callAi(settings, buildRecipientPrompt(recipient));
+      const content = await callAi(
+        settings,
+        buildRecipientPrompt(recipient),
+        `${CAFCM_PROPOSAL_CONTEXT}\n\n${settings.researchPrompt.trim()}\n\n${RESEARCH_PROMPT_ENFORCEMENT}`,
+      );
       onChange(latest.current.map((r, i) => (i === index ? { ...r, [AI_COLUMN]: content } : r)));
       setStatuses((prev) => ({ ...prev, [index]: "ok" }));
       setErrors((prev) => ({ ...prev, [index]: "" }));

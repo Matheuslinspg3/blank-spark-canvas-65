@@ -24,7 +24,16 @@ ${CAFCM_PROPOSAL_CONTEXT}
 Com base nos dados do destinatário abaixo, use o contexto da empresa/pessoa e escreva um parágrafo
 curto (no máximo 3 frases) altamente personalizado para abrir o e-mail, conectando a realidade do
 destinatário à proposta de jovem aprendiz da CAFCM.
-Não use saudação, assinatura ou HTML — devolva apenas o texto do parágrafo.`;
+Não use saudação, assinatura ou HTML — devolva apenas o texto do parágrafo.
+Nunca faça perguntas, nunca peça esclarecimentos e nunca devolva metatexto: escreva o parágrafo
+imediatamente, ancorado nos serviços da CAFCM descritos no contexto.`;
+
+/** Regra de reforço aplicada sempre, mesmo se o prompt salvo for customizado. */
+export const RESEARCH_PROMPT_ENFORCEMENT = `
+IMPORTANTE — o que oferecemos é o convênio de socioaprendizagem da CAFCM (contratação de jovens aprendizes
+de 16 a 23 anos, cota legal da Lei 10.097/2000). Escreva o parágrafo agora, direto ao destinatário, ancorado
+nisso. NUNCA faça perguntas, NUNCA peça mais informações e NUNCA devolva metatexto sobre o que você faria.
+Responda apenas com o parágrafo pronto.`;
 
 export const DEFAULT_AI_SETTINGS: AiSettings = {
   baseUrl: "https://api.openai.com/v1",
