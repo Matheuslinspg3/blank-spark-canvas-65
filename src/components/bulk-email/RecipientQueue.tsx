@@ -85,7 +85,7 @@ export function RecipientQueue({ recipients, disabled, onChange }: RecipientQueu
       const content = await callAi(
         settings,
         buildRecipientPrompt(recipient),
-        `${settings.researchPrompt.trim()}\n\n${RESEARCH_PROMPT_ENFORCEMENT}`,
+        `${CAFCM_PROPOSAL_CONTEXT}\n\n${settings.researchPrompt.trim()}\n\n${RESEARCH_PROMPT_ENFORCEMENT}`,
       );
       onChange(latest.current.map((r, i) => (i === index ? { ...r, [AI_COLUMN]: content } : r)));
       setStatuses((prev) => ({ ...prev, [index]: "ok" }));
