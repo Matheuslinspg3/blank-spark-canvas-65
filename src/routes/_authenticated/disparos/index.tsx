@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { FilePlus2, LogOut, Mail, Settings2, Trash2, Users, Zap } from "lucide-react";
+import { FilePlus2, LayoutTemplate, LogOut, Mail, Settings2, Trash2, Users, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ function CampaignsPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (mode: "completo" | "simples") => create({ data: { mode } }),
+    mutationFn: (mode: "completo" | "simples" | "molde") => create({ data: { mode } }),
     onSuccess: (campaign) => {
       void queryClient.invalidateQueries({ queryKey: ["campaigns"] });
       void navigate({ to: "/disparos/$id", params: { id: campaign.id } });
@@ -99,6 +99,15 @@ function CampaignsPage() {
           </Button>
           <Button
             size="sm"
+            variant="secondary"
+            disabled={createMutation.isPending}
+            onClick={() => createMutation.mutate("molde")}
+          >
+            <LayoutTemplate className="size-4" />
+            Disparo com molde
+          </Button>
+          <Button
+            size="sm"
             disabled={createMutation.isPending}
             onClick={() => createMutation.mutate("completo")}
           >
@@ -140,6 +149,7 @@ function CampaignsPage() {
               </div>
               <div className="flex items-center gap-2">
                 {campaign.mode === "simples" && <Badge variant="outline">Simples</Badge>}
+                {campaign.mode === "molde" && <Badge variant="outline">Molde</Badge>}
                 <Badge variant={statusVariant(campaign.status)}>
                   {STATUS_LABEL[campaign.status]}
                 </Badge>
