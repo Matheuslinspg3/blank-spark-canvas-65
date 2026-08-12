@@ -628,7 +628,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                           id={`ab-${template.id}`}
                           checked={Boolean(template.ab)}
                           disabled={locked}
-                          onCheckedChange={(checked) =>
+                          onCheckedChange={(checked: boolean) =>
                             patchTemplate(template.id, { ab: checked })
                           }
                         />
