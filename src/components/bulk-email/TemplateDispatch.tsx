@@ -204,11 +204,12 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     return rows.flatMap((row) => {
       const template = resolveTemplate(row, templates);
       if (!template) return [];
+      const variant = variantOf(row);
       return [
         {
           email: row["email"] ?? "",
-          subject: renderSubject(template, row),
-          html: renderTemplateHtml(template, row),
+          subject: renderSubject(template, row, variant),
+          html: renderTemplateHtml(template, row, variant),
         },
       ];
     });
