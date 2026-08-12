@@ -616,13 +616,20 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
             </Alert>
           )}
 
+          <DailyLimitBanner
+            dailyLimit={guard.dailyLimit}
+            sentLast24h={guard.sentLast24h}
+            nearLimit={guard.nearLimit}
+            limitReached={guard.limitReached}
+          />
+
           {(loading || retrying) && <Progress value={progress} />}
 
           <div className="flex flex-wrap items-center gap-3">
             <Button
               size="lg"
               className="min-w-56"
-              disabled={loading || !checklistDone}
+              disabled={loading || !checklistDone || guard.limitReached}
               onClick={requestSend}
             >
               <Send className="size-4" />
