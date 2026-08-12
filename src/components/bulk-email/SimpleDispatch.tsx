@@ -73,6 +73,7 @@ function isReady(row: Recipient): boolean {
 export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
   const save = useServerFn(updateCampaign);
   const sendSimple = useServerFn(sendSimpleEmailsFn);
+  const guard = useSendGuard(campaign.id);
 
   const [name, setName] = useState(campaign.name);
   const [status, setStatus] = useState<CampaignStatus>(campaign.status);
