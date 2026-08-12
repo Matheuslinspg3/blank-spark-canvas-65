@@ -10,6 +10,8 @@ export type SendResult = {
   success: boolean;
   error?: string;
   messageId?: string;
+  /** Preenchido quando o envio nem foi tentado (supressão ou limite diário). */
+  blocked?: "suppressed" | "limit";
 };
 
 export type EmailFormData = {
