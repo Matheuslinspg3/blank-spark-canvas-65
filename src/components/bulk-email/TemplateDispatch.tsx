@@ -113,6 +113,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   const [schedule, setSchedule] = useState<SendSchedule>(DEFAULT_SCHEDULE);
   const [waiting, setWaiting] = useState(false);
   const cancelRef = useRef(false);
+  const [dirty, setDirty] = useState(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+
 
   const bodyRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
@@ -153,27 +156,108 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     return variantByRow.get(row) ?? "A";
   }
 
+  const backupKey = `molde-draft:${campaign.id}`;
+
+  // Backup local imediato: se a aba recarregar antes do autosave, nada se perde.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = localStorage.getItem(backupKey);
+      if (!saved) return;
+      const parsed = parseTemplatePlan(saved).templates;
+      if (parsed.length === 0) return;
+      setTemplates((current) => {
+        const json = serializeTemplatePlan({ templates: current });
+        if (json === saved) return current;
+        const currentFilled = current.filter(
+          (t) => t.subject.trim() || t.body.trim(),
+        ).length;
+        const savedFilled = parsed.filter((t) => t.subject.trim() || t.body.trim()).length;
+        if (savedFilled <= currentFilled) return current;
+        toast.info("Recuperamos os moldes que você estava escrevendo.");
+        return parsed;
+      });
+    } catch {
+      /* backup é opcional */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const firstRun = useRef(true);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Autosave: grava o rascunho ~1,5s depois da última alteração.
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    if (locked) return;
+    try {
+      localStorage.setItem(backupKey, planJson);
+    } catch {
+      /* ignore */
+    }
+    setDirty(true);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      void (async () => {
+        const ok = await persist(currentPatch());
+        if (ok) {
+          setDirty(false);
+          setSavedAt(new Date());
+        }
+      })();
+    }, 1500);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planJson, recipients, name, senderName, senderEmail]);
+
+  // Avisa antes de fechar a aba com alterações ainda não salvas.
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
+
+
   async function persist(patch: CampaignPatch) {
     try {
       await save({ data: { id: campaign.id, patch } });
+      return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar.");
+      return false;
     }
   }
 
+  const currentPatch = (): CampaignPatch => ({
+    name,
+    brief: planJson,
+    sender_name: senderName,
+    sender_email: senderEmail,
+    recipients,
+    total_count: recipients.length,
+  });
+
   async function handleSave() {
     setSaving(true);
-    await persist({
-      name,
-      brief: planJson,
-      sender_name: senderName,
-      sender_email: senderEmail,
-      recipients,
-      total_count: recipients.length,
-    });
+    const ok = await persist(currentPatch());
     setSaving(false);
-    toast.success("Rascunho salvo");
+    if (ok) {
+      setDirty(false);
+      setSavedAt(new Date());
+      toast.success("Rascunho salvo");
+    }
   }
+
 
   function patchTemplate(id: string, patch: Partial<MoldeTemplate>) {
     setTemplates((current) =>
@@ -402,6 +486,14 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
             <Save className="size-4" />
             Salvar rascunho
           </Button>
+          <span className="text-muted-foreground text-xs">
+            {saving || dirty
+              ? "Salvando…"
+              : savedAt
+                ? `Salvo ${savedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                : "Salvo"}
+          </span>
+
         </div>
       </header>
 
