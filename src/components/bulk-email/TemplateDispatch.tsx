@@ -261,8 +261,19 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     });
 
     try {
-      const sent = await sendSimple({ data: { senderName, senderEmail, messages } });
-      setResults(sent);
+      const sent: SendResult[] = [];
+      for (const [index, message] of messages.entries()) {
+        const canSend = await waitForWindow(schedule, () => cancelRef.current, setWaiting);
+        if (!canSend) break;
+        if (schedule.enabled && index > 0) await sleep(schedule.intervalSeconds * 1000);
+        const [result] = await sendSimple({
+          data: { senderName, senderEmail, messages: [message] },
+        });
+        sent.push(result ?? { email: message.email, success: false, error: "Sem resposta." });
+        setResults([...sent]);
+        setProgress(Math.round(((index + 1) / messages.length) * 100));
+      }
+      setWaiting(false);
       setProgress(100);
       const okCount = sent.filter((result) => result.success).length;
       const finalStatus: CampaignStatus = okCount > 0 ? "concluido" : "erro";
