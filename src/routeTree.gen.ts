@@ -17,6 +17,7 @@ import { Route as AuthenticatedContatosRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
 import { Route as AuthenticatedDisparosIndexRouteImport } from './routes/_authenticated/disparos/index'
 import { Route as AuthenticatedDisparosIdRouteImport } from './routes/_authenticated/disparos/$id'
+import { Route as ApiPublicHooksBrevoRouteImport } from './routes/api/public/hooks/brevo'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +59,11 @@ const AuthenticatedDisparosIdRoute = AuthenticatedDisparosIdRouteImport.update({
   path: '/disparos/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicHooksBrevoRoute = ApiPublicHooksBrevoRouteImport.update({
+  id: '/api/public/hooks/brevo',
+  path: '/api/public/hooks/brevo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/disparos/': typeof AuthenticatedDisparosIndexRoute
+  '/api/public/hooks/brevo': typeof ApiPublicHooksBrevoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/disparos': typeof AuthenticatedDisparosIndexRoute
+  '/api/public/hooks/brevo': typeof ApiPublicHooksBrevoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
   '/_authenticated/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/_authenticated/disparos/': typeof AuthenticatedDisparosIndexRoute
+  '/api/public/hooks/brevo': typeof ApiPublicHooksBrevoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/revisao'
     | '/disparos/$id'
     | '/disparos/'
+    | '/api/public/hooks/brevo'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/revisao'
     | '/disparos/$id'
     | '/disparos'
+    | '/api/public/hooks/brevo'
   id:
     | '__root__'
     | '/'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/_authenticated/revisao'
     | '/_authenticated/disparos/$id'
     | '/_authenticated/disparos/'
+    | '/api/public/hooks/brevo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -124,6 +136,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
+  ApiPublicHooksBrevoRoute: typeof ApiPublicHooksBrevoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -184,6 +197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDisparosIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/hooks/brevo': {
+      id: '/api/public/hooks/brevo'
+      path: '/api/public/hooks/brevo'
+      fullPath: '/api/public/hooks/brevo'
+      preLoaderRoute: typeof ApiPublicHooksBrevoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -209,17 +229,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
+  ApiPublicHooksBrevoRoute: ApiPublicHooksBrevoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

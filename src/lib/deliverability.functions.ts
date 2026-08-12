@@ -72,3 +72,8 @@ export const removeSuppression = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** Segredo do webhook da Brevo, para montar a URL mostrada em Configurações. */
+export const getWebhookSecret = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => ({ secret: process.env["BREVO_WEBHOOK_SECRET"] ?? "" }));
