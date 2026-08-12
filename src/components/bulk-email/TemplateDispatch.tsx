@@ -598,9 +598,10 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
               </TabsList>
 
               {templates.map((template) => {
-                const sample = recipients.find(
-                  (row) => resolveTemplate(row, templates)?.id === template.id,
-                );
+                const sample =
+                  recipients.find(
+                    (row) => resolveTemplate(row, templates)?.id === template.id,
+                  ) ?? recipients[0];
                 const count = recipients.filter(
                   (row) => resolveTemplate(row, templates)?.id === template.id,
                 ).length;
