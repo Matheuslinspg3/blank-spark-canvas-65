@@ -621,6 +621,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {template && hasVariantB(template) && (
+                    <Badge variant="outline">Variação {variantOf(row)}</Badge>
+                  )}
                   <Badge variant={ready ? "default" : "secondary"}>
                     {ready ? "Pronto" : template ? "Molde vazio" : "Sem molde"}
                   </Badge>
