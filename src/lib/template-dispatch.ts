@@ -134,8 +134,13 @@ export function resolveTemplate(
     if (match) return match;
   }
   const category = normalize(categoryOf(row));
-  if (!category) return undefined;
-  return templates.find((template) => normalize(template.name) === category);
+  if (!category) {
+    // CSV sem coluna de categoria: com um único molde, ele vale para todos.
+    return templates.length === 1 ? templates[0] : undefined;
+  }
+  const match = templates.find((template) => normalize(template.name) === category);
+  if (match) return match;
+  return templates.length === 1 ? templates[0] : undefined;
 }
 
 /** A/B ativo e variação B preenchida. */
