@@ -190,6 +190,89 @@ export type Database = {
         }
         Relationships: []
       }
+      email_events: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          email: string
+          id: string
+          message_id: string | null
+          reason: string | null
+          sent_at: string
+          status: Database["public"]["Enums"]["email_event_status"]
+          updated_at: string
+          updated_status_at: string | null
+          user_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          message_id?: string | null
+          reason?: string | null
+          sent_at?: string
+          status?: Database["public"]["Enums"]["email_event_status"]
+          updated_at?: string
+          updated_status_at?: string | null
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          message_id?: string | null
+          reason?: string | null
+          sent_at?: string
+          status?: Database["public"]["Enums"]["email_event_status"]
+          updated_at?: string
+          updated_status_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppressions: {
+        Row: {
+          created_at: string
+          detail: string | null
+          email: string
+          id: string
+          reason: Database["public"]["Enums"]["suppression_reason"]
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          email: string
+          id?: string
+          reason?: Database["public"]["Enums"]["suppression_reason"]
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          email?: string
+          id?: string
+          reason?: Database["public"]["Enums"]["suppression_reason"]
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -199,6 +282,16 @@ export type Database = {
     }
     Enums: {
       csv_row_status: "pendente" | "processando" | "gerado" | "erro"
+      email_event_status:
+        | "enviado"
+        | "entregue"
+        | "bounce_hard"
+        | "bounce_soft"
+        | "spam"
+        | "bloqueado"
+        | "invalido"
+        | "erro"
+      suppression_reason: "bounce" | "spam" | "invalido" | "manual"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -327,6 +420,17 @@ export const Constants = {
   public: {
     Enums: {
       csv_row_status: ["pendente", "processando", "gerado", "erro"],
+      email_event_status: [
+        "enviado",
+        "entregue",
+        "bounce_hard",
+        "bounce_soft",
+        "spam",
+        "bloqueado",
+        "invalido",
+        "erro",
+      ],
+      suppression_reason: ["bounce", "spam", "invalido", "manual"],
     },
   },
 } as const
