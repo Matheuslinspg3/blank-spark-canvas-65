@@ -89,7 +89,15 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       }
     );
 
-    const { data, error } = await supabase.auth.getClaims(token);
+    let { data, error } = await supabase.auth.getClaims(token);
+
+    // Small clock skew between the app server and the auth server can make a
+    // freshly issued token look like it comes from the future. Wait briefly and retry once.
+    if (error && /issued at future/i.test(error.message ?? '')) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      ({ data, error } = await supabase.auth.getClaims(token));
+    }
+
     if (error || !data?.claims) {
       throw new Error('Unauthorized: Invalid token');
     }
