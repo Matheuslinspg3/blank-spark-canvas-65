@@ -6,7 +6,9 @@ import { sendBulkEmailsFn } from "./send-email.functions";
  * Falls back to a per-recipient error entry when the call fails so the UI can
  * always show a log.
  */
-export async function sendBulkEmails(payload: SendBulkPayload): Promise<SendResult[]> {
+export async function sendBulkEmails(
+  payload: SendBulkPayload & { campaignId?: string; dailyLimit?: number },
+): Promise<SendResult[]> {
   try {
     return await sendBulkEmailsFn({ data: payload });
   } catch (error) {

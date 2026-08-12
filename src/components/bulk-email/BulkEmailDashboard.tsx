@@ -19,12 +19,16 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { ApprovalChecklist } from "./ApprovalChecklist";
+import { DailyLimitBanner } from "./DailyLimitBanner";
+import { DeliverabilityReport } from "./DeliverabilityReport";
 import { RecipientQueue } from "./RecipientQueue";
 import { CSVUploader } from "./CSVUploader";
 import { EmailEditor } from "./EmailEditor";
 import { FinalReview } from "./FinalReview";
 import { ResultsTable } from "./ResultsTable";
 import { SenderFields } from "./SenderFields";
+
+import { useSendGuard } from "@/hooks/use-send-guard";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -109,6 +113,7 @@ function Step({
 export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
   const save = useServerFn(updateCampaign);
   const sendTest = useServerFn(sendTestEmailFn);
+  const guard = useSendGuard(campaign.id);
 
   const [name, setName] = useState(campaign.name);
   const [status, setStatus] = useState<CampaignStatus>(campaign.status);
@@ -249,12 +254,19 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
                   senderEmail: formData.senderEmail,
                   subject: abVariants[slot]!.subject || formData.subject,
                   htmlTemplate: abVariants[slot]!.html,
+                  campaignId: campaign.id,
+                  dailyLimit: guard.dailyLimit,
                 }),
           ),
         );
         return batches.flat();
       }
-      return await sendBulkEmails({ recipients: list, ...formData });
+      return await sendBulkEmails({
+        recipients: list,
+        ...formData,
+        campaignId: campaign.id,
+        dailyLimit: guard.dailyLimit,
+      });
     } finally {
       window.clearInterval(ticker);
       setProgress(100);
@@ -604,13 +616,20 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
             </Alert>
           )}
 
+          <DailyLimitBanner
+            dailyLimit={guard.dailyLimit}
+            sentLast24h={guard.sentLast24h}
+            nearLimit={guard.nearLimit}
+            limitReached={guard.limitReached}
+          />
+
           {(loading || retrying) && <Progress value={progress} />}
 
           <div className="flex flex-wrap items-center gap-3">
             <Button
               size="lg"
               className="min-w-56"
-              disabled={loading || !checklistDone}
+              disabled={loading || !checklistDone || guard.limitReached}
               onClick={requestSend}
             >
               <Send className="size-4" />
@@ -645,6 +664,9 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
           )}
         </div>
       </Step>
+
+      <DeliverabilityReport campaignId={campaign.id} />
+
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>

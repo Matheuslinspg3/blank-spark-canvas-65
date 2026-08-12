@@ -17,9 +17,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { CSVUploader } from "./CSVUploader";
+import { DailyLimitBanner } from "./DailyLimitBanner";
+import { DeliverabilityReport } from "./DeliverabilityReport";
 import { ScheduleFields } from "./ScheduleFields";
 import { ResultsTable } from "./ResultsTable";
 import { SenderFields } from "./SenderFields";
+
+import { useSendGuard } from "@/hooks/use-send-guard";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +77,7 @@ function isReady(row: Recipient): boolean {
 export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
   const save = useServerFn(updateCampaign);
   const sendSimple = useServerFn(sendSimpleEmailsFn);
+  const guard = useSendGuard(campaign.id);
 
   const [name, setName] = useState(campaign.name);
   const [status, setStatus] = useState<CampaignStatus>(campaign.status);
@@ -297,15 +302,36 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
         if (!canSend) break;
         if (index > 0) await sleep(schedule.enabled ? schedule.intervalSeconds * 1000 : 1000);
         const [result] = await sendSimple({
-          data: { senderName, senderEmail, messages: [message] },
+          data: {
+            senderName,
+            senderEmail,
+            messages: [message],
+            campaignId: campaign.id,
+            dailyLimit: guard.dailyLimit,
+          },
         });
         sent.push(result ?? { email: message.email, success: false, error: "Sem resposta." });
         setResults([...sent]);
         setProgress(Math.round(((index + 1) / messages.length) * 100));
+
+        if (result?.blocked === "limit") {
+          toast.error("Limite diário atingido — o disparo foi pausado.");
+          break;
+        }
+        // A cada 10 envios, confere bounce/spam e para se estiver arriscado.
+        if ((index + 1) % 10 === 0) {
+          const risk = await guard.checkRisk();
+          if (risk.stop) {
+            toast.error(risk.alerts[0]?.message ?? "Taxa de bounce/spam alta: disparo interrompido.");
+            break;
+          }
+        }
       }
       setWaitingWindow(false);
       setProgress(100);
+      void guard.refreshUsage();
       const okCount = sent.filter((r) => r.success).length;
+      const skipped = sent.filter((r) => r.blocked === "suppressed").length;
       const finalStatus: CampaignStatus = okCount > 0 ? "concluido" : "erro";
       setStatus(finalStatus);
       await persist({
@@ -314,7 +340,9 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
         sent_count: okCount,
         finished_at: new Date().toISOString(),
       });
-      toast.success(`${okCount} de ${sent.length} e-mails enviados`);
+      toast.success(
+        `${okCount} de ${sent.length} e-mails enviados${skipped > 0 ? ` · ${skipped} bloqueados` : ""}`,
+      );
     } catch (error) {
       setStatus("erro");
       await persist({ status: "erro" });
@@ -609,6 +637,13 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
             onChange={setSchedule}
           />
 
+          <DailyLimitBanner
+            dailyLimit={guard.dailyLimit}
+            sentLast24h={guard.sentLast24h}
+            nearLimit={guard.nearLimit}
+            limitReached={guard.limitReached}
+          />
+
           {sending && <Progress value={progress} />}
           {waitingWindow && (
             <p className="text-muted-foreground text-xs">
@@ -616,7 +651,10 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
             </p>
           )}
 
-          <Button disabled={locked || readyCount === 0} onClick={() => void handleSend()}>
+          <Button
+            disabled={locked || readyCount === 0 || guard.limitReached}
+            onClick={() => void handleSend()}
+          >
             {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
             {sending ? "Enviando…" : `Enviar ${readyCount} e-mails`}
           </Button>
@@ -646,6 +684,8 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
           )}
         </CardContent>
       </Card>
+
+      <DeliverabilityReport campaignId={campaign.id} />
     </main>
   );
 }
