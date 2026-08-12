@@ -17,6 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { CSVUploader } from "./CSVUploader";
+import { ScheduleFields } from "./ScheduleFields";
 import { ResultsTable } from "./ResultsTable";
 import { SenderFields } from "./SenderFields";
 
@@ -40,6 +41,12 @@ import { STATUS_LABEL, type Campaign, type CampaignPatch, type CampaignStatus } 
 import { updateCampaign } from "@/lib/campaigns.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
+import {
+  DEFAULT_SCHEDULE,
+  sleep,
+  waitForWindow,
+  type SendSchedule,
+} from "@/lib/send-schedule";
 import {
   SIMPLE_BODY_COLUMN,
   SIMPLE_SUBJECT_COLUMN,
@@ -83,11 +90,14 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [schedule, setSchedule] = useState<SendSchedule>(DEFAULT_SCHEDULE);
+  const [waitingWindow, setWaitingWindow] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const stopRef = useRef(false);
+  const sendCancelRef = useRef(false);
   const latest = useRef(recipients);
   latest.current = recipients;
 
@@ -256,6 +266,7 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
       return;
     }
 
+    sendCancelRef.current = false;
     setSending(true);
     setStatus("enviando");
     setProgress(0);
@@ -271,18 +282,28 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
     });
 
     try {
-      const sent = await sendSimple({
-        data: {
-          senderName,
-          senderEmail,
-          messages: ready.map((row) => ({
-            email: row["email"] ?? "",
-            subject: row[SIMPLE_SUBJECT_COLUMN] ?? "",
-            html: simpleLetterHtml(row[SIMPLE_BODY_COLUMN] ?? ""),
-          })),
-        },
-      });
-      setResults(sent);
+      const messages = ready.map((row) => ({
+        email: row["email"] ?? "",
+        subject: row[SIMPLE_SUBJECT_COLUMN] ?? "",
+        html: simpleLetterHtml(row[SIMPLE_BODY_COLUMN] ?? ""),
+      }));
+      const sent: SendResult[] = [];
+      for (const [index, message] of messages.entries()) {
+        const canSend = await waitForWindow(
+          schedule,
+          () => sendCancelRef.current,
+          setWaitingWindow,
+        );
+        if (!canSend) break;
+        if (schedule.enabled && index > 0) await sleep(schedule.intervalSeconds * 1000);
+        const [result] = await sendSimple({
+          data: { senderName, senderEmail, messages: [message] },
+        });
+        sent.push(result ?? { email: message.email, success: false, error: "Sem resposta." });
+        setResults([...sent]);
+        setProgress(Math.round(((index + 1) / messages.length) * 100));
+      }
+      setWaitingWindow(false);
       setProgress(100);
       const okCount = sent.filter((r) => r.success).length;
       const finalStatus: CampaignStatus = okCount > 0 ? "concluido" : "erro";
@@ -581,12 +602,36 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
             </Button>
           </div>
 
+          <ScheduleFields
+            schedule={schedule}
+            pending={readyCount}
+            disabled={locked}
+            onChange={setSchedule}
+          />
+
           {sending && <Progress value={progress} />}
+          {waitingWindow && (
+            <p className="text-muted-foreground text-xs">
+              Fora da janela de envio — aguardando {schedule.startTime} para continuar.
+            </p>
+          )}
 
           <Button disabled={locked || readyCount === 0} onClick={() => void handleSend()}>
             {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
             {sending ? "Enviando…" : `Enviar ${readyCount} e-mails`}
           </Button>
+          {sending && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                sendCancelRef.current = true;
+                setWaitingWindow(false);
+              }}
+            >
+              Parar envio
+            </Button>
+          )}
 
           {results.length > 0 && (
             <ResultsTable
