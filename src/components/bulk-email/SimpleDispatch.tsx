@@ -637,6 +637,13 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
             onChange={setSchedule}
           />
 
+          <DailyLimitBanner
+            dailyLimit={guard.dailyLimit}
+            sentLast24h={guard.sentLast24h}
+            nearLimit={guard.nearLimit}
+            limitReached={guard.limitReached}
+          />
+
           {sending && <Progress value={progress} />}
           {waitingWindow && (
             <p className="text-muted-foreground text-xs">
@@ -644,7 +651,10 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
             </p>
           )}
 
-          <Button disabled={locked || readyCount === 0} onClick={() => void handleSend()}>
+          <Button
+            disabled={locked || readyCount === 0 || guard.limitReached}
+            onClick={() => void handleSend()}
+          >
             {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
             {sending ? "Enviando…" : `Enviar ${readyCount} e-mails`}
           </Button>
