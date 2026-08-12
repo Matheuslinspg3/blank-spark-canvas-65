@@ -17,6 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { CSVUploader } from "./CSVUploader";
+import { ScheduleFields } from "./ScheduleFields";
 import { ResultsTable } from "./ResultsTable";
 import { SenderFields } from "./SenderFields";
 
@@ -52,6 +53,12 @@ import {
 import { updateCampaign } from "@/lib/campaigns.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
+import {
+  DEFAULT_SCHEDULE,
+  sleep,
+  waitForWindow,
+  type SendSchedule,
+} from "@/lib/send-schedule";
 import {
   SAMPLE_TEMPLATE_BODY,
   TEMPLATE_ID_COLUMN,
@@ -91,6 +98,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   const [testEmail, setTestEmail] = useState("");
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [schedule, setSchedule] = useState<SendSchedule>(DEFAULT_SCHEDULE);
+  const [waiting, setWaiting] = useState(false);
+  const cancelRef = useRef(false);
 
   const bodyRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
@@ -247,6 +257,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
       return;
     }
 
+    cancelRef.current = false;
     setSending(true);
     setStatus("enviando");
     setProgress(0);
@@ -624,12 +635,36 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
             </Button>
           </div>
 
+          <ScheduleFields
+            schedule={schedule}
+            pending={readyRows.length}
+            disabled={locked}
+            onChange={setSchedule}
+          />
+
           {sending && <Progress value={progress} />}
+          {waiting && (
+            <p className="text-muted-foreground text-xs">
+              Fora da janela de envio — aguardando {schedule.startTime} para continuar.
+            </p>
+          )}
 
           <Button disabled={locked || readyRows.length === 0} onClick={() => void handleSend()}>
             {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
             {sending ? "Enviando…" : `Enviar ${readyRows.length} e-mails`}
           </Button>
+          {sending && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                cancelRef.current = true;
+                setWaiting(false);
+              }}
+            >
+              Parar envio
+            </Button>
+          )}
 
           {results.length > 0 && (
             <ResultsTable
