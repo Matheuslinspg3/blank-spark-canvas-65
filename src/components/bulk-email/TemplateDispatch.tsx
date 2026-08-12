@@ -156,24 +156,33 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   async function persist(patch: CampaignPatch) {
     try {
       await save({ data: { id: campaign.id, patch } });
+      return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar.");
+      return false;
     }
   }
 
+  const currentPatch = (): CampaignPatch => ({
+    name,
+    brief: planJson,
+    sender_name: senderName,
+    sender_email: senderEmail,
+    recipients,
+    total_count: recipients.length,
+  });
+
   async function handleSave() {
     setSaving(true);
-    await persist({
-      name,
-      brief: planJson,
-      sender_name: senderName,
-      sender_email: senderEmail,
-      recipients,
-      total_count: recipients.length,
-    });
+    const ok = await persist(currentPatch());
     setSaving(false);
-    toast.success("Rascunho salvo");
+    if (ok) {
+      setDirty(false);
+      setSavedAt(new Date());
+      toast.success("Rascunho salvo");
+    }
   }
+
 
   function patchTemplate(id: string, patch: Partial<MoldeTemplate>) {
     setTemplates((current) =>
