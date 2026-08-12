@@ -131,6 +131,21 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   );
   const variables = useMemo(() => availableVariables(csvColumns), [csvColumns]);
 
+  /** Variação A/B de cada linha, dividida na ordem da lista. */
+  const variantByRow = useMemo(() => {
+    const map = new Map<Recipient, VariantLabel>();
+    recipients.forEach((row, index) => {
+      const template = resolveTemplate(row, templates);
+      if (!template) return;
+      map.set(row, variantFor(row, template, indexInTemplate(recipients, index, templates)));
+    });
+    return map;
+  }, [recipients, templates]);
+
+  function variantOf(row: Recipient): VariantLabel {
+    return variantByRow.get(row) ?? "A";
+  }
+
   async function persist(patch: CampaignPatch) {
     try {
       await save({ data: { id: campaign.id, patch } });
