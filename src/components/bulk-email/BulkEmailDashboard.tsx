@@ -249,12 +249,19 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
                   senderEmail: formData.senderEmail,
                   subject: abVariants[slot]!.subject || formData.subject,
                   htmlTemplate: abVariants[slot]!.html,
+                  campaignId: campaign.id,
+                  dailyLimit: guard.dailyLimit,
                 }),
           ),
         );
         return batches.flat();
       }
-      return await sendBulkEmails({ recipients: list, ...formData });
+      return await sendBulkEmails({
+        recipients: list,
+        ...formData,
+        campaignId: campaign.id,
+        dailyLimit: guard.dailyLimit,
+      });
     } finally {
       window.clearInterval(ticker);
       setProgress(100);
