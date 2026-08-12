@@ -113,6 +113,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   const [schedule, setSchedule] = useState<SendSchedule>(DEFAULT_SCHEDULE);
   const [waiting, setWaiting] = useState(false);
   const cancelRef = useRef(false);
+  const [dirty, setDirty] = useState(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+
 
   const bodyRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
