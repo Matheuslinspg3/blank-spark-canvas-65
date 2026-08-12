@@ -276,7 +276,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
       for (const [index, message] of messages.entries()) {
         const canSend = await waitForWindow(schedule, () => cancelRef.current, setWaiting);
         if (!canSend) break;
-        if (schedule.enabled && index > 0) await sleep(schedule.intervalSeconds * 1000);
+        if (index > 0) await sleep(schedule.enabled ? schedule.intervalSeconds * 1000 : 1000);
         const [result] = await sendSimple({
           data: { senderName, senderEmail, messages: [message] },
         });

@@ -295,7 +295,7 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
           setWaitingWindow,
         );
         if (!canSend) break;
-        if (schedule.enabled && index > 0) await sleep(schedule.intervalSeconds * 1000);
+        if (index > 0) await sleep(schedule.enabled ? schedule.intervalSeconds * 1000 : 1000);
         const [result] = await sendSimple({
           data: { senderName, senderEmail, messages: [message] },
         });
