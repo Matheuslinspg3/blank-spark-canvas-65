@@ -39,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -184,6 +185,13 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     const created = newTemplate(`Molde ${templates.length + 1}`);
     setTemplates((current) => [...current, created]);
     setActiveTab(created.id);
+  }
+
+  function addPreset(preset: (typeof TEMPLATE_PRESETS)[number]) {
+    const created = preset.build();
+    setTemplates((current) => [...current, created]);
+    setActiveTab(created.id);
+    toast.success(`Molde "${created.name}" adicionado`);
   }
 
   function removeTemplate(id: string) {
@@ -461,10 +469,24 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
               {"{{empresa}}"}.
             </CardDescription>
           </div>
-          <Button size="sm" variant="outline" disabled={locked} onClick={addTemplate}>
-            <Plus className="size-4" />
-            Novo molde
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {TEMPLATE_PRESETS.map((preset) => (
+              <Button
+                key={preset.label}
+                size="sm"
+                variant="ghost"
+                disabled={locked}
+                onClick={() => addPreset(preset)}
+              >
+                <FileText className="size-4" />
+                {preset.label}
+              </Button>
+            ))}
+            <Button size="sm" variant="outline" disabled={locked} onClick={addTemplate}>
+              <Plus className="size-4" />
+              Novo molde
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {templates.length === 0 && (
@@ -491,6 +513,14 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                   (row) => resolveTemplate(row, templates)?.id === template.id,
                 ).length;
                 const warnings = promoSubjectWarnings(template.subject);
+                const brackets = bracketPlaceholders(
+                  template.subject,
+                  template.body,
+                  template.previewText ?? "",
+                  template.subjectB ?? "",
+                  template.bodyB ?? "",
+                  template.previewTextB ?? "",
+                );
 
                 return (
                   <TabsContent key={template.id} value={template.id} className="space-y-4 pt-4">
