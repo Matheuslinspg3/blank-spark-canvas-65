@@ -297,15 +297,36 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
         if (!canSend) break;
         if (index > 0) await sleep(schedule.enabled ? schedule.intervalSeconds * 1000 : 1000);
         const [result] = await sendSimple({
-          data: { senderName, senderEmail, messages: [message] },
+          data: {
+            senderName,
+            senderEmail,
+            messages: [message],
+            campaignId: campaign.id,
+            dailyLimit: guard.dailyLimit,
+          },
         });
         sent.push(result ?? { email: message.email, success: false, error: "Sem resposta." });
         setResults([...sent]);
         setProgress(Math.round(((index + 1) / messages.length) * 100));
+
+        if (result?.blocked === "limit") {
+          toast.error("Limite diário atingido — o disparo foi pausado.");
+          break;
+        }
+        // A cada 10 envios, confere bounce/spam e para se estiver arriscado.
+        if ((index + 1) % 10 === 0) {
+          const risk = await guard.checkRisk();
+          if (risk.stop) {
+            toast.error(risk.alerts[0]?.message ?? "Taxa de bounce/spam alta: disparo interrompido.");
+            break;
+          }
+        }
       }
       setWaitingWindow(false);
       setProgress(100);
+      void guard.refreshUsage();
       const okCount = sent.filter((r) => r.success).length;
+      const skipped = sent.filter((r) => r.blocked === "suppressed").length;
       const finalStatus: CampaignStatus = okCount > 0 ? "concluido" : "erro";
       setStatus(finalStatus);
       await persist({
@@ -314,7 +335,9 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
         sent_count: okCount,
         finished_at: new Date().toISOString(),
       });
-      toast.success(`${okCount} de ${sent.length} e-mails enviados`);
+      toast.success(
+        `${okCount} de ${sent.length} e-mails enviados${skipped > 0 ? ` · ${skipped} bloqueados` : ""}`,
+      );
     } catch (error) {
       setStatus("erro");
       await persist({ status: "erro" });
