@@ -3,6 +3,7 @@ import { ArrowLeft, Bot, KeyRound, Loader2, MailCheck, Save, Trash2, Zap } from 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { DeliverabilitySettings } from "@/components/config/DeliverabilitySettings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
