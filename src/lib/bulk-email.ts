@@ -235,14 +235,55 @@ function fallbackValue(key: string, recipient: Recipient): string {
 
 /**
  * Remove sobras de saudação quando o nome/empresa ficou vazio:
- * "Olá, !" vira "Olá!", "para a ." desaparece.
+ * "Olá, !" vira "Olá!", "para a ." e "equipe da!" desaparecem.
  */
 function tidyInterpolated(text: string): string {
   return text
     .replace(/,\s*(?=[!?.,])/g, "")
     .replace(/\s+([!?.,;:])/g, "$1")
-    .replace(/\b(?:para|da|de|do|na|no|a|à)\s+(?:a\s+|o\s+)?(?=[.,!?;:])/gi, "")
+    .replace(/\s*\b(?:para|da|de|do|na|no|à)\s*(?:[ao]\s+)?(?=[.,!?;:])/gi, "")
     .replace(/[ \t]{2,}/g, " ");
+}
+
+/** Colunas alternativas do CSV que representam a mesma variável. */
+const COLUMN_ALIASES: Record<string, string[]> = {
+  empresa: [
+    "empresa",
+    "nome_empresa",
+    "nomeempresa",
+    "nome da empresa",
+    "razao_social",
+    "razaosocial",
+    "razão social",
+    "nome_fantasia",
+    "fantasia",
+    "company",
+    "company_name",
+    "organizacao",
+    "organização",
+  ],
+  nome: [
+    "nome",
+    "nome_contato",
+    "contato",
+    "responsavel",
+    "responsável",
+    "first_name",
+    "primeiro_nome",
+    "name",
+  ],
+  categoria: ["categoria", "segmento", "category", "tipo"],
+};
+
+/** Valor da variável considerando colunas equivalentes do CSV. */
+function valueFor(key: string, recipient: Recipient): string {
+  const direct = (recipient[key] ?? "").trim();
+  if (direct) return direct;
+  for (const alias of COLUMN_ALIASES[key] ?? []) {
+    const value = (recipient[alias] ?? "").trim();
+    if (value) return value;
+  }
+  return "";
 }
 
 /** Replaces {{coluna}} placeholders with the recipient's values. */
@@ -250,11 +291,11 @@ export function interpolate(template: string, recipient: Recipient | undefined):
   if (!recipient) return template;
   const filled = template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_match, raw: string) => {
     const key = raw.toLowerCase();
-    const value = (recipient[key] ?? "").trim();
-    return value || fallbackValue(key, recipient);
+    return valueFor(key, recipient) || fallbackValue(key, recipient);
   });
   return tidyInterpolated(filled);
 }
+
 
 /** Palavras/sinais que empurram o e-mail para a aba Promoções do Gmail. */
 const PROMO_SUBJECT_TERMS = [
