@@ -716,6 +716,8 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
           )}
         </CardContent>
       </Card>
+
+      <DeliverabilityReport campaignId={campaign.id} />
     </main>
   );
 }
