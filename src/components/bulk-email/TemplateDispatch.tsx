@@ -66,9 +66,13 @@ import {
 import {
   SAMPLE_TEMPLATE_BODY,
   TEMPLATE_ID_COLUMN,
+  TEMPLATE_PRESETS,
   availableVariables,
+  bracketPlaceholders,
   categoryOf,
   ensureTemplatesForRows,
+  hasVariantB,
+  indexInTemplate,
   isRowReady,
   newTemplate,
   parseTemplatePlan,
@@ -77,7 +81,9 @@ import {
   renderTemplateHtml,
   resolveTemplate,
   serializeTemplatePlan,
+  variantFor,
   type MoldeTemplate,
+  type VariantLabel,
 } from "@/lib/template-dispatch";
 
 export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
