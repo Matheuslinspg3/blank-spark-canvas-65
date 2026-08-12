@@ -156,6 +156,78 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     return variantByRow.get(row) ?? "A";
   }
 
+  const backupKey = `molde-draft:${campaign.id}`;
+
+  // Backup local imediato: se a aba recarregar antes do autosave, nada se perde.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = localStorage.getItem(backupKey);
+      if (!saved) return;
+      const parsed = parseTemplatePlan(saved).templates;
+      if (parsed.length === 0) return;
+      setTemplates((current) => {
+        const json = serializeTemplatePlan({ templates: current });
+        if (json === saved) return current;
+        const currentFilled = current.filter(
+          (t) => t.subject.trim() || t.body.trim(),
+        ).length;
+        const savedFilled = parsed.filter((t) => t.subject.trim() || t.body.trim()).length;
+        if (savedFilled <= currentFilled) return current;
+        toast.info("Recuperamos os moldes que você estava escrevendo.");
+        return parsed;
+      });
+    } catch {
+      /* backup é opcional */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const firstRun = useRef(true);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Autosave: grava o rascunho ~1,5s depois da última alteração.
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    if (locked) return;
+    try {
+      localStorage.setItem(backupKey, planJson);
+    } catch {
+      /* ignore */
+    }
+    setDirty(true);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      void (async () => {
+        const ok = await persist(currentPatch());
+        if (ok) {
+          setDirty(false);
+          setSavedAt(new Date());
+        }
+      })();
+    }, 1500);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planJson, recipients, name, senderName, senderEmail]);
+
+  // Avisa antes de fechar a aba com alterações ainda não salvas.
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
+
+
   async function persist(patch: CampaignPatch) {
     try {
       await save({ data: { id: campaign.id, patch } });
