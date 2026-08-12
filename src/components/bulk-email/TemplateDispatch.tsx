@@ -486,6 +486,14 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
             <Save className="size-4" />
             Salvar rascunho
           </Button>
+          <span className="text-muted-foreground text-xs">
+            {saving || dirty
+              ? "Salvando…"
+              : savedAt
+                ? `Salvo ${savedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                : "Salvo"}
+          </span>
+
         </div>
       </header>
 
