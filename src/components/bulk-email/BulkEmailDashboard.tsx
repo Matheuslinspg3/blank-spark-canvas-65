@@ -109,6 +109,7 @@ function Step({
 export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
   const save = useServerFn(updateCampaign);
   const sendTest = useServerFn(sendTestEmailFn);
+  const guard = useSendGuard(campaign.id);
 
   const [name, setName] = useState(campaign.name);
   const [status, setStatus] = useState<CampaignStatus>(campaign.status);
