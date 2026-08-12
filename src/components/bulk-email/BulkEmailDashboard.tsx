@@ -665,6 +665,9 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
         </div>
       </Step>
 
+      <DeliverabilityReport campaignId={campaign.id} />
+
+
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
