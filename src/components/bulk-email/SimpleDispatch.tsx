@@ -684,6 +684,8 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
           )}
         </CardContent>
       </Card>
+
+      <DeliverabilityReport campaignId={campaign.id} />
     </main>
   );
 }
