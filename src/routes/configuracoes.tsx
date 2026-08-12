@@ -200,6 +200,8 @@ function ConfiguracoesPage() {
 
       <SendersCard />
 
+      <DeliverabilitySettings />
+
       <Alert>
         <KeyRound className="size-4" />
         <AlertTitle>Sobre segurança</AlertTitle>
