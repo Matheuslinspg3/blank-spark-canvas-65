@@ -39,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -66,9 +67,13 @@ import {
 import {
   SAMPLE_TEMPLATE_BODY,
   TEMPLATE_ID_COLUMN,
+  TEMPLATE_PRESETS,
   availableVariables,
+  bracketPlaceholders,
   categoryOf,
   ensureTemplatesForRows,
+  hasVariantB,
+  indexInTemplate,
   isRowReady,
   newTemplate,
   parseTemplatePlan,
@@ -77,7 +82,9 @@ import {
   renderTemplateHtml,
   resolveTemplate,
   serializeTemplatePlan,
+  variantFor,
   type MoldeTemplate,
+  type VariantLabel,
 } from "@/lib/template-dispatch";
 
 export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
@@ -131,6 +138,21 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   );
   const variables = useMemo(() => availableVariables(csvColumns), [csvColumns]);
 
+  /** Variação A/B de cada linha, dividida na ordem da lista. */
+  const variantByRow = useMemo(() => {
+    const map = new Map<Recipient, VariantLabel>();
+    recipients.forEach((row, index) => {
+      const template = resolveTemplate(row, templates);
+      if (!template) return;
+      map.set(row, variantFor(row, template, indexInTemplate(recipients, index, templates)));
+    });
+    return map;
+  }, [recipients, templates]);
+
+  function variantOf(row: Recipient): VariantLabel {
+    return variantByRow.get(row) ?? "A";
+  }
+
   async function persist(patch: CampaignPatch) {
     try {
       await save({ data: { id: campaign.id, patch } });
@@ -163,6 +185,13 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     const created = newTemplate(`Molde ${templates.length + 1}`);
     setTemplates((current) => [...current, created]);
     setActiveTab(created.id);
+  }
+
+  function addPreset(preset: (typeof TEMPLATE_PRESETS)[number]) {
+    const created = preset.build();
+    setTemplates((current) => [...current, created]);
+    setActiveTab(created.id);
+    toast.success(`Molde "${created.name}" adicionado`);
   }
 
   function removeTemplate(id: string) {
@@ -204,11 +233,12 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     return rows.flatMap((row) => {
       const template = resolveTemplate(row, templates);
       if (!template) return [];
+      const variant = variantOf(row);
       return [
         {
           email: row["email"] ?? "",
-          subject: renderSubject(template, row),
-          html: renderTemplateHtml(template, row),
+          subject: renderSubject(template, row, variant),
+          html: renderTemplateHtml(template, row, variant),
         },
       ];
     });
@@ -439,10 +469,24 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
               {"{{empresa}}"}.
             </CardDescription>
           </div>
-          <Button size="sm" variant="outline" disabled={locked} onClick={addTemplate}>
-            <Plus className="size-4" />
-            Novo molde
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {TEMPLATE_PRESETS.map((preset) => (
+              <Button
+                key={preset.label}
+                size="sm"
+                variant="ghost"
+                disabled={locked}
+                onClick={() => addPreset(preset)}
+              >
+                <FileText className="size-4" />
+                {preset.label}
+              </Button>
+            ))}
+            <Button size="sm" variant="outline" disabled={locked} onClick={addTemplate}>
+              <Plus className="size-4" />
+              Novo molde
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {templates.length === 0 && (
@@ -469,6 +513,14 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                   (row) => resolveTemplate(row, templates)?.id === template.id,
                 ).length;
                 const warnings = promoSubjectWarnings(template.subject);
+                const brackets = bracketPlaceholders(
+                  template.subject,
+                  template.body,
+                  template.previewText ?? "",
+                  template.subjectB ?? "",
+                  template.bodyB ?? "",
+                  template.previewTextB ?? "",
+                );
 
                 return (
                   <TabsContent key={template.id} value={template.id} className="space-y-4 pt-4">
@@ -498,7 +550,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor={`assunto-${template.id}`}>Assunto</Label>
+                      <Label htmlFor={`assunto-${template.id}`}>Assunto {template.ab && "(A)"}</Label>
                       <Input
                         id={`assunto-${template.id}`}
                         value={template.subject}
@@ -516,7 +568,24 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor={`corpo-${template.id}`}>Texto do e-mail</Label>
+                      <Label htmlFor={`preview-${template.id}`}>
+                        Preview text {template.ab && "(A)"}
+                      </Label>
+                      <Input
+                        id={`preview-${template.id}`}
+                        value={template.previewText ?? ""}
+                        disabled={locked}
+                        placeholder="Linha cinza que aparece ao lado do assunto na caixa de entrada"
+                        onChange={(event) =>
+                          patchTemplate(template.id, { previewText: event.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`corpo-${template.id}`}>
+                        Texto do e-mail {template.ab && "(A)"}
+                      </Label>
                       <div className="flex flex-wrap gap-1.5">
                         {variables.map((variable) => (
                           <Button
@@ -547,16 +616,105 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                       />
                     </div>
 
-                    <div className="bg-muted/40 space-y-2 rounded-lg border p-3">
+                    <div className="space-y-3 rounded-lg border p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <Label htmlFor={`ab-${template.id}`}>Teste A/B</Label>
+                          <p className="text-muted-foreground text-xs">
+                            Metade das empresas deste molde recebe a variação B.
+                          </p>
+                        </div>
+                        <Switch
+                          id={`ab-${template.id}`}
+                          checked={Boolean(template.ab)}
+                          disabled={locked}
+                          onCheckedChange={(checked: boolean) =>
+                            patchTemplate(template.id, { ab: checked })
+                          }
+                        />
+                      </div>
+
+                      {template.ab && (
+                        <div className="space-y-3 border-t pt-3">
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`assuntoB-${template.id}`}>Assunto (B)</Label>
+                            <Input
+                              id={`assuntoB-${template.id}`}
+                              value={template.subjectB ?? ""}
+                              disabled={locked}
+                              onChange={(event) =>
+                                patchTemplate(template.id, { subjectB: event.target.value })
+                              }
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`previewB-${template.id}`}>Preview text (B)</Label>
+                            <Input
+                              id={`previewB-${template.id}`}
+                              value={template.previewTextB ?? ""}
+                              disabled={locked}
+                              onChange={(event) =>
+                                patchTemplate(template.id, { previewTextB: event.target.value })
+                              }
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`corpoB-${template.id}`}>Texto do e-mail (B)</Label>
+                            <Textarea
+                              id={`corpoB-${template.id}`}
+                              value={template.bodyB ?? ""}
+                              disabled={locked}
+                              rows={10}
+                              placeholder={SAMPLE_TEMPLATE_BODY}
+                              onChange={(event) =>
+                                patchTemplate(template.id, { bodyB: event.target.value })
+                              }
+                            />
+                          </div>
+                          {!hasVariantB(template) && (
+                            <p className="text-muted-foreground text-xs">
+                              Preencha assunto e texto da variação B — enquanto estiver vazia, todos
+                              recebem a variação A.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {brackets.length > 0 && (
+                      <Alert variant="destructive">
+                        <AlertTitle>Campos entre colchetes não preenchidos</AlertTitle>
+                        <AlertDescription>
+                          {brackets.join(", ")} seriam enviados literalmente. Substitua pelo texto
+                          real ou por uma variável {"{{coluna}}"}.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="bg-muted/40 space-y-3 rounded-lg border p-3">
                       <p className="text-muted-foreground text-xs font-medium uppercase">
                         Prévia {sample?.["email"] ? `· ${sample["email"]}` : "· exemplo"}
                       </p>
-                      <p className="text-sm font-medium">
-                        {renderSubject(template, sample ?? {}) || "(sem assunto)"}
-                      </p>
-                      <p className="text-sm whitespace-pre-wrap">
-                        {renderBody(template, sample ?? {}) || "(sem texto)"}
-                      </p>
+                      {(hasVariantB(template)
+                        ? (["A", "B"] as VariantLabel[])
+                        : (["A"] as VariantLabel[])
+                      ).map((variant) => (
+                        <div key={variant} className="space-y-1">
+                          {hasVariantB(template) && (
+                            <Badge variant="outline">Variação {variant}</Badge>
+                          )}
+                          <p className="text-sm font-medium">
+                            {renderSubject(template, sample ?? {}, variant) || "(sem assunto)"}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            {(variant === "A" ? template.previewText : template.previewTextB) ||
+                              "(sem preview text)"}
+                          </p>
+                          <p className="text-sm whitespace-pre-wrap">
+                            {renderBody(template, sample ?? {}, variant) || "(sem texto)"}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </TabsContent>
                 );
@@ -599,6 +757,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {template && hasVariantB(template) && (
+                    <Badge variant="outline">Variação {variantOf(row)}</Badge>
+                  )}
                   <Badge variant={ready ? "default" : "secondary"}>
                     {ready ? "Pronto" : template ? "Molde vazio" : "Sem molde"}
                   </Badge>
