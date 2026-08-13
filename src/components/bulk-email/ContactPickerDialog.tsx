@@ -60,14 +60,29 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return rows.filter((row) => {
+    const list = rows.filter((row) => {
       if (categoria !== "todos" && row.categoria !== categoria) return false;
       if (!term) return true;
       return (
         row.nome.toLowerCase().includes(term) || row.email.toLowerCase().includes(term)
       );
     });
-  }, [rows, q, categoria]);
+    const [field, dir] = sort.split("-") as ["nome" | "email", "asc" | "desc"];
+    return [...list].sort((a, b) => {
+      const cmp = (a[field] || "").localeCompare(b[field] || "", "pt-BR", {
+        sensitivity: "base",
+      });
+      return dir === "asc" ? cmp : -cmp;
+    });
+  }, [rows, q, categoria, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [q, categoria, sort]);
 
   const allFilteredSelected =
     filtered.length > 0 && filtered.every((row) => selected.has(row.id));
@@ -81,15 +96,16 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
     });
   }
 
-  function toggleAllFiltered() {
+  function selectAllFiltered() {
     setSelected((prev) => {
       const next = new Set(prev);
-      for (const row of filtered) {
-        if (allFilteredSelected) next.delete(row.id);
-        else next.add(row.id);
-      }
+      for (const row of filtered) next.add(row.id);
       return next;
     });
+  }
+
+  function clearSelection() {
+    setSelected(new Set());
   }
 
   function confirm() {
