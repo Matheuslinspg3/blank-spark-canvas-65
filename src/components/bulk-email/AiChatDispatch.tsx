@@ -1,8 +1,10 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
   Bot,
+  FileText,
   Loader2,
   Paperclip,
   RefreshCw,
@@ -17,6 +19,8 @@ import { toast } from "sonner";
 import { DailyLimitBanner } from "./DailyLimitBanner";
 import { DeliverabilityReport } from "./DeliverabilityReport";
 import { ResultsTable } from "./ResultsTable";
+import { ScheduleFields } from "./ScheduleFields";
+
 
 import { useSendGuard } from "@/hooks/use-send-guard";
 
@@ -50,10 +54,24 @@ import {
   type SendResult,
 } from "@/lib/bulk-email";
 import { STATUS_LABEL, type Campaign, type CampaignPatch, type CampaignStatus } from "@/lib/campaigns";
-import { updateCampaign } from "@/lib/campaigns.functions";
+import { listCampaigns, updateCampaign } from "@/lib/campaigns.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
-import { sleep } from "@/lib/send-schedule";
+import {
+  DEFAULT_SCHEDULE,
+  sleep,
+  waitForWindow,
+  type SendSchedule,
+} from "@/lib/send-schedule";
+import {
+  TEMPLATE_PRESETS,
+  parseTemplatePlan,
+  renderBody,
+  renderSubject,
+  resolveTemplate,
+  type MoldeTemplate,
+} from "@/lib/template-dispatch";
+
 import {
   SIMPLE_BODY_COLUMN,
   SIMPLE_SUBJECT_COLUMN,
@@ -108,6 +126,29 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
   const [progress, setProgress] = useState(0);
   const [pendingSend, setPendingSend] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [schedule, setSchedule] = useState<SendSchedule>(DEFAULT_SCHEDULE);
+  const [waiting, setWaiting] = useState(false);
+
+  // Moldes já criados nos disparos "com molde" + moldes prontos da CAFCM.
+  const fetchCampaigns = useServerFn(listCampaigns);
+  const { data: allCampaigns } = useQuery({
+    queryKey: ["campaigns", "moldes"],
+    queryFn: () => fetchCampaigns(),
+  });
+  const molds = useMemo<MoldeTemplate[]>(() => {
+    const saved = (allCampaigns ?? [])
+      .filter((item) => item.mode === "molde")
+      .flatMap((item) =>
+        parseTemplatePlan(item.brief).templates.map((template) => ({
+          ...template,
+          name: template.name || item.name,
+        })),
+      )
+      .filter((template) => template.subject.trim() && template.body.trim());
+    const presets = TEMPLATE_PRESETS.map((preset) => preset.build());
+    return [...saved, ...presets];
+  }, [allCampaigns]);
+
 
   const fileRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -326,7 +367,10 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
 
       for (const [index, message] of messages.entries()) {
         if (sendCancelRef.current) break;
-        if (index > 0) await sleep(1000);
+        const canSend = await waitForWindow(schedule, () => sendCancelRef.current, setWaiting);
+        if (!canSend) break;
+        if (index > 0) await sleep(schedule.enabled ? schedule.intervalSeconds * 1000 : 1000);
+
         const [result] = await sendSimple({
           data: {
             senderName,
@@ -371,6 +415,8 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
       pushAssistant(error instanceof Error ? error.message : "Falha no disparo.");
     } finally {
       setSending(false);
+      setWaiting(false);
+
     }
   }
 
@@ -504,6 +550,57 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
   function updateRow(index: number, patch: Record<string, string>) {
     setRecipients(latest.current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
+
+  /** Usa um molde salvo para preencher assunto/corpo dos destinatários. */
+  function applyMold(mold: MoldeTemplate, onlyPending: boolean) {
+    const rows = latest.current;
+    if (rows.length === 0) {
+      toast.error("Anexe o CSV antes de aplicar um molde.");
+      return;
+    }
+    let applied = 0;
+    const next = rows.map((row) => {
+      if (onlyPending && isReady(row)) return row;
+      applied += 1;
+      return {
+        ...row,
+        [SIMPLE_SUBJECT_COLUMN]: renderSubject(mold, row),
+        [SIMPLE_BODY_COLUMN]: renderBody(mold, row),
+      };
+    });
+    setRecipients(next);
+    pushAssistant(
+      `Apliquei o molde "${mold.name}" em ${applied} e-mail(s). Posso ajustar qualquer um deles.`,
+    );
+  }
+
+  /** Aplica automaticamente o molde de cada categoria do CSV. */
+  function applyMoldsByCategory(onlyPending: boolean) {
+    const rows = latest.current;
+    if (rows.length === 0) {
+      toast.error("Anexe o CSV antes de aplicar os moldes.");
+      return;
+    }
+    let applied = 0;
+    const next = rows.map((row) => {
+      if (onlyPending && isReady(row)) return row;
+      const mold = resolveTemplate(row, molds);
+      if (!mold) return row;
+      applied += 1;
+      return {
+        ...row,
+        [SIMPLE_SUBJECT_COLUMN]: renderSubject(mold, row),
+        [SIMPLE_BODY_COLUMN]: renderBody(mold, row),
+      };
+    });
+    if (applied === 0) {
+      toast.error("Nenhum molde bate com as categorias do CSV.");
+      return;
+    }
+    setRecipients(next);
+    pushAssistant(`Apliquei os moldes por categoria em ${applied} e-mail(s).`);
+  }
+
 
   return (
     <main className="mx-auto w-full max-w-[1200px] space-y-4 px-4 py-8">
@@ -689,6 +786,75 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
               nearLimit={guard.nearLimit}
               limitReached={guard.limitReached}
             />
+
+            {/* Moldes salvos: reaproveita os textos dos disparos "com molde". */}
+            <div className="space-y-2 rounded-md border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  <FileText className="text-primary size-4" />
+                  Moldes criados
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={locked || molds.length === 0 || recipients.length === 0}
+                  onClick={() => applyMoldsByCategory(true)}
+                >
+                  Aplicar por categoria
+                </Button>
+              </div>
+              {molds.length === 0 ? (
+                <p className="text-muted-foreground text-xs">
+                  Nenhum molde salvo ainda — crie um disparo com molde para reaproveitar aqui.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {molds.map((mold) => (
+                    <div
+                      key={mold.id}
+                      className="flex items-center justify-between gap-2 rounded-md border p-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{mold.name || "Molde"}</p>
+                        <p className="text-muted-foreground truncate text-xs">{mold.subject}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={locked || recipients.length === 0}
+                          onClick={() => applyMold(mold, true)}
+                        >
+                          Só pendentes
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={locked || recipients.length === 0}
+                          onClick={() => applyMold(mold, false)}
+                        >
+                          Aplicar a todos
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Horário agendado do disparo. */}
+            <ScheduleFields
+              schedule={schedule}
+              pending={readyCount}
+              disabled={locked}
+              onChange={setSchedule}
+            />
+            {waiting && (
+              <p className="text-muted-foreground text-xs">
+                Fora da janela de envio — aguardando {schedule.startTime} para continuar.
+              </p>
+            )}
+
 
             {recipients.length === 0 && (
               <p className="text-muted-foreground text-sm">
