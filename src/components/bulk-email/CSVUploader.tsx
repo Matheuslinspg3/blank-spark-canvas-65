@@ -131,6 +131,15 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
         </Button>
         <Button
           type="button"
+          variant="secondary"
+          disabled={disabled || loadingContacts}
+          onClick={() => void useMyContacts()}
+        >
+          <Users className="size-4" />
+          {loadingContacts ? "Carregando…" : "Usar minha lista de Contatos"}
+        </Button>
+        <Button
+          type="button"
           variant="outline"
           onClick={() => downloadFile("exemplo-destinatarios.csv", SAMPLE_CSV)}
         >
