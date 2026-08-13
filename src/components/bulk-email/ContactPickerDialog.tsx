@@ -228,6 +228,32 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
           ))}
         </div>
 
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-muted-foreground text-xs">
+            {filtered.length} contatos · página {currentPage} de {totalPages}
+          </span>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={currentPage <= 1}
+              onClick={() => setPage(currentPage - 1)}
+            >
+              Anterior
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage(currentPage + 1)}
+            >
+              Próxima
+            </Button>
+          </div>
+        </div>
+
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
