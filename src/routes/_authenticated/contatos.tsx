@@ -381,9 +381,60 @@ function ContatosPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">1. Upload do CSV</CardTitle>
-          <CardDescription>Colunas esperadas: nome, email, categoria.</CardDescription>
+          <CardTitle className="text-base">1. Adicionar contatos</CardTitle>
+          <CardDescription>
+            Importe um CSV (nome, email, categoria) ou adicione um contato manualmente.
+          </CardDescription>
         </CardHeader>
+        <CardContent className="space-y-4">
+          <form
+            className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const email = manual.email.trim();
+              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                toast.error("Informe um e-mail válido.");
+                return;
+              }
+              importMutation.mutate(
+                [{ nome: manual.nome.trim(), email, categoria: manual.categoria.trim() }],
+                { onSuccess: () => setManual({ nome: "", email: "", categoria: "" }) },
+              );
+            }}
+          >
+            <Input
+              aria-label="Nome"
+              placeholder="Nome"
+              maxLength={120}
+              value={manual.nome}
+              onChange={(e) => setManual((p) => ({ ...p, nome: e.target.value }))}
+            />
+            <Input
+              aria-label="E-mail"
+              type="email"
+              required
+              placeholder="email@empresa.com"
+              maxLength={255}
+              value={manual.email}
+              onChange={(e) => setManual((p) => ({ ...p, email: e.target.value }))}
+            />
+            <Input
+              aria-label="Categoria"
+              placeholder="Categoria"
+              maxLength={120}
+              value={manual.categoria}
+              onChange={(e) => setManual((p) => ({ ...p, categoria: e.target.value }))}
+            />
+            <Button type="submit" disabled={importMutation.isPending}>
+              {importMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <UserPlus className="size-4" />
+              )}
+              Adicionar
+            </Button>
+          </form>
+
         <CardContent className="flex flex-wrap items-center gap-2">
           <input
             ref={inputRef}
