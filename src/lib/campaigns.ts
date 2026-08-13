@@ -27,9 +27,9 @@ export type Campaign = {
   finished_at: string | null;
   created_at: string;
   updated_at: string;
-  schedule?: unknown;
-  queue?: unknown[];
-  next_send_at?: string | null;
+  schedule: SendSchedule | null;
+  queue: QueuedMessage[];
+  next_send_at: string | null;
 };
 
 export type CampaignPatch = Partial<
