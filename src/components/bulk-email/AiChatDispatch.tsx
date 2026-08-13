@@ -787,6 +787,75 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
               limitReached={guard.limitReached}
             />
 
+            {/* Moldes salvos: reaproveita os textos dos disparos "com molde". */}
+            <div className="space-y-2 rounded-md border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  <FileText className="text-primary size-4" />
+                  Moldes criados
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={locked || molds.length === 0 || recipients.length === 0}
+                  onClick={() => applyMoldsByCategory(true)}
+                >
+                  Aplicar por categoria
+                </Button>
+              </div>
+              {molds.length === 0 ? (
+                <p className="text-muted-foreground text-xs">
+                  Nenhum molde salvo ainda — crie um disparo com molde para reaproveitar aqui.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {molds.map((mold) => (
+                    <div
+                      key={mold.id}
+                      className="flex items-center justify-between gap-2 rounded-md border p-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{mold.name || "Molde"}</p>
+                        <p className="text-muted-foreground truncate text-xs">{mold.subject}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={locked || recipients.length === 0}
+                          onClick={() => applyMold(mold, true)}
+                        >
+                          Só pendentes
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={locked || recipients.length === 0}
+                          onClick={() => applyMold(mold, false)}
+                        >
+                          Aplicar a todos
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Horário agendado do disparo. */}
+            <ScheduleFields
+              schedule={schedule}
+              pending={readyCount}
+              disabled={locked}
+              onChange={setSchedule}
+            />
+            {waiting && (
+              <p className="text-muted-foreground text-xs">
+                Fora da janela de envio — aguardando {schedule.startTime} para continuar.
+              </p>
+            )}
+
+
             {recipients.length === 0 && (
               <p className="text-muted-foreground text-sm">
                 Nenhum contato ainda — anexe o CSV pelo chat.
