@@ -139,6 +139,64 @@ function CampaignsPage() {
         </Card>
       )}
 
+      {scheduled.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarClock className="text-primary size-4" />
+              Disparos programados ({scheduled.length})
+            </CardTitle>
+            <CardDescription>
+              O robô do servidor envia sozinho na janela de horário escolhida, mesmo com o site
+              fechado.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            {scheduled.map((campaign) => {
+              const schedule = campaign.schedule;
+              const pending = Math.max(0, (campaign.total_count ?? 0) - (campaign.sent_count ?? 0));
+              return (
+                <div
+                  key={campaign.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <Link
+                      to="/disparos/$id"
+                      params={{ id: campaign.id }}
+                      className="font-medium hover:underline"
+                    >
+                      {campaign.name}
+                    </Link>
+                    <p className="text-muted-foreground text-xs">
+                      {campaign.sent_count}/{campaign.total_count} enviados · {pending} na fila
+                      {schedule?.enabled
+                        ? ` · das ${schedule.startTime} às ${schedule.endTime}, 1 a cada ${schedule.intervalSeconds}s`
+                        : " · envio contínuo"}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      Próximo envio:{" "}
+                      {campaign.next_send_at
+                        ? new Date(campaign.next_send_at).toLocaleString("pt-BR")
+                        : "assim que a janela abrir"}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={cancelMutation.isPending}
+                    onClick={() => cancelMutation.mutate(campaign.id)}
+                  >
+                    <XCircle className="size-4" />
+                    Cancelar
+                  </Button>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-3">
         {campaigns.map((campaign) => (
           <Card key={campaign.id}>
