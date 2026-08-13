@@ -345,6 +345,36 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
       return;
     }
 
+    // Com agenda ligada, quem envia é o servidor: pode fechar a aba.
+    if (schedule.enabled) {
+      const queued = ready.map((row) => ({
+        email: row["email"] ?? "",
+        subject: row[SIMPLE_SUBJECT_COLUMN] ?? "",
+        html: simpleLetterHtml(row[SIMPLE_BODY_COLUMN] ?? ""),
+      }));
+      try {
+        await scheduleCampaign({
+          data: {
+            campaignId: campaign.id,
+            schedule,
+            messages: queued,
+            senderName,
+            senderEmail,
+            recipients: latest.current,
+            brief: briefJson,
+          },
+        });
+        setStatus("agendado");
+        setResults([]);
+        pushAssistant(
+          `Programei ${queued.length} e-mails das ${schedule.startTime} às ${schedule.endTime}, com 1 e-mail a cada ${schedule.intervalSeconds}s. O envio roda no servidor — pode fechar o site.`,
+        );
+      } catch (error) {
+        pushAssistant(error instanceof Error ? error.message : "Falha ao programar o disparo.");
+      }
+      return;
+    }
+
     sendCancelRef.current = false;
     setSending(true);
     setStatus("enviando");
