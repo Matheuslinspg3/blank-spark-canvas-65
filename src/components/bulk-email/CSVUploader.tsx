@@ -71,11 +71,29 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
     return Array.from(new Set([...(columns.length ? columns : CONTACT_COLUMNS), ...extra]));
   }
 
-  function handlePicked(rows: CsvRow[]) {
+  function handlePicked(picked: CsvRow[]) {
+    const { rows, removed } = dedupeByEmail([recipients, picked.map(toRecipient)]);
     setFileName("Minha lista de Contatos");
     setError(null);
-    onLoaded(CONTACT_COLUMNS, rows.map(toRecipient));
-    toast.success(`${rows.length} contatos selecionados`);
+    onLoaded(mergeColumns(CONTACT_COLUMNS), rows);
+    toast.success(
+      removed > 0
+        ? `${picked.length} contatos selecionados · ${removed} duplicados removidos`
+        : `${picked.length} contatos selecionados`,
+    );
+  }
+
+  function removeRecipient(email: string) {
+    const key = email.trim().toLowerCase();
+    onLoaded(
+      columns,
+      recipients.filter((row) => (row["email"] ?? "").trim().toLowerCase() !== key),
+    );
+  }
+
+  function clearRecipients() {
+    setFileName(null);
+    onLoaded(columns, []);
   }
 
   async function addManualContact() {
