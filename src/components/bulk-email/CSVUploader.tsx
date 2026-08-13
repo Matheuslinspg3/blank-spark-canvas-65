@@ -119,11 +119,11 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
         <Button
           type="button"
           variant="secondary"
-          disabled={disabled || loadingContacts}
-          onClick={() => void useMyContacts()}
+          disabled={disabled}
+          onClick={() => setPickerOpen(true)}
         >
           <Users className="size-4" />
-          {loadingContacts ? "Carregando…" : "Usar minha lista de Contatos"}
+          Usar minha lista de Contatos
         </Button>
         <Button
           type="button"
