@@ -548,9 +548,59 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
   }
 
   function updateRow(index: number, patch: Record<string, string>) {
-
     setRecipients(latest.current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
+
+  /** Usa um molde salvo para preencher assunto/corpo dos destinatários. */
+  function applyMold(mold: MoldeTemplate, onlyPending: boolean) {
+    const rows = latest.current;
+    if (rows.length === 0) {
+      toast.error("Anexe o CSV antes de aplicar um molde.");
+      return;
+    }
+    let applied = 0;
+    const next = rows.map((row) => {
+      if (onlyPending && isReady(row)) return row;
+      applied += 1;
+      return {
+        ...row,
+        [SIMPLE_SUBJECT_COLUMN]: renderSubject(mold, row),
+        [SIMPLE_BODY_COLUMN]: renderBody(mold, row),
+      };
+    });
+    setRecipients(next);
+    pushAssistant(
+      `Apliquei o molde "${mold.name}" em ${applied} e-mail(s). Posso ajustar qualquer um deles.`,
+    );
+  }
+
+  /** Aplica automaticamente o molde de cada categoria do CSV. */
+  function applyMoldsByCategory(onlyPending: boolean) {
+    const rows = latest.current;
+    if (rows.length === 0) {
+      toast.error("Anexe o CSV antes de aplicar os moldes.");
+      return;
+    }
+    let applied = 0;
+    const next = rows.map((row) => {
+      if (onlyPending && isReady(row)) return row;
+      const mold = resolveTemplate(row, molds);
+      if (!mold) return row;
+      applied += 1;
+      return {
+        ...row,
+        [SIMPLE_SUBJECT_COLUMN]: renderSubject(mold, row),
+        [SIMPLE_BODY_COLUMN]: renderBody(mold, row),
+      };
+    });
+    if (applied === 0) {
+      toast.error("Nenhum molde bate com as categorias do CSV.");
+      return;
+    }
+    setRecipients(next);
+    pushAssistant(`Apliquei os moldes por categoria em ${applied} e-mail(s).`);
+  }
+
 
   return (
     <main className="mx-auto w-full max-w-[1200px] space-y-4 px-4 py-8">
