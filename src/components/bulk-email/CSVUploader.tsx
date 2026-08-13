@@ -246,6 +246,16 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
                 {`{{${column}}}`}
               </Badge>
             ))}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={disabled}
+              onClick={clearRecipients}
+            >
+              <Trash2 className="size-4" />
+              Limpar lista
+            </Button>
           </div>
 
           <div className="max-h-80 overflow-auto rounded-lg border">
@@ -255,6 +265,7 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
                   {columns.map((column) => (
                     <TableHead key={column}>{column}</TableHead>
                   ))}
+                  <TableHead className="w-12" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -265,6 +276,18 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
                         {row[column]}
                       </TableCell>
                     ))}
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={disabled}
+                        aria-label={`Remover ${row['email']}`}
+                        onClick={() => removeRecipient(row['email'] ?? "")}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
