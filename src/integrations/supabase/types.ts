@@ -17,6 +17,7 @@ export type Database = {
       campaigns: {
         Row: {
           brief: string
+          chat: Json
           created_at: string
           finished_at: string | null
           html_template: string
@@ -38,6 +39,7 @@ export type Database = {
         }
         Insert: {
           brief?: string
+          chat?: Json
           created_at?: string
           finished_at?: string | null
           html_template?: string
@@ -59,6 +61,7 @@ export type Database = {
         }
         Update: {
           brief?: string
+          chat?: Json
           created_at?: string
           finished_at?: string | null
           html_template?: string
