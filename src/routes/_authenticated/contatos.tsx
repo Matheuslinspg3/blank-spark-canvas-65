@@ -435,7 +435,7 @@ function ContatosPage() {
             </Button>
           </form>
 
-        <CardContent className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             ref={inputRef}
             type="file"
