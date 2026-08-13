@@ -17,6 +17,7 @@ import { Route as AuthenticatedContatosRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
 import { Route as AuthenticatedDisparosIndexRouteImport } from './routes/_authenticated/disparos/index'
 import { Route as AuthenticatedDisparosIdRouteImport } from './routes/_authenticated/disparos/$id'
+import { Route as ApiPublicCronDispatchRouteImport } from './routes/api/public/cron/dispatch'
 import { Route as ApiPublicHooksBrevoRouteImport } from './routes/api/public/hooks/brevo'
 
 const IndexRoute = IndexRouteImport.update({
@@ -59,6 +60,11 @@ const AuthenticatedDisparosIdRoute = AuthenticatedDisparosIdRouteImport.update({
   path: '/disparos/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicCronDispatchRoute = ApiPublicCronDispatchRouteImport.update({
+  id: '/api/public/cron/dispatch',
+  path: '/api/public/cron/dispatch',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksBrevoRoute = ApiPublicHooksBrevoRouteImport.update({
   id: '/api/public/hooks/brevo',
   path: '/api/public/hooks/brevo',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/disparos/': typeof AuthenticatedDisparosIndexRoute
+  '/api/public/cron/dispatch': typeof ApiPublicCronDispatchRoute
   '/api/public/hooks/brevo': typeof ApiPublicHooksBrevoRoute
 }
 export interface FileRoutesByTo {
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/disparos': typeof AuthenticatedDisparosIndexRoute
+  '/api/public/cron/dispatch': typeof ApiPublicCronDispatchRoute
   '/api/public/hooks/brevo': typeof ApiPublicHooksBrevoRoute
 }
 export interface FileRoutesById {
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
   '/_authenticated/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/_authenticated/disparos/': typeof AuthenticatedDisparosIndexRoute
+  '/api/public/cron/dispatch': typeof ApiPublicCronDispatchRoute
   '/api/public/hooks/brevo': typeof ApiPublicHooksBrevoRoute
 }
 export interface FileRouteTypes {
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/revisao'
     | '/disparos/$id'
     | '/disparos/'
+    | '/api/public/cron/dispatch'
     | '/api/public/hooks/brevo'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/revisao'
     | '/disparos/$id'
     | '/disparos'
+    | '/api/public/cron/dispatch'
     | '/api/public/hooks/brevo'
   id:
     | '__root__'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/_authenticated/revisao'
     | '/_authenticated/disparos/$id'
     | '/_authenticated/disparos/'
+    | '/api/public/cron/dispatch'
     | '/api/public/hooks/brevo'
   fileRoutesById: FileRoutesById
 }
@@ -136,6 +148,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
+  ApiPublicCronDispatchRoute: typeof ApiPublicCronDispatchRoute
   ApiPublicHooksBrevoRoute: typeof ApiPublicHooksBrevoRoute
 }
 
@@ -197,6 +210,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDisparosIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/cron/dispatch': {
+      id: '/api/public/cron/dispatch'
+      path: '/api/public/cron/dispatch'
+      fullPath: '/api/public/cron/dispatch'
+      preLoaderRoute: typeof ApiPublicCronDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/brevo': {
       id: '/api/public/hooks/brevo'
       path: '/api/public/hooks/brevo'
@@ -229,6 +249,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
+  ApiPublicCronDispatchRoute: ApiPublicCronDispatchRoute,
   ApiPublicHooksBrevoRoute: ApiPublicHooksBrevoRoute,
 }
 export const routeTree = rootRouteImport

@@ -1,0 +1,1 @@
+UPDATE public.campaigns SET status = 'rascunho', started_at = NULL WHERE status = 'enviando' AND sent_count = 0;

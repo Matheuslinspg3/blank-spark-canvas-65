@@ -43,6 +43,7 @@ import {
 import { downloadFile, buildReportCsv, type Recipient, type SendResult } from "@/lib/bulk-email";
 import { STATUS_LABEL, type Campaign, type CampaignPatch, type CampaignStatus } from "@/lib/campaigns";
 import { updateCampaign } from "@/lib/campaigns.functions";
+import { scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
 import {
@@ -77,6 +78,7 @@ function isReady(row: Recipient): boolean {
 export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
   const save = useServerFn(updateCampaign);
   const sendSimple = useServerFn(sendSimpleEmailsFn);
+  const scheduleCampaign = useServerFn(scheduleCampaignFn);
   const guard = useSendGuard(campaign.id);
 
   const [name, setName] = useState(campaign.name);
@@ -268,6 +270,36 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
     }
     if (!senderEmail.trim()) {
       toast.error("Escolha o remetente verificado.");
+      return;
+    }
+
+    // Com agenda ligada, quem envia é o servidor: pode fechar a aba.
+    if (schedule.enabled) {
+      const queued = ready.map((row) => ({
+        email: row["email"] ?? "",
+        subject: row[SIMPLE_SUBJECT_COLUMN] ?? "",
+        html: simpleLetterHtml(row[SIMPLE_BODY_COLUMN] ?? ""),
+      }));
+      try {
+        await scheduleCampaign({
+          data: {
+            campaignId: campaign.id,
+            schedule,
+            messages: queued,
+            senderName,
+            senderEmail,
+            recipients,
+            brief: briefJson,
+          },
+        });
+        setStatus("agendado");
+        setResults([]);
+        toast.success(
+          `${queued.length} e-mails programados. O envio continua no servidor, mesmo com o site fechado.`,
+        );
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Falha ao programar o disparo.");
+      }
       return;
     }
 

@@ -1,7 +1,7 @@
 import type { ChatMessage } from "./ai-chat-dispatch";
 import type { Recipient, Reviews, SendResult } from "./bulk-email";
 
-export type CampaignStatus = "rascunho" | "enviando" | "concluido" | "erro";
+export type CampaignStatus = "rascunho" | "agendado" | "enviando" | "concluido" | "erro";
 
 /** "completo" = 5 etapas; "simples" = IA; "molde" = textos próprios; "ia" = chat. */
 export type CampaignMode = "completo" | "simples" | "molde" | "ia";
@@ -52,6 +52,7 @@ export type CampaignPatch = Partial<
 
 export const STATUS_LABEL: Record<CampaignStatus, string> = {
   rascunho: "Rascunho",
+  agendado: "Programado",
   enviando: "Enviando",
   concluido: "Concluído",
   erro: "Erro",

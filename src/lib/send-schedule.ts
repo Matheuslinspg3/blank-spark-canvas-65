@@ -99,3 +99,30 @@ export async function waitForWindow(
   if (notified) onWaiting?.(false);
   return !isCancelled();
 }
+
+/** Minutos desde a meia-noite em um fuso específico (padrão: São Paulo). */
+export function minutesInTimeZone(date = new Date(), timeZone = "America/Sao_Paulo"): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? "0");
+  return hour * 60 + minute;
+}
+
+/** Versão da janela usada no servidor, sempre no fuso do usuário (Brasil). */
+export function isWithinWindowTz(
+  schedule: SendSchedule,
+  date = new Date(),
+  timeZone = "America/Sao_Paulo",
+): boolean {
+  if (!schedule.enabled) return true;
+  const start = minutesOf(schedule.startTime);
+  const end = minutesOf(schedule.endTime);
+  const current = minutesInTimeZone(date, timeZone);
+  if (start > end) return current >= start || current < end;
+  return current >= start && current < end;
+}
