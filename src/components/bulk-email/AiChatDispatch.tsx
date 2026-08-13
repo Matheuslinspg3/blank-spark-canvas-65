@@ -54,10 +54,24 @@ import {
   type SendResult,
 } from "@/lib/bulk-email";
 import { STATUS_LABEL, type Campaign, type CampaignPatch, type CampaignStatus } from "@/lib/campaigns";
-import { updateCampaign } from "@/lib/campaigns.functions";
+import { listCampaigns, updateCampaign } from "@/lib/campaigns.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
-import { sleep } from "@/lib/send-schedule";
+import {
+  DEFAULT_SCHEDULE,
+  sleep,
+  waitForWindow,
+  type SendSchedule,
+} from "@/lib/send-schedule";
+import {
+  TEMPLATE_PRESETS,
+  parseTemplatePlan,
+  renderBody,
+  renderSubject,
+  resolveTemplate,
+  type MoldeTemplate,
+} from "@/lib/template-dispatch";
+
 import {
   SIMPLE_BODY_COLUMN,
   SIMPLE_SUBJECT_COLUMN,
