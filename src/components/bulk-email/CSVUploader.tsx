@@ -16,8 +16,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SAMPLE_CSV, downloadFile, parseCsv, type Recipient } from "@/lib/bulk-email";
-import { importCsvRows, listCsvRows } from "@/lib/csv-rows.functions";
+import { importCsvRows } from "@/lib/csv-rows.functions";
 import type { CsvRow } from "@/lib/csv-rows";
+import { ContactPickerDialog } from "./ContactPickerDialog";
 
 const CONTACT_COLUMNS = ["nome", "email", "categoria", "ia_conteudo"];
 
@@ -41,33 +42,20 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [savingContact, setSavingContact] = useState(false);
   const [manual, setManual] = useState({ nome: "", email: "", categoria: "" });
-  const fetchContacts = useServerFn(listCsvRows);
   const addContacts = useServerFn(importCsvRows);
 
   function mergeColumns(extra: string[]) {
     return Array.from(new Set([...(columns.length ? columns : CONTACT_COLUMNS), ...extra]));
   }
 
-  async function useMyContacts() {
-    setLoadingContacts(true);
-    try {
-      const rows = await fetchContacts();
-      if (rows.length === 0) {
-        toast.error("Você ainda não tem contatos salvos. Adicione um abaixo.");
-        return;
-      }
-      setFileName("Minha lista de Contatos");
-      setError(null);
-      onLoaded(CONTACT_COLUMNS, rows.map(toRecipient));
-      toast.success(`${rows.length} contatos carregados da sua lista`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Não foi possível carregar seus contatos.");
-    } finally {
-      setLoadingContacts(false);
-    }
+  function handlePicked(rows: CsvRow[]) {
+    setFileName("Minha lista de Contatos");
+    setError(null);
+    onLoaded(CONTACT_COLUMNS, rows.map(toRecipient));
+    toast.success(`${rows.length} contatos selecionados`);
   }
 
   async function addManualContact() {
@@ -112,6 +100,11 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
 
   return (
     <div className="space-y-4">
+      <ContactPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onConfirm={handlePicked}
+      />
       <div className="flex flex-wrap items-center gap-3">
         <input
           ref={inputRef}
@@ -132,11 +125,11 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
         <Button
           type="button"
           variant="secondary"
-          disabled={disabled || loadingContacts}
-          onClick={() => void useMyContacts()}
+          disabled={disabled}
+          onClick={() => setPickerOpen(true)}
         >
           <Users className="size-4" />
-          {loadingContacts ? "Carregando…" : "Usar minha lista de Contatos"}
+          Usar minha lista de Contatos
         </Button>
         <Button
           type="button"
