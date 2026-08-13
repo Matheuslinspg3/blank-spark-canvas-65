@@ -378,6 +378,31 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
       return;
     }
 
+    // Com agenda ligada, quem envia é o servidor: pode fechar a aba.
+    if (schedule.enabled) {
+      try {
+        await scheduleCampaign({
+          data: {
+            campaignId: campaign.id,
+            schedule,
+            messages,
+            senderName,
+            senderEmail,
+            recipients,
+            brief: planJson,
+          },
+        });
+        setStatus("agendado");
+        setResults([]);
+        toast.success(
+          `${messages.length} e-mails programados. O envio continua no servidor, mesmo com o site fechado.`,
+        );
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Falha ao programar o disparo.");
+      }
+      return;
+    }
+
     cancelRef.current = false;
     setSending(true);
     setStatus("enviando");
