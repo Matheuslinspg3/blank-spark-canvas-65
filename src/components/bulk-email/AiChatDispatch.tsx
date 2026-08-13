@@ -1,8 +1,10 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
   Bot,
+  FileText,
   Loader2,
   Paperclip,
   RefreshCw,
@@ -17,6 +19,8 @@ import { toast } from "sonner";
 import { DailyLimitBanner } from "./DailyLimitBanner";
 import { DeliverabilityReport } from "./DeliverabilityReport";
 import { ResultsTable } from "./ResultsTable";
+import { ScheduleFields } from "./ScheduleFields";
+
 
 import { useSendGuard } from "@/hooks/use-send-guard";
 
