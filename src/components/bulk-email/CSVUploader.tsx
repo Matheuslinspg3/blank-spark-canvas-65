@@ -1,5 +1,5 @@
 import { useServerFn } from "@tanstack/react-start";
-import { Upload, FileText, Download, CheckCircle2, Users, UserPlus } from "lucide-react";
+import { Upload, FileText, Download, CheckCircle2, Users, UserPlus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
