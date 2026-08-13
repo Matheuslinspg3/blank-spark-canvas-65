@@ -100,6 +100,11 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
 
   return (
     <div className="space-y-4">
+      <ContactPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onConfirm={handlePicked}
+      />
       <div className="flex flex-wrap items-center gap-3">
         <input
           ref={inputRef}
