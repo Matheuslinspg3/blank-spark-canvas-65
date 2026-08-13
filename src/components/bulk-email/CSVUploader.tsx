@@ -16,8 +16,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SAMPLE_CSV, downloadFile, parseCsv, type Recipient } from "@/lib/bulk-email";
-import { importCsvRows, listCsvRows } from "@/lib/csv-rows.functions";
+import { importCsvRows } from "@/lib/csv-rows.functions";
 import type { CsvRow } from "@/lib/csv-rows";
+import { ContactPickerDialog } from "./ContactPickerDialog";
 
 const CONTACT_COLUMNS = ["nome", "email", "categoria", "ia_conteudo"];
 
