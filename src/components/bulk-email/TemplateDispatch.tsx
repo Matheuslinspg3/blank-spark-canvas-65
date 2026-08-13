@@ -56,6 +56,7 @@ import {
   type CampaignStatus,
 } from "@/lib/campaigns";
 import { updateCampaign } from "@/lib/campaigns.functions";
+import { scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
 import {
@@ -90,6 +91,7 @@ import {
 export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   const save = useServerFn(updateCampaign);
   const sendSimple = useServerFn(sendSimpleEmailsFn);
+  const scheduleCampaign = useServerFn(scheduleCampaignFn);
   const guard = useSendGuard(campaign.id);
 
   const [name, setName] = useState(campaign.name);

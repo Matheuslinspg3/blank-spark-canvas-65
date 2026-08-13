@@ -55,6 +55,7 @@ import {
 } from "@/lib/bulk-email";
 import { STATUS_LABEL, type Campaign, type CampaignPatch, type CampaignStatus } from "@/lib/campaigns";
 import { listCampaigns, updateCampaign } from "@/lib/campaigns.functions";
+import { scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
 import {
@@ -107,6 +108,7 @@ type Backup = {
 export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
   const save = useServerFn(updateCampaign);
   const sendSimple = useServerFn(sendSimpleEmailsFn);
+  const scheduleCampaign = useServerFn(scheduleCampaignFn);
   const guard = useSendGuard(campaign.id);
 
   const [status, setStatus] = useState<CampaignStatus>(campaign.status);
