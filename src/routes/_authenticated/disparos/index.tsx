@@ -22,6 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS_LABEL, type CampaignStatus } from "@/lib/campaigns";
 import { createCampaign, deleteCampaign, listCampaigns } from "@/lib/campaigns.functions";
+import { cancelScheduleFn } from "@/lib/schedule-dispatch.functions";
 
 export const Route = createFileRoute("/_authenticated/disparos/")({
   component: CampaignsPage,
