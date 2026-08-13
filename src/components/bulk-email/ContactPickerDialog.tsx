@@ -25,6 +25,8 @@ import {
 import { listCsvRows } from "@/lib/csv-rows.functions";
 import type { CsvRow } from "@/lib/csv-rows";
 
+const PAGE_SIZE = 50;
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
