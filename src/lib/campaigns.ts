@@ -1,3 +1,4 @@
+import type { ChatMessage } from "./ai-chat-dispatch";
 import type { Recipient, Reviews, SendResult } from "./bulk-email";
 
 export type CampaignStatus = "rascunho" | "enviando" | "concluido" | "erro";
@@ -41,6 +42,7 @@ export type CampaignPatch = Partial<
     | "recipients"
     | "results"
     | "reviews"
+    | "chat"
     | "total_count"
     | "sent_count"
     | "started_at"
