@@ -123,11 +123,16 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
   async function handleFile(file: File) {
     try {
       const text = await file.text();
-      const { columns: cols, rows } = parseCsv(text);
+      const { columns: cols, rows: parsed } = parseCsv(text);
+      const { rows, removed } = dedupeByEmail([parsed]);
       setFileName(file.name);
       setError(null);
       onLoaded(cols, rows);
-      toast.success(`${rows.length} destinatários carregados`);
+      toast.success(
+        removed > 0
+          ? `${rows.length} destinatários carregados · ${removed} duplicados removidos`
+          : `${rows.length} destinatários carregados`,
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Não foi possível ler o CSV.";
       setError(message);
