@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { FilePlus2, LayoutTemplate, LogOut, Mail, Settings2, Trash2, Users, Zap } from "lucide-react";
+import { Bot, FilePlus2, LayoutTemplate, LogOut, Mail, Settings2, Trash2, Users, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ function CampaignsPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (mode: "completo" | "simples" | "molde") => create({ data: { mode } }),
+    mutationFn: (mode: "completo" | "simples" | "molde" | "ia") => create({ data: { mode } }),
     onSuccess: (campaign) => {
       void queryClient.invalidateQueries({ queryKey: ["campaigns"] });
       void navigate({ to: "/disparos/$id", params: { id: campaign.id } });
@@ -87,6 +87,15 @@ function CampaignsPage() {
           <Button variant="ghost" size="sm" onClick={() => void signOut()}>
             <LogOut className="size-4" />
             Sair
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={createMutation.isPending}
+            onClick={() => createMutation.mutate("ia")}
+          >
+            <Bot className="size-4" />
+            Disparo por IA (chat)
           </Button>
           <Button
             size="sm"
@@ -148,6 +157,7 @@ function CampaignsPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                {campaign.mode === "ia" && <Badge variant="outline">IA</Badge>}
                 {campaign.mode === "simples" && <Badge variant="outline">Simples</Badge>}
                 {campaign.mode === "molde" && <Badge variant="outline">Molde</Badge>}
                 <Badge variant={statusVariant(campaign.status)}>
