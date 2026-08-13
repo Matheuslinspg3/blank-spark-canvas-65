@@ -108,7 +108,8 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
         data: { rows: [{ nome: manual.nome.trim(), email, categoria: manual.categoria.trim() }] },
       });
       const added = (saved ?? []).map(toRecipient);
-      onLoaded(mergeColumns(CONTACT_COLUMNS), [...recipients, ...added]);
+      const { rows } = dedupeByEmail([recipients, added]);
+      onLoaded(mergeColumns(CONTACT_COLUMNS), rows);
       setManual({ nome: "", email: "", categoria: "" });
       toast.success("Contato adicionado à lista e ao disparo");
     } catch (err) {
