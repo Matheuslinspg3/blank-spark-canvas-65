@@ -24,9 +24,12 @@ export type Database = {
           id: string
           mode: string
           name: string
+          next_send_at: string | null
+          queue: Json
           recipients: Json
           results: Json
           reviews: Json
+          schedule: Json
           sender_email: string
           sender_name: string
           sent_count: number
@@ -46,9 +49,12 @@ export type Database = {
           id?: string
           mode?: string
           name?: string
+          next_send_at?: string | null
+          queue?: Json
           recipients?: Json
           results?: Json
           reviews?: Json
+          schedule?: Json
           sender_email?: string
           sender_name?: string
           sent_count?: number
@@ -68,9 +74,12 @@ export type Database = {
           id?: string
           mode?: string
           name?: string
+          next_send_at?: string | null
+          queue?: Json
           recipients?: Json
           results?: Json
           reviews?: Json
+          schedule?: Json
           sender_email?: string
           sender_name?: string
           sent_count?: number
@@ -80,6 +89,24 @@ export type Database = {
           total_count?: number
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      cron_config: {
+        Row: {
+          created_at: string
+          dispatch_secret: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          dispatch_secret?: string
+          id?: number
+        }
+        Update: {
+          created_at?: string
+          dispatch_secret?: string
+          id?: number
         }
         Relationships: []
       }
