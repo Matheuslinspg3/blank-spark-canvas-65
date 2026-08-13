@@ -1,5 +1,8 @@
 import type { ChatMessage } from "./ai-chat-dispatch";
 import type { Recipient, Reviews, SendResult } from "./bulk-email";
+import type { SendSchedule } from "./send-schedule";
+
+export type QueuedMessage = { email: string; subject: string; html: string };
 
 export type CampaignStatus = "rascunho" | "agendado" | "enviando" | "concluido" | "erro";
 
