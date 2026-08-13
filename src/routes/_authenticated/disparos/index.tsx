@@ -40,9 +40,24 @@ function CampaignsPage() {
   const create = useServerFn(createCampaign);
   const remove = useServerFn(deleteCampaign);
 
+  const cancelSchedule = useServerFn(cancelScheduleFn);
+
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["campaigns"],
     queryFn: () => fetchList(),
+    // Atualiza sozinho para acompanhar os disparos programados.
+    refetchInterval: 30_000,
+  });
+
+  const scheduled = campaigns.filter((campaign) => campaign.status === "agendado");
+
+  const cancelMutation = useMutation({
+    mutationFn: (campaignId: string) => cancelSchedule({ data: { campaignId } }),
+    onSuccess: () => {
+      toast.success("Agendamento cancelado");
+      void queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const createMutation = useMutation({
