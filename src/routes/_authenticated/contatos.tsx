@@ -12,7 +12,9 @@ import {
   Trash2,
   TriangleAlert,
   Upload,
+  UserPlus,
   Users,
+
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -23,6 +25,8 @@ import { RowHistoryDialog } from "@/components/contatos/RowHistoryDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+
 import { Progress } from "@/components/ui/progress";
 import {
   Table,
@@ -114,6 +118,8 @@ function ContatosPage() {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [historyRow, setHistoryRow] = useState<CsvRow | null>(null);
   const [phase, setPhase] = useState<Record<string, "pesquisando" | "escrevendo">>({});
+  const [manual, setManual] = useState({ nome: "", email: "", categoria: "" });
+
 
   const fetchRows = useServerFn(listCsvRows);
   const fetchEvents = useServerFn(listCsvRowEvents);
@@ -381,10 +387,61 @@ function ContatosPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">1. Upload do CSV</CardTitle>
-          <CardDescription>Colunas esperadas: nome, email, categoria.</CardDescription>
+          <CardTitle className="text-base">1. Adicionar contatos</CardTitle>
+          <CardDescription>
+            Importe um CSV (nome, email, categoria) ou adicione um contato manualmente.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-2">
+        <CardContent className="space-y-4">
+          <form
+            className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const email = manual.email.trim();
+              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                toast.error("Informe um e-mail válido.");
+                return;
+              }
+              importMutation.mutate(
+                [{ nome: manual.nome.trim(), email, categoria: manual.categoria.trim() }],
+                { onSuccess: () => setManual({ nome: "", email: "", categoria: "" }) },
+              );
+            }}
+          >
+            <Input
+              aria-label="Nome"
+              placeholder="Nome"
+              maxLength={120}
+              value={manual.nome}
+              onChange={(e) => setManual((p) => ({ ...p, nome: e.target.value }))}
+            />
+            <Input
+              aria-label="E-mail"
+              type="email"
+              required
+              placeholder="email@empresa.com"
+              maxLength={255}
+              value={manual.email}
+              onChange={(e) => setManual((p) => ({ ...p, email: e.target.value }))}
+            />
+            <Input
+              aria-label="Categoria"
+              placeholder="Categoria"
+              maxLength={120}
+              value={manual.categoria}
+              onChange={(e) => setManual((p) => ({ ...p, categoria: e.target.value }))}
+            />
+            <Button type="submit" disabled={importMutation.isPending}>
+              {importMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <UserPlus className="size-4" />
+              )}
+              Adicionar
+            </Button>
+          </form>
+
+        <div className="flex flex-wrap items-center gap-2">
           <input
             ref={inputRef}
             type="file"
@@ -411,7 +468,9 @@ function ContatosPage() {
             <Download className="size-4" />
             CSV de exemplo
           </Button>
+          </div>
         </CardContent>
+
       </Card>
 
       <Card>
