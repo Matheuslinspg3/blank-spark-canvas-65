@@ -1,7 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Bot, FilePlus2, LayoutTemplate, LogOut, Mail, Settings2, Trash2, Users, Zap } from "lucide-react";
+import {
+  Bot,
+  CalendarClock,
+  FilePlus2,
+  LayoutTemplate,
+  LogOut,
+  Mail,
+  Settings2,
+  Trash2,
+  Users,
+  XCircle,
+  Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
