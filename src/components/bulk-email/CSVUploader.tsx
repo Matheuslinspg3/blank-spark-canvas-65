@@ -31,6 +31,26 @@ function toRecipient(row: CsvRow): Recipient {
   };
 }
 
+/** Junta listas mantendo apenas um registro por e-mail (o primeiro vence). */
+function dedupeByEmail(lists: Recipient[][]): { rows: Recipient[]; removed: number } {
+  const seen = new Set<string>();
+  const rows: Recipient[] = [];
+  let removed = 0;
+  for (const list of lists) {
+    for (const row of list) {
+      const email = (row["email"] ?? "").trim().toLowerCase();
+      if (!email) continue;
+      if (seen.has(email)) {
+        removed += 1;
+        continue;
+      }
+      seen.add(email);
+      rows.push(row);
+    }
+  }
+  return { rows, removed };
+}
+
 type CSVUploaderProps = {
   recipients: Recipient[];
   columns: string[];
