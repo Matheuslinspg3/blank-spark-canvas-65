@@ -462,7 +462,9 @@ function ContatosPage() {
             <Download className="size-4" />
             CSV de exemplo
           </Button>
+          </div>
         </CardContent>
+
       </Card>
 
       <Card>
