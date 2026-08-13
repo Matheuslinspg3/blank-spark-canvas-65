@@ -19,6 +19,7 @@ export type Campaign = {
   recipients: Recipient[];
   results: SendResult[];
   reviews: Reviews;
+  chat: ChatMessage[];
   total_count: number;
   sent_count: number;
   started_at: string | null;
