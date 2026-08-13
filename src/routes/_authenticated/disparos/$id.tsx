@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
+import { AiChatDispatch } from "@/components/bulk-email/AiChatDispatch";
 import { BulkEmailDashboard } from "@/components/bulk-email/BulkEmailDashboard";
 import { SimpleDispatch } from "@/components/bulk-email/SimpleDispatch";
 import { TemplateDispatch } from "@/components/bulk-email/TemplateDispatch";
@@ -27,6 +28,7 @@ function CampaignPage() {
     return <p className="text-destructive p-10 text-sm">Não foi possível carregar este disparo.</p>;
   }
 
+  if (data.mode === "ia") return <AiChatDispatch campaign={data} />;
   if (data.mode === "simples") return <SimpleDispatch campaign={data} />;
   if (data.mode === "molde") return <TemplateDispatch campaign={data} />;
   return <BulkEmailDashboard campaign={data} />;

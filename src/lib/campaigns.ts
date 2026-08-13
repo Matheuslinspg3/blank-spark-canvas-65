@@ -1,9 +1,10 @@
+import type { ChatMessage } from "./ai-chat-dispatch";
 import type { Recipient, Reviews, SendResult } from "./bulk-email";
 
 export type CampaignStatus = "rascunho" | "enviando" | "concluido" | "erro";
 
-/** "completo" = fluxo de 5 etapas; "simples" = IA; "molde" = textos próprios por categoria. */
-export type CampaignMode = "completo" | "simples" | "molde";
+/** "completo" = 5 etapas; "simples" = IA; "molde" = textos próprios; "ia" = chat. */
+export type CampaignMode = "completo" | "simples" | "molde" | "ia";
 
 export type Campaign = {
   id: string;
@@ -19,6 +20,7 @@ export type Campaign = {
   recipients: Recipient[];
   results: SendResult[];
   reviews: Reviews;
+  chat: ChatMessage[];
   total_count: number;
   sent_count: number;
   started_at: string | null;
@@ -40,6 +42,7 @@ export type CampaignPatch = Partial<
     | "recipients"
     | "results"
     | "reviews"
+    | "chat"
     | "total_count"
     | "sent_count"
     | "started_at"
