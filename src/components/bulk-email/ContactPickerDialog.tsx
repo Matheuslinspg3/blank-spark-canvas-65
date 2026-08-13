@@ -160,10 +160,38 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
           </Select>
         </div>
 
-        <div className="flex items-center justify-between gap-2">
-          <Button type="button" variant="ghost" size="sm" onClick={toggleAllFiltered}>
-            {allFilteredSelected ? "Desmarcar todos" : "Selecionar todos"}
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={allFilteredSelected}
+              onClick={selectAllFiltered}
+            >
+              Selecionar tudo
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={selected.size === 0}
+              onClick={clearSelection}
+            >
+              Limpar seleção
+            </Button>
+            <Select value={sort} onValueChange={setSort}>
+              <SelectTrigger className="h-8 w-[11rem]">
+                <SelectValue placeholder="Ordenar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nome-asc">Nome (A–Z)</SelectItem>
+                <SelectItem value="nome-desc">Nome (Z–A)</SelectItem>
+                <SelectItem value="email-asc">E-mail (A–Z)</SelectItem>
+                <SelectItem value="email-desc">E-mail (Z–A)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Badge variant="secondary">
             {selected.size} selecionados de {rows.length}
           </Badge>
