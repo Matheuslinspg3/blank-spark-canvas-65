@@ -1,10 +1,12 @@
-import { Upload, FileText, Download, CheckCircle2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Upload, FileText, Download, CheckCircle2, Users, UserPlus } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -14,6 +16,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SAMPLE_CSV, downloadFile, parseCsv, type Recipient } from "@/lib/bulk-email";
+import { importCsvRows, listCsvRows } from "@/lib/csv-rows.functions";
+import type { CsvRow } from "@/lib/csv-rows";
+
+const CONTACT_COLUMNS = ["nome", "email", "categoria", "ia_conteudo"];
+
+function toRecipient(row: CsvRow): Recipient {
+  return {
+    nome: row.nome ?? "",
+    email: row.email,
+    categoria: row.categoria ?? "",
+    ia_conteudo: row.generated_email ?? "",
+  };
+}
 
 type CSVUploaderProps = {
   recipients: Recipient[];
@@ -26,6 +41,57 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [savingContact, setSavingContact] = useState(false);
+  const [manual, setManual] = useState({ nome: "", email: "", categoria: "" });
+  const fetchContacts = useServerFn(listCsvRows);
+  const addContacts = useServerFn(importCsvRows);
+
+  function mergeColumns(extra: string[]) {
+    return Array.from(new Set([...(columns.length ? columns : CONTACT_COLUMNS), ...extra]));
+  }
+
+  async function useMyContacts() {
+    setLoadingContacts(true);
+    try {
+      const rows = await fetchContacts();
+      if (rows.length === 0) {
+        toast.error("Você ainda não tem contatos salvos. Adicione um abaixo.");
+        return;
+      }
+      setFileName("Minha lista de Contatos");
+      setError(null);
+      onLoaded(CONTACT_COLUMNS, rows.map(toRecipient));
+      toast.success(`${rows.length} contatos carregados da sua lista`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível carregar seus contatos.");
+    } finally {
+      setLoadingContacts(false);
+    }
+  }
+
+  async function addManualContact() {
+    const email = manual.email.trim().toLowerCase();
+    if (!email.includes("@")) {
+      toast.error("Informe um e-mail válido.");
+      return;
+    }
+    setSavingContact(true);
+    try {
+      const saved = await addContacts({
+        data: { rows: [{ nome: manual.nome.trim(), email, categoria: manual.categoria.trim() }] },
+      });
+      const added = (saved ?? []).map(toRecipient);
+      onLoaded(mergeColumns(CONTACT_COLUMNS), [...recipients, ...added]);
+      setManual({ nome: "", email: "", categoria: "" });
+      toast.success("Contato adicionado à lista e ao disparo");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível salvar o contato.");
+    } finally {
+      setSavingContact(false);
+    }
+  }
+
 
   async function handleFile(file: File) {
     try {
@@ -65,6 +131,15 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
         </Button>
         <Button
           type="button"
+          variant="secondary"
+          disabled={disabled || loadingContacts}
+          onClick={() => void useMyContacts()}
+        >
+          <Users className="size-4" />
+          {loadingContacts ? "Carregando…" : "Usar minha lista de Contatos"}
+        </Button>
+        <Button
+          type="button"
           variant="outline"
           onClick={() => downloadFile("exemplo-destinatarios.csv", SAMPLE_CSV)}
         >
@@ -77,6 +152,43 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
             {fileName}
           </span>
         )}
+      </div>
+
+      <div className="bg-muted/40 space-y-3 rounded-lg border p-3">
+        <p className="text-muted-foreground inline-flex items-center gap-1.5 text-xs font-medium">
+          <UserPlus className="size-3.5" />
+          Adicionar contato agora (salva na sua lista e entra neste disparo)
+        </p>
+        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+          <Input
+            placeholder="Nome"
+            value={manual.nome}
+            disabled={disabled}
+            onChange={(event) => setManual((prev) => ({ ...prev, nome: event.target.value }))}
+          />
+          <Input
+            type="email"
+            placeholder="email@empresa.com"
+            value={manual.email}
+            disabled={disabled}
+            onChange={(event) => setManual((prev) => ({ ...prev, email: event.target.value }))}
+          />
+          <Input
+            placeholder="Categoria"
+            value={manual.categoria}
+            disabled={disabled}
+            onChange={(event) => setManual((prev) => ({ ...prev, categoria: event.target.value }))}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={disabled || savingContact}
+            onClick={() => void addManualContact()}
+          >
+            <UserPlus className="size-4" />
+            {savingContact ? "Salvando…" : "Adicionar"}
+          </Button>
+        </div>
       </div>
 
       {error && (
