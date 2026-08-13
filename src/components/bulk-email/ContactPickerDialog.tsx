@@ -202,7 +202,7 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
           {!loading && filtered.length === 0 && (
             <p className="text-muted-foreground p-3 text-sm">Nenhum contato encontrado.</p>
           )}
-          {filtered.map((row) => (
+          {pageRows.map((row) => (
             <label
               key={row.id}
               className="hover:bg-muted/60 flex cursor-pointer items-center gap-3 rounded-md px-3 py-2"
