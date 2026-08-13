@@ -1,5 +1,8 @@
 import type { ChatMessage } from "./ai-chat-dispatch";
 import type { Recipient, Reviews, SendResult } from "./bulk-email";
+import type { SendSchedule } from "./send-schedule";
+
+export type QueuedMessage = { email: string; subject: string; html: string };
 
 export type CampaignStatus = "rascunho" | "agendado" | "enviando" | "concluido" | "erro";
 
@@ -27,6 +30,9 @@ export type Campaign = {
   finished_at: string | null;
   created_at: string;
   updated_at: string;
+  schedule: SendSchedule | null;
+  queue: QueuedMessage[];
+  next_send_at: string | null;
 };
 
 export type CampaignPatch = Partial<

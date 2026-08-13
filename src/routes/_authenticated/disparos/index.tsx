@@ -1,7 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Bot, FilePlus2, LayoutTemplate, LogOut, Mail, Settings2, Trash2, Users, Zap } from "lucide-react";
+import {
+  Bot,
+  CalendarClock,
+  FilePlus2,
+  LayoutTemplate,
+  LogOut,
+  Mail,
+  Settings2,
+  Trash2,
+  Users,
+  XCircle,
+  Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS_LABEL, type CampaignStatus } from "@/lib/campaigns";
 import { createCampaign, deleteCampaign, listCampaigns } from "@/lib/campaigns.functions";
+import { cancelScheduleFn } from "@/lib/schedule-dispatch.functions";
 
 export const Route = createFileRoute("/_authenticated/disparos/")({
   component: CampaignsPage,
@@ -28,9 +41,24 @@ function CampaignsPage() {
   const create = useServerFn(createCampaign);
   const remove = useServerFn(deleteCampaign);
 
+  const cancelSchedule = useServerFn(cancelScheduleFn);
+
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["campaigns"],
     queryFn: () => fetchList(),
+    // Atualiza sozinho para acompanhar os disparos programados.
+    refetchInterval: 30_000,
+  });
+
+  const scheduled = campaigns.filter((campaign) => campaign.status === "agendado");
+
+  const cancelMutation = useMutation({
+    mutationFn: (campaignId: string) => cancelSchedule({ data: { campaignId } }),
+    onSuccess: () => {
+      toast.success("Agendamento cancelado");
+      void queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const createMutation = useMutation({
@@ -136,6 +164,64 @@ function CampaignsPage() {
               Crie um novo disparo para começar — ele é salvo automaticamente como rascunho.
             </CardDescription>
           </CardHeader>
+        </Card>
+      )}
+
+      {scheduled.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarClock className="text-primary size-4" />
+              Disparos programados ({scheduled.length})
+            </CardTitle>
+            <CardDescription>
+              O robô do servidor envia sozinho na janela de horário escolhida, mesmo com o site
+              fechado.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            {scheduled.map((campaign) => {
+              const schedule = campaign.schedule;
+              const pending = Math.max(0, (campaign.total_count ?? 0) - (campaign.sent_count ?? 0));
+              return (
+                <div
+                  key={campaign.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <Link
+                      to="/disparos/$id"
+                      params={{ id: campaign.id }}
+                      className="font-medium hover:underline"
+                    >
+                      {campaign.name}
+                    </Link>
+                    <p className="text-muted-foreground text-xs">
+                      {campaign.sent_count}/{campaign.total_count} enviados · {pending} na fila
+                      {schedule?.enabled
+                        ? ` · das ${schedule.startTime} às ${schedule.endTime}, 1 a cada ${schedule.intervalSeconds}s`
+                        : " · envio contínuo"}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      Próximo envio:{" "}
+                      {campaign.next_send_at
+                        ? new Date(campaign.next_send_at).toLocaleString("pt-BR")
+                        : "assim que a janela abrir"}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={cancelMutation.isPending}
+                    onClick={() => cancelMutation.mutate(campaign.id)}
+                  >
+                    <XCircle className="size-4" />
+                    Cancelar
+                  </Button>
+                </div>
+              );
+            })}
+          </CardContent>
         </Card>
       )}
 
