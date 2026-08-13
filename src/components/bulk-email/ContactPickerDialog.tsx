@@ -25,6 +25,8 @@ import {
 import { listCsvRows } from "@/lib/csv-rows.functions";
 import type { CsvRow } from "@/lib/csv-rows";
 
+const PAGE_SIZE = 50;
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -38,6 +40,8 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
   const [q, setQ] = useState("");
   const [categoria, setCategoria] = useState("todos");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sort, setSort] = useState("nome-asc");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (!open) return;
@@ -60,14 +64,29 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return rows.filter((row) => {
+    const list = rows.filter((row) => {
       if (categoria !== "todos" && row.categoria !== categoria) return false;
       if (!term) return true;
       return (
         row.nome.toLowerCase().includes(term) || row.email.toLowerCase().includes(term)
       );
     });
-  }, [rows, q, categoria]);
+    const [field, dir] = sort.split("-") as ["nome" | "email", "asc" | "desc"];
+    return [...list].sort((a, b) => {
+      const cmp = (a[field] || "").localeCompare(b[field] || "", "pt-BR", {
+        sensitivity: "base",
+      });
+      return dir === "asc" ? cmp : -cmp;
+    });
+  }, [rows, q, categoria, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [q, categoria, sort]);
 
   const allFilteredSelected =
     filtered.length > 0 && filtered.every((row) => selected.has(row.id));
@@ -81,15 +100,16 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
     });
   }
 
-  function toggleAllFiltered() {
+  function selectAllFiltered() {
     setSelected((prev) => {
       const next = new Set(prev);
-      for (const row of filtered) {
-        if (allFilteredSelected) next.delete(row.id);
-        else next.add(row.id);
-      }
+      for (const row of filtered) next.add(row.id);
       return next;
     });
+  }
+
+  function clearSelection() {
+    setSelected(new Set());
   }
 
   function confirm() {
@@ -140,10 +160,38 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
           </Select>
         </div>
 
-        <div className="flex items-center justify-between gap-2">
-          <Button type="button" variant="ghost" size="sm" onClick={toggleAllFiltered}>
-            {allFilteredSelected ? "Desmarcar todos" : "Selecionar todos"}
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={allFilteredSelected}
+              onClick={selectAllFiltered}
+            >
+              Selecionar tudo
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={selected.size === 0}
+              onClick={clearSelection}
+            >
+              Limpar seleção
+            </Button>
+            <Select value={sort} onValueChange={setSort}>
+              <SelectTrigger className="h-8 w-[11rem]">
+                <SelectValue placeholder="Ordenar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nome-asc">Nome (A–Z)</SelectItem>
+                <SelectItem value="nome-desc">Nome (Z–A)</SelectItem>
+                <SelectItem value="email-asc">E-mail (A–Z)</SelectItem>
+                <SelectItem value="email-desc">E-mail (Z–A)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Badge variant="secondary">
             {selected.size} selecionados de {rows.length}
           </Badge>
@@ -154,7 +202,7 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
           {!loading && filtered.length === 0 && (
             <p className="text-muted-foreground p-3 text-sm">Nenhum contato encontrado.</p>
           )}
-          {filtered.map((row) => (
+          {pageRows.map((row) => (
             <label
               key={row.id}
               className="hover:bg-muted/60 flex cursor-pointer items-center gap-3 rounded-md px-3 py-2"
@@ -178,6 +226,32 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
               )}
             </label>
           ))}
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-muted-foreground text-xs">
+            {filtered.length} contatos · página {currentPage} de {totalPages}
+          </span>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={currentPage <= 1}
+              onClick={() => setPage(currentPage - 1)}
+            >
+              Anterior
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage(currentPage + 1)}
+            >
+              Próxima
+            </Button>
+          </div>
         </div>
 
         <DialogFooter>

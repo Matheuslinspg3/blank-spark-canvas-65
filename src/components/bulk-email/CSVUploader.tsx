@@ -1,5 +1,5 @@
 import { useServerFn } from "@tanstack/react-start";
-import { Upload, FileText, Download, CheckCircle2, Users, UserPlus } from "lucide-react";
+import { Upload, FileText, Download, CheckCircle2, Users, UserPlus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -31,6 +31,26 @@ function toRecipient(row: CsvRow): Recipient {
   };
 }
 
+/** Junta listas mantendo apenas um registro por e-mail (o primeiro vence). */
+function dedupeByEmail(lists: Recipient[][]): { rows: Recipient[]; removed: number } {
+  const seen = new Set<string>();
+  const rows: Recipient[] = [];
+  let removed = 0;
+  for (const list of lists) {
+    for (const row of list) {
+      const email = (row["email"] ?? "").trim().toLowerCase();
+      if (!email) continue;
+      if (seen.has(email)) {
+        removed += 1;
+        continue;
+      }
+      seen.add(email);
+      rows.push(row);
+    }
+  }
+  return { rows, removed };
+}
+
 type CSVUploaderProps = {
   recipients: Recipient[];
   columns: string[];
@@ -51,11 +71,29 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
     return Array.from(new Set([...(columns.length ? columns : CONTACT_COLUMNS), ...extra]));
   }
 
-  function handlePicked(rows: CsvRow[]) {
+  function handlePicked(picked: CsvRow[]) {
+    const { rows, removed } = dedupeByEmail([recipients, picked.map(toRecipient)]);
     setFileName("Minha lista de Contatos");
     setError(null);
-    onLoaded(CONTACT_COLUMNS, rows.map(toRecipient));
-    toast.success(`${rows.length} contatos selecionados`);
+    onLoaded(mergeColumns(CONTACT_COLUMNS), rows);
+    toast.success(
+      removed > 0
+        ? `${picked.length} contatos selecionados · ${removed} duplicados removidos`
+        : `${picked.length} contatos selecionados`,
+    );
+  }
+
+  function removeRecipient(email: string) {
+    const key = email.trim().toLowerCase();
+    onLoaded(
+      columns,
+      recipients.filter((row) => (row["email"] ?? "").trim().toLowerCase() !== key),
+    );
+  }
+
+  function clearRecipients() {
+    setFileName(null);
+    onLoaded(columns, []);
   }
 
   async function addManualContact() {
@@ -70,7 +108,8 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
         data: { rows: [{ nome: manual.nome.trim(), email, categoria: manual.categoria.trim() }] },
       });
       const added = (saved ?? []).map(toRecipient);
-      onLoaded(mergeColumns(CONTACT_COLUMNS), [...recipients, ...added]);
+      const { rows } = dedupeByEmail([recipients, added]);
+      onLoaded(mergeColumns(CONTACT_COLUMNS), rows);
       setManual({ nome: "", email: "", categoria: "" });
       toast.success("Contato adicionado à lista e ao disparo");
     } catch (err) {
@@ -84,11 +123,16 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
   async function handleFile(file: File) {
     try {
       const text = await file.text();
-      const { columns: cols, rows } = parseCsv(text);
+      const { columns: cols, rows: parsed } = parseCsv(text);
+      const { rows, removed } = dedupeByEmail([parsed]);
       setFileName(file.name);
       setError(null);
       onLoaded(cols, rows);
-      toast.success(`${rows.length} destinatários carregados`);
+      toast.success(
+        removed > 0
+          ? `${rows.length} destinatários carregados · ${removed} duplicados removidos`
+          : `${rows.length} destinatários carregados`,
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Não foi possível ler o CSV.";
       setError(message);
@@ -202,6 +246,16 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
                 {`{{${column}}}`}
               </Badge>
             ))}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={disabled}
+              onClick={clearRecipients}
+            >
+              <Trash2 className="size-4" />
+              Limpar lista
+            </Button>
           </div>
 
           <div className="max-h-80 overflow-auto rounded-lg border">
@@ -211,6 +265,7 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
                   {columns.map((column) => (
                     <TableHead key={column}>{column}</TableHead>
                   ))}
+                  <TableHead className="w-12" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -221,6 +276,18 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
                         {row[column]}
                       </TableCell>
                     ))}
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={disabled}
+                        aria-label={`Remover ${row['email']}`}
+                        onClick={() => removeRecipient(row['email'] ?? "")}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
