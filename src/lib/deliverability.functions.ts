@@ -77,3 +77,13 @@ export const removeSuppression = createServerFn({ method: "POST" })
 export const getWebhookSecret = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => ({ secret: process.env["BREVO_WEBHOOK_SECRET"] ?? "" }));
+
+/** Importa os eventos da API da Brevo (padrão: últimos 30 dias). */
+export const syncBrevoEventsFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { days?: number } | undefined) => input ?? {})
+  .handler(async ({ data, context }) => {
+    const { syncBrevoEvents } = await import("./brevo-sync.server");
+    const days = Math.min(90, Math.max(1, Math.round(Number(data.days ?? 30))));
+    return syncBrevoEvents(context.supabase, context.userId, days);
+  });
