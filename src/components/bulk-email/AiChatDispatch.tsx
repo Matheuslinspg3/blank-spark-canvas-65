@@ -415,6 +415,8 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
       pushAssistant(error instanceof Error ? error.message : "Falha no disparo.");
     } finally {
       setSending(false);
+      setWaiting(false);
+
     }
   }
 
@@ -546,6 +548,7 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
   }
 
   function updateRow(index: number, patch: Record<string, string>) {
+
     setRecipients(latest.current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
 
