@@ -2,8 +2,8 @@ import type { Recipient, Reviews, SendResult } from "./bulk-email";
 
 export type CampaignStatus = "rascunho" | "enviando" | "concluido" | "erro";
 
-/** "completo" = fluxo de 5 etapas; "simples" = IA; "molde" = textos próprios por categoria. */
-export type CampaignMode = "completo" | "simples" | "molde";
+/** "completo" = 5 etapas; "simples" = IA; "molde" = textos próprios; "ia" = chat. */
+export type CampaignMode = "completo" | "simples" | "molde" | "ia";
 
 export type Campaign = {
   id: string;
