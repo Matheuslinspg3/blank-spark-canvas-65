@@ -126,6 +126,29 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
   const [progress, setProgress] = useState(0);
   const [pendingSend, setPendingSend] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [schedule, setSchedule] = useState<SendSchedule>(DEFAULT_SCHEDULE);
+  const [waiting, setWaiting] = useState(false);
+
+  // Moldes já criados nos disparos "com molde" + moldes prontos da CAFCM.
+  const fetchCampaigns = useServerFn(listCampaigns);
+  const { data: allCampaigns } = useQuery({
+    queryKey: ["campaigns", "moldes"],
+    queryFn: () => fetchCampaigns(),
+  });
+  const molds = useMemo<MoldeTemplate[]>(() => {
+    const saved = (allCampaigns ?? [])
+      .filter((item) => item.mode === "molde")
+      .flatMap((item) =>
+        parseTemplatePlan(item.brief).templates.map((template) => ({
+          ...template,
+          name: template.name || item.name,
+        })),
+      )
+      .filter((template) => template.subject.trim() && template.body.trim());
+    const presets = TEMPLATE_PRESETS.map((preset) => preset.build());
+    return [...saved, ...presets];
+  }, [allCampaigns]);
+
 
   const fileRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
