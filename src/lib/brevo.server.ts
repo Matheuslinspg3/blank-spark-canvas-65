@@ -176,46 +176,19 @@ export async function sendSimpleCampaignViaBrevo(
 
     if (index > 0) await sleep(DELAY_MS);
 
-    try {
-      const response = await fetch(`${GATEWAY_URL}/smtp/email`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${lovableApiKey}`,
-          "X-Connection-Api-Key": brevoKey,
-        },
-        body: JSON.stringify({
-          sender: { name: payload.senderName, email: payload.senderEmail },
-          to: [{ email }],
-          subject: message.subject.trim(),
-          htmlContent: message.html,
-          textContent: htmlToPlainText(message.html),
-        }),
-      });
+    const outcome = await postEmail(lovableApiKey, brevoKey, {
+      sender: { name: payload.senderName, email: payload.senderEmail },
+      to: [{ email }],
+      subject: message.subject.trim(),
+      htmlContent: message.html,
+      textContent: htmlToPlainText(message.html),
+    });
 
-      const body = await response.text();
-
-      if (!response.ok) {
-        console.error(`Brevo send failed [${response.status}]: ${body}`);
-        results.push({ email, success: false, error: `Brevo ${response.status}: ${body}` });
-        continue;
-      }
-
-      let messageId: string | undefined;
-      try {
-        messageId = (JSON.parse(body) as { messageId?: string }).messageId;
-      } catch {
-        messageId = undefined;
-      }
-
-      results.push({ email, success: true, ...(messageId ? { messageId } : {}) });
-    } catch (error) {
-      results.push({
-        email,
-        success: false,
-        error: error instanceof Error ? error.message : "Erro desconhecido",
-      });
-    }
+    results.push(
+      outcome.ok
+        ? { email, success: true, ...(outcome.messageId ? { messageId: outcome.messageId } : {}) }
+        : { email, success: false, error: outcome.error },
+    );
   }
 
   return results;
