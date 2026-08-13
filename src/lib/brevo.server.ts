@@ -20,6 +20,59 @@ function isEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+/** Quantas tentativas extras em falhas temporárias (429 / 5xx / rede). */
+const MAX_RETRIES = 3;
+
+/**
+ * Envia um e-mail pela Brevo com novas tentativas automáticas quando a falha é
+ * temporária (limite de taxa, instabilidade 5xx ou queda de conexão).
+ */
+async function postEmail(
+  lovableApiKey: string,
+  brevoKey: string,
+  body: unknown,
+): Promise<{ ok: true; messageId?: string } | { ok: false; error: string }> {
+  let lastError = "Erro desconhecido";
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+    if (attempt > 0) await sleep(2000 * attempt);
+
+    try {
+      const response = await fetch(`${GATEWAY_URL}/smtp/email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${lovableApiKey}`,
+          "X-Connection-Api-Key": brevoKey,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const text = await response.text();
+
+      if (response.ok) {
+        let messageId: string | undefined;
+        try {
+          messageId = (JSON.parse(text) as { messageId?: string }).messageId;
+        } catch {
+          messageId = undefined;
+        }
+        return { ok: true, ...(messageId ? { messageId } : {}) };
+      }
+
+      console.error(`Brevo send failed [${response.status}]: ${text}`);
+      lastError = `Brevo ${response.status}: ${text}`;
+
+      const retryable = response.status === 429 || response.status >= 500;
+      if (!retryable) return { ok: false, error: lastError };
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : "Erro desconhecido";
+    }
+  }
+
+  return { ok: false, error: lastError };
+}
+
 export async function sendCampaignViaBrevo(payload: SendBulkPayload): Promise<SendResult[]> {
   const lovableApiKey = process.env["LOVABLE_API_KEY"];
   const brevoKey = process.env["BREVO_API_KEY"];
