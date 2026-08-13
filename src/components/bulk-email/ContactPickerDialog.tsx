@@ -40,6 +40,8 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
   const [q, setQ] = useState("");
   const [categoria, setCategoria] = useState("todos");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sort, setSort] = useState("nome-asc");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (!open) return;
