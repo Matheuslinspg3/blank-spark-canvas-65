@@ -273,6 +273,36 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
       return;
     }
 
+    // Com agenda ligada, quem envia é o servidor: pode fechar a aba.
+    if (schedule.enabled) {
+      const queued = ready.map((row) => ({
+        email: row["email"] ?? "",
+        subject: row[SIMPLE_SUBJECT_COLUMN] ?? "",
+        html: simpleLetterHtml(row[SIMPLE_BODY_COLUMN] ?? ""),
+      }));
+      try {
+        await scheduleCampaign({
+          data: {
+            campaignId: campaign.id,
+            schedule,
+            messages: queued,
+            senderName,
+            senderEmail,
+            recipients,
+            brief: briefJson,
+          },
+        });
+        setStatus("agendado");
+        setResults([]);
+        toast.success(
+          `${queued.length} e-mails programados. O envio continua no servidor, mesmo com o site fechado.`,
+        );
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Falha ao programar o disparo.");
+      }
+      return;
+    }
+
     sendCancelRef.current = false;
     setSending(true);
     setStatus("enviando");
