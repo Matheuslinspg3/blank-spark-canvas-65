@@ -118,6 +118,8 @@ function ContatosPage() {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [historyRow, setHistoryRow] = useState<CsvRow | null>(null);
   const [phase, setPhase] = useState<Record<string, "pesquisando" | "escrevendo">>({});
+  const [manual, setManual] = useState({ nome: "", email: "", categoria: "" });
+
 
   const fetchRows = useServerFn(listCsvRows);
   const fetchEvents = useServerFn(listCsvRowEvents);
