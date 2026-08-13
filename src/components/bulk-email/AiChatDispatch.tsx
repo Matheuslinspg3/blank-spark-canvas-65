@@ -367,7 +367,10 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
 
       for (const [index, message] of messages.entries()) {
         if (sendCancelRef.current) break;
-        if (index > 0) await sleep(1000);
+        const canSend = await waitForWindow(schedule, () => sendCancelRef.current, setWaiting);
+        if (!canSend) break;
+        if (index > 0) await sleep(schedule.enabled ? schedule.intervalSeconds * 1000 : 1000);
+
         const [result] = await sendSimple({
           data: {
             senderName,
