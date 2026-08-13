@@ -11,7 +11,7 @@ function isNewSupabaseApiKey(value: string): boolean {
 }
 
 function createSupabaseFetch(supabaseKey: string): typeof fetch {
-  return (input, init) => {
+  return async (input, init) => {
     const headers = new Headers(
       typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined,
     );
@@ -26,7 +26,23 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
     }
 
     headers.set('apikey', supabaseKey);
-    return fetch(input, { ...init, headers });
+
+    // Supabase services can briefly disagree about the current time just after
+    // a session is issued. Retrying here also covers PostgREST queries, whereas
+    // retrying only auth.getClaims leaves the first database request vulnerable.
+    const retryDelays = [1_000, 2_000, 4_000, 8_000];
+    for (let attempt = 0; ; attempt += 1) {
+      const requestInput =
+        typeof Request !== 'undefined' && input instanceof Request ? input.clone() : input;
+      const response = await fetch(requestInput, { ...init, headers });
+      const canRetry = attempt < retryDelays.length && response.status >= 400;
+      if (!canRetry) return response;
+
+      const body = await response.clone().text();
+      if (!/jwt issued at future/i.test(body)) return response;
+
+      await new Promise((resolve) => setTimeout(resolve, retryDelays[attempt]));
+    }
   };
 }
 
