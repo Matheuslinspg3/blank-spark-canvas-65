@@ -154,6 +154,43 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
         )}
       </div>
 
+      <div className="bg-muted/40 space-y-3 rounded-lg border p-3">
+        <p className="text-muted-foreground inline-flex items-center gap-1.5 text-xs font-medium">
+          <UserPlus className="size-3.5" />
+          Adicionar contato agora (salva na sua lista e entra neste disparo)
+        </p>
+        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+          <Input
+            placeholder="Nome"
+            value={manual.nome}
+            disabled={disabled}
+            onChange={(event) => setManual((prev) => ({ ...prev, nome: event.target.value }))}
+          />
+          <Input
+            type="email"
+            placeholder="email@empresa.com"
+            value={manual.email}
+            disabled={disabled}
+            onChange={(event) => setManual((prev) => ({ ...prev, email: event.target.value }))}
+          />
+          <Input
+            placeholder="Categoria"
+            value={manual.categoria}
+            disabled={disabled}
+            onChange={(event) => setManual((prev) => ({ ...prev, categoria: event.target.value }))}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={disabled || savingContact}
+            onClick={() => void addManualContact()}
+          >
+            <UserPlus className="size-4" />
+            {savingContact ? "Salvando…" : "Adicionar"}
+          </Button>
+        </div>
+      </div>
+
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
