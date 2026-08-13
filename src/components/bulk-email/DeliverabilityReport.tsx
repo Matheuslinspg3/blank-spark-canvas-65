@@ -2,9 +2,17 @@
  * Relatório de entregabilidade da campanha: números, alertas de reputação,
  * recomendações e a lista de eventos por destinatário.
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, Download, Lightbulb, RefreshCw, ShieldCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  CloudDownload,
+  Download,
+  Lightbulb,
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +37,7 @@ import {
   type EmailEvent,
   type EmailEventStatus,
 } from "@/lib/deliverability";
-import { listCampaignEvents } from "@/lib/deliverability.functions";
+import { listCampaignEvents, syncBrevoEventsFn } from "@/lib/deliverability.functions";
 
 function statusVariant(status: EmailEventStatus): "default" | "secondary" | "destructive" {
   if (status === "entregue") return "default";
@@ -39,11 +47,25 @@ function statusVariant(status: EmailEventStatus): "default" | "secondary" | "des
 
 export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
   const fetchEvents = useServerFn(listCampaignEvents);
+  const syncBrevo = useServerFn(syncBrevoEventsFn);
+  const queryClient = useQueryClient();
 
   const { data, isFetching, refetch } = useQuery({
     queryKey: ["deliverability", campaignId],
     queryFn: () => fetchEvents({ data: { campaignId } }),
     refetchInterval: 60_000,
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: () => syncBrevo({ data: { days: 30 } }),
+    onSuccess: (result) => {
+      toast.success(
+        `Brevo sincronizada: ${result.fetched} eventos lidos, ${result.updated} atualizados, ${result.inserted} importados.`,
+      );
+      void queryClient.invalidateQueries({ queryKey: ["deliverability", campaignId] });
+      void queryClient.invalidateQueries({ queryKey: ["suppressions"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const events: EmailEvent[] = data ?? [];
@@ -81,6 +103,15 @@ export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
             <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
               <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
               Atualizar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={syncMutation.isPending}
+              onClick={() => syncMutation.mutate()}
+            >
+              <CloudDownload className={`size-4 ${syncMutation.isPending ? "animate-pulse" : ""}`} />
+              {syncMutation.isPending ? "Sincronizando…" : "Sincronizar com a Brevo"}
             </Button>
             <Button
               variant="outline"
