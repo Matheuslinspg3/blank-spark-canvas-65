@@ -84,6 +84,8 @@ import {
   resolveTemplate,
   serializeTemplatePlan,
   unfilledVariables,
+  templateImages,
+  replaceImageSrc,
   variantFor,
   type MoldeTemplate,
   type VariantLabel,
