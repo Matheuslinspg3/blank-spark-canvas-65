@@ -279,7 +279,27 @@ const COLUMN_ALIASES: Record<string, string[]> = {
   categoria: ["categoria", "segmento", "category", "tipo"],
 };
 
-/** Valor da variável considerando colunas equivalentes do CSV. */
+/** "Nome do Responsável" → "nomedoresponsavel": compara nomes sem acento/espaço/caixa. */
+function normKey(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+/** Descobre a variável padrão (nome/empresa/categoria) por trás de um apelido. */
+export function canonicalKey(raw: string): string {
+  const norm = normKey(raw);
+  for (const [key, aliases] of Object.entries(COLUMN_ALIASES)) {
+    if (normKey(key) === norm) return key;
+    if (aliases.some((alias) => normKey(alias) === norm)) return key;
+  }
+  return norm;
+}
+
+/** Valor da variável considerando colunas equivalentes e nomes aproximados. */
 function valueFor(key: string, recipient: Recipient): string {
   const direct = (recipient[key] ?? "").trim();
   if (direct) return direct;
@@ -287,16 +307,32 @@ function valueFor(key: string, recipient: Recipient): string {
     const value = (recipient[alias] ?? "").trim();
     if (value) return value;
   }
-  return "";
+  // Comparação tolerante: {{Nome do Responsável}} acha a coluna "nome_responsavel".
+  const wanted = normKey(key);
+  if (!wanted) return "";
+  const entries = Object.entries(recipient).filter(([, value]) => (value ?? "").trim());
+  const exact = entries.find(([column]) => normKey(column) === wanted);
+  if (exact) return (exact[1] ?? "").trim();
+  const aliasSet = new Set((COLUMN_ALIASES[key] ?? []).map(normKey));
+  const aliased = entries.find(([column]) => aliasSet.has(normKey(column)));
+  if (aliased) return (aliased[1] ?? "").trim();
+  const partial = entries.find(([column]) => {
+    const c = normKey(column);
+    return c.length > 2 && (c.includes(wanted) || wanted.includes(c));
+  });
+  return partial ? (partial[1] ?? "").trim() : "";
 }
 
 /** Replaces {{coluna}} placeholders with the recipient's values. */
 export function interpolate(template: string, recipient: Recipient | undefined): string {
   if (!recipient) return template;
-  const filled = template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_match, raw: string) => {
-    const key = raw.toLowerCase();
-    return valueFor(key, recipient) || fallbackValue(key, recipient);
-  });
+  const filled = template.replace(
+    /\{\{\s*([^{}\n]{1,60}?)\s*\}\}/g,
+    (_match, raw: string) => {
+      const key = canonicalKey(raw);
+      return valueFor(key, recipient) || fallbackValue(key, recipient);
+    },
+  );
   return tidyInterpolated(filled);
 }
 
