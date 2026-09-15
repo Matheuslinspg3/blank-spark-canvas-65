@@ -83,6 +83,7 @@ import {
   renderTemplateHtml,
   resolveTemplate,
   serializeTemplatePlan,
+  unfilledVariables,
   variantFor,
   type MoldeTemplate,
   type VariantLabel,
@@ -641,6 +642,17 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                   template.bodyB ?? "",
                   template.previewTextB ?? "",
                 );
+                const missingVars = unfilledVariables(
+                  [
+                    template.subject,
+                    template.body,
+                    template.previewText ?? "",
+                    template.subjectB ?? "",
+                    template.bodyB ?? "",
+                    template.previewTextB ?? "",
+                  ],
+                  sample,
+                );
 
                 return (
                   <TabsContent key={template.id} value={template.id} className="space-y-4 pt-4">
@@ -702,9 +714,26 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                       />
                     </div>
 
+                    <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                      <div>
+                        <Label htmlFor={`html-${template.id}`}>HTML próprio</Label>
+                        <p className="text-muted-foreground text-xs">
+                          Cole um e-mail em HTML completo — as variáveis continuam funcionando.
+                        </p>
+                      </div>
+                      <Switch
+                        id={`html-${template.id}`}
+                        checked={Boolean(template.html)}
+                        disabled={locked}
+                        onCheckedChange={(checked: boolean) =>
+                          patchTemplate(template.id, { html: checked })
+                        }
+                      />
+                    </div>
+
                     <div className="space-y-1.5">
                       <Label htmlFor={`corpo-${template.id}`}>
-                        Texto do e-mail {template.ab && "(A)"}
+                        {template.html ? "HTML do e-mail" : "Texto do e-mail"} {template.ab && "(A)"}
                       </Label>
                       <div className="flex flex-wrap gap-1.5">
                         {variables.map((variable) => (
@@ -728,8 +757,15 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                         }}
                         value={template.body}
                         disabled={locked}
-                        rows={10}
-                        placeholder={SAMPLE_TEMPLATE_BODY}
+                        rows={template.html ? 18 : 10}
+                        className={
+                          template.html ? "bg-muted/40 font-mono text-xs leading-relaxed" : undefined
+                        }
+                        placeholder={
+                          template.html
+                            ? "<!doctype html> … cole aqui o HTML completo do e-mail"
+                            : SAMPLE_TEMPLATE_BODY
+                        }
                         onChange={(event) =>
                           patchTemplate(template.id, { body: event.target.value })
                         }
@@ -784,8 +820,17 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                               id={`corpoB-${template.id}`}
                               value={template.bodyB ?? ""}
                               disabled={locked}
-                              rows={10}
-                              placeholder={SAMPLE_TEMPLATE_BODY}
+                              rows={template.html ? 18 : 10}
+                              className={
+                                template.html
+                                  ? "bg-muted/40 font-mono text-xs leading-relaxed"
+                                  : undefined
+                              }
+                              placeholder={
+                                template.html
+                                  ? "<!doctype html> … HTML completo da variação B"
+                                  : SAMPLE_TEMPLATE_BODY
+                              }
                               onChange={(event) =>
                                 patchTemplate(template.id, { bodyB: event.target.value })
                               }
@@ -811,6 +856,18 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                       </Alert>
                     )}
 
+                    {template.html && missingVars.length > 0 && (
+                      <Alert>
+                        <AlertTitle>Variáveis sem valor no CSV</AlertTitle>
+                        <AlertDescription>
+                          Para o exemplo, estas variáveis ficariam em branco:{" "}
+                          {missingVars.join(", ")}. Confira se o CSV tem as colunas (ex.:
+                          nome_responsavel, link_whatsapp, link_descadastro) — sem elas, o link ou a
+                          saudação sai vazio.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
                     <div className="bg-muted/40 space-y-3 rounded-lg border p-3">
                       <p className="text-muted-foreground text-xs font-medium uppercase">
                         Prévia {sample?.["email"] ? `· ${sample["email"]}` : "· exemplo"}
@@ -830,9 +887,18 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                             {(variant === "A" ? template.previewText : template.previewTextB) ||
                               "(sem preview text)"}
                           </p>
-                          <p className="text-sm whitespace-pre-wrap">
-                            {renderBody(template, sample ?? {}, variant) || "(sem texto)"}
-                          </p>
+                          {template.html ? (
+                            <iframe
+                              title={`Prévia ${variant}`}
+                              sandbox=""
+                              srcDoc={renderTemplateHtml(template, sample ?? {}, variant)}
+                              className="h-[420px] w-full rounded-md border bg-white"
+                            />
+                          ) : (
+                            <p className="text-sm whitespace-pre-wrap">
+                              {renderBody(template, sample ?? {}, variant) || "(sem texto)"}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>

@@ -7,6 +7,7 @@
  * cinza que o Gmail mostra ao lado do assunto).
  */
 
+import { CAFCM_HTML_EMAIL } from "./cafcm-html-template";
 import { escapeHtml, interpolate, type Recipient } from "./bulk-email";
 import { simpleLetterHtml } from "./simple-dispatch";
 
@@ -29,6 +30,8 @@ export type MoldeTemplate = {
   body: string;
   /** Linha de prévia (preheader) mostrada ao lado do assunto na caixa de entrada. */
   previewText?: string;
+  /** O corpo do molde é o HTML completo do e-mail (layout próprio). */
+  html?: boolean;
   /** Liga o teste A/B: metade recebe a variação B. */
   ab?: boolean;
   subjectB?: string;
@@ -64,6 +67,7 @@ export function parseTemplatePlan(raw: string | null | undefined): TemplatePlan 
           subject: String(item.subject ?? ""),
           body: String(item.body ?? ""),
           previewText: String(item.previewText ?? ""),
+          html: Boolean(item.html),
           ab: Boolean(item.ab),
           subjectB: String(item.subjectB ?? ""),
           bodyB: String(item.bodyB ?? ""),
@@ -225,14 +229,25 @@ export function renderBody(
   return interpolate(variantContent(template, variant).body, row);
 }
 
-/** HTML final (carta simples) com preheader invisível, já interpolado. */
+/** HTML final já interpolado: carta simples ou o HTML próprio do molde. */
 export function renderTemplateHtml(
   template: MoldeTemplate,
   row: Recipient,
   variant: VariantLabel = "A",
 ): string {
-  const html = simpleLetterHtml(renderBody(template, row, variant));
   const preview = interpolate(variantContent(template, variant).previewText, row).trim();
+
+  // HTML próprio: o corpo já é o e-mail completo — só interpolamos variáveis.
+  if (template.html) {
+    const html = interpolate(variantContent(template, variant).body, row);
+    if (!preview || /display:\s*none/i.test(html)) return html;
+    const preheader = `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${escapeHtml(
+      preview,
+    )}</div>`;
+    return html.replace(/(<body[^>]*>)/i, `$1${preheader}`);
+  }
+
+  const html = simpleLetterHtml(renderBody(template, row, variant));
   if (!preview) return html;
   const preheader = `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${escapeHtml(
     preview,
@@ -262,6 +277,22 @@ export function bracketPlaceholders(...texts: string[]): string[] {
   for (const text of texts) {
     for (const match of (text || "").matchAll(/\[([^\]\n]{2,60})\]/g)) {
       found.add(`[${match[1]!.trim()}]`);
+    }
+  }
+  return [...found];
+}
+
+/**
+ * Variáveis {{...}} que ficaram vazias para o destinatário de exemplo — em
+ * HTML próprio isso quebra links e saudações sem nenhum aviso visual.
+ */
+export function unfilledVariables(texts: string[], sample: Recipient | undefined): string[] {
+  if (!sample) return [];
+  const found = new Set<string>();
+  for (const text of texts) {
+    for (const match of (text || "").matchAll(/\{\{\s*([\w.-]+)\s*\}\}/g)) {
+      const token = match[0]!;
+      if (interpolate(token, sample).trim() === "") found.add(token);
     }
   }
   return [...found];
@@ -310,6 +341,18 @@ Atenciosamente,
 CAFCM — (13) 3222-1233`;
 
 export const TEMPLATE_PRESETS: TemplatePreset[] = [
+  {
+    label: "HTML CAFCM — cota de aprendizagem",
+    build: () => ({
+      id: newTemplateId(),
+      name: "Construtoras HTML",
+      subject: "Sua empresa está preparada para a cota de aprendizagem?",
+      previewText:
+        "A CAFCM ajuda a organizar a cota, a contratação e o acompanhamento dos aprendizes.",
+      body: CAFCM_HTML_EMAIL,
+      html: true,
+    }),
+  },
   {
     label: "Construtoras e incorporadoras (A/B)",
     build: () => ({
