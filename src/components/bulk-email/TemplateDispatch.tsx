@@ -858,6 +858,63 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                       </Alert>
                     )}
 
+                    {template.html &&
+                      (() => {
+                        const images = templateImages(
+                          `${template.body}\n${template.bodyB ?? ""}`,
+                        );
+                        if (images.length === 0) return null;
+                        const broken = images.filter((image) => image.problem);
+                        return (
+                          <div className="space-y-2 rounded-lg border p-3">
+                            <p className="text-sm font-medium">
+                              Imagens do e-mail ({images.length})
+                              {broken.length > 0 && (
+                                <span className="text-destructive">
+                                  {" "}
+                                  — {broken.length} precisam de endereço real
+                                </span>
+                              )}
+                            </p>
+                            {images.map((image) => (
+                              <div
+                                key={image.src}
+                                className="space-y-1 border-t pt-2 first:border-t-0 first:pt-0"
+                              >
+                                <p className="text-muted-foreground truncate text-xs">
+                                  {image.alt ? `${image.alt} · ` : ""}
+                                  {image.src || "(sem endereço)"}
+                                </p>
+                                <Input
+                                  defaultValue={image.src}
+                                  disabled={locked}
+                                  placeholder="https://… endereço público da imagem"
+                                  onBlur={(event) => {
+                                    const next = event.target.value.trim();
+                                    if (!next || next === image.src) return;
+                                    patchTemplate(template.id, {
+                                      body: replaceImageSrc(template.body, image.src, next),
+                                      bodyB: replaceImageSrc(
+                                        template.bodyB ?? "",
+                                        image.src,
+                                        next,
+                                      ),
+                                    });
+                                  }}
+                                />
+                                {image.problem && (
+                                  <p className="text-destructive text-xs">{image.problem}</p>
+                                )}
+                              </div>
+                            ))}
+                            <p className="text-muted-foreground text-xs">
+                              A imagem precisa estar publicada na internet (endereço https que abre
+                              no navegador). Cole aqui o endereço certo e ele é trocado no HTML.
+                            </p>
+                          </div>
+                        );
+                      })()}
+
                     {template.html && missingVars.length > 0 && (
                       <Alert>
                         <AlertTitle>Variáveis sem valor no CSV</AlertTitle>
