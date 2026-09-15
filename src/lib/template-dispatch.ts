@@ -7,6 +7,7 @@
  * cinza que o Gmail mostra ao lado do assunto).
  */
 
+import { CAFCM_HTML_EMAIL } from "./cafcm-html-template";
 import { escapeHtml, interpolate, type Recipient } from "./bulk-email";
 import { simpleLetterHtml } from "./simple-dispatch";
 
@@ -340,6 +341,18 @@ Atenciosamente,
 CAFCM — (13) 3222-1233`;
 
 export const TEMPLATE_PRESETS: TemplatePreset[] = [
+  {
+    label: "HTML CAFCM — cota de aprendizagem",
+    build: () => ({
+      id: newTemplateId(),
+      name: "Construtoras HTML",
+      subject: "Sua empresa está preparada para a cota de aprendizagem?",
+      previewText:
+        "A CAFCM ajuda a organizar a cota, a contratação e o acompanhamento dos aprendizes.",
+      body: CAFCM_HTML_EMAIL,
+      html: true,
+    }),
+  },
   {
     label: "Construtoras e incorporadoras (A/B)",
     build: () => ({
