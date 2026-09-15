@@ -290,12 +290,80 @@ export function unfilledVariables(texts: string[], sample: Recipient | undefined
   if (!sample) return [];
   const found = new Set<string>();
   for (const text of texts) {
-    for (const match of (text || "").matchAll(/\{\{\s*([\w.-]+)\s*\}\}/g)) {
+    for (const match of (text || "").matchAll(/\{\{\s*([^{}\n]{1,60}?)\s*\}\}/g)) {
       const token = match[0]!;
       if (interpolate(token, sample).trim() === "") found.add(token);
     }
   }
   return [...found];
+}
+
+/** Uma imagem encontrada no HTML do molde. */
+export type TemplateImage = {
+  /** Endereço exatamente como está no HTML. */
+  src: string;
+  /** Texto alternativo, quando existir. */
+  alt: string;
+  /** Motivo pelo qual a imagem não vai aparecer para quem receber. */
+  problem: string | null;
+};
+
+const IMAGE_PLACEHOLDER_HINTS = [
+  "example.com",
+  "exemplo.com",
+  "seudominio",
+  "seusite",
+  "placeholder",
+  "via.placeholder",
+  "placehold",
+  "lorempixel",
+  "dummyimage",
+  "imagem.png",
+  "logo.png",
+  "sua-imagem",
+  "url-da-imagem",
+  "localhost",
+  "127.0.0.1",
+];
+
+function imageProblem(src: string): string | null {
+  const value = src.trim();
+  if (!value) return "Endereço da imagem vazio.";
+  if (value.startsWith("{{") || /\{\{/.test(value)) return null;
+  if (value.startsWith("data:")) return null;
+  if (value.startsWith("cid:")) return "Imagem anexada (cid:) — não aparece em e-mail enviado.";
+  if (value.startsWith("//")) return "Endereço sem https:// — muitos e-mails bloqueiam.";
+  if (!/^https?:\/\//i.test(value))
+    return "Endereço local ou relativo — só funciona no seu computador.";
+  if (/^http:\/\//i.test(value)) return "Endereço http:// — use https:// para não ser bloqueado.";
+  const lower = value.toLowerCase();
+  if (IMAGE_PLACEHOLDER_HINTS.some((hint) => lower.includes(hint)))
+    return "Parece um endereço de exemplo — troque pela imagem real.";
+  return null;
+}
+
+/** Lê as imagens do HTML (tags <img> e background-image) e aponta as problemáticas. */
+export function templateImages(html: string): TemplateImage[] {
+  const found = new Map<string, TemplateImage>();
+  for (const match of (html || "").matchAll(/<img\b[^>]*>/gi)) {
+    const tag = match[0];
+    const src = (tag.match(/\bsrc\s*=\s*["']([^"']*)["']/i)?.[1] ?? "").trim();
+    const alt = (tag.match(/\balt\s*=\s*["']([^"']*)["']/i)?.[1] ?? "").trim();
+    if (!found.has(src)) found.set(src, { src, alt, problem: imageProblem(src) });
+  }
+  for (const match of (html || "").matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/gi)) {
+    const src = (match[1] ?? "").trim();
+    if (!src || found.has(src)) continue;
+    found.set(src, { src, alt: "fundo", problem: imageProblem(src) });
+  }
+  return [...found.values()];
+}
+
+/** Troca todas as ocorrências de um endereço de imagem no HTML. */
+export function replaceImageSrc(html: string, from: string, to: string): string {
+  if (!from) return html;
+  const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return html.replace(new RegExp(escaped, "g"), to);
 }
 
 export const SAMPLE_TEMPLATE_BODY = `Olá, {{nome}}!
