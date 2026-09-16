@@ -283,7 +283,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     const bodyB = template.bodyB ? optimizeEmailHtml(template.bodyB) : template.bodyB;
     const after = htmlSizeBytes(body) + htmlSizeBytes(bodyB ?? "");
     const saved = Math.max(0, before - after);
-    patchTemplate(template.id, { body, bodyB });
+    patchTemplate(template.id, bodyB === undefined ? { body } : { body, bodyB });
     const message =
       saved > 0
         ? `${formatHtmlSize(saved)} removidos · agora ${formatHtmlSize(after)}`
