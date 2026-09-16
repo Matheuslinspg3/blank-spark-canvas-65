@@ -367,6 +367,56 @@ export function replaceImageSrc(html: string, from: string, to: string): string 
   return html.replace(new RegExp(escaped, "g"), to);
 }
 
+/** Gmail costuma cortar o corpo quando o HTML final se aproxima de 102 KB. */
+export const GMAIL_SAFE_HTML_BYTES = 90 * 1024;
+export const GMAIL_WARNING_HTML_BYTES = 75 * 1024;
+
+export type HtmlSizeLevel = "safe" | "warning" | "blocked";
+
+export function htmlSizeBytes(html: string): number {
+  return new TextEncoder().encode(html).length;
+}
+
+export function formatHtmlSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} bytes`;
+  return `${(bytes / 1024).toFixed(1).replace(".0", "")} KB`;
+}
+
+export function htmlSizeLevel(html: string): HtmlSizeLevel {
+  const bytes = htmlSizeBytes(html);
+  if (bytes >= GMAIL_SAFE_HTML_BYTES) return "blocked";
+  if (bytes >= GMAIL_WARNING_HTML_BYTES) return "warning";
+  return "safe";
+}
+
+/**
+ * Compactação conservadora para HTML de e-mail. Preserva comentários
+ * condicionais do Outlook, conteúdo de pre/textarea e os espaços do texto.
+ */
+export function optimizeEmailHtml(html: string): string {
+  const protectedBlocks: string[] = [];
+  const protect = (value: string) => {
+    const index = protectedBlocks.push(value) - 1;
+    return `___EMAIL_BLOCK_${index}___`;
+  };
+
+  let optimized = html
+    .replace(/<!--[\s\S]*?-->/g, (comment) =>
+      /^<!--\[if\s/i.test(comment) || /<!\[endif\]-->$/i.test(comment)
+        ? protect(comment)
+        : "",
+    )
+    .replace(/<(pre|textarea)\b[\s\S]*?<\/\1>/gi, protect)
+    .replace(/>\s+</g, "><")
+    .replace(/[ \t]+\r?\n/g, "\n")
+    .trim();
+
+  protectedBlocks.forEach((block, index) => {
+    optimized = optimized.replace(`___EMAIL_BLOCK_${index}___`, block);
+  });
+  return optimized;
+}
+
 export const SAMPLE_TEMPLATE_BODY = `Olá, {{nome}}!
 
 Escrevo para falar rapidamente sobre a {{empresa}}...
