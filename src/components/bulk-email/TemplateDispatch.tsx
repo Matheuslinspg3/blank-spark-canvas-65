@@ -60,12 +60,7 @@ import { updateCampaign } from "@/lib/campaigns.functions";
 import { scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
-import {
-  DEFAULT_SCHEDULE,
-  sleep,
-  waitForWindow,
-  type SendSchedule,
-} from "@/lib/send-schedule";
+import { DEFAULT_SCHEDULE, sleep, waitForWindow, type SendSchedule } from "@/lib/send-schedule";
 import {
   SAMPLE_TEMPLATE_BODY,
   TEMPLATE_ID_COLUMN,
@@ -128,7 +123,6 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [optimizationSavings, setOptimizationSavings] = useState<Record<string, string>>({});
 
-
   const bodyRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
   useEffect(() => {
@@ -181,9 +175,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
       setTemplates((current) => {
         const json = serializeTemplatePlan({ templates: current });
         if (json === saved) return current;
-        const currentFilled = current.filter(
-          (t) => t.subject.trim() || t.body.trim(),
-        ).length;
+        const currentFilled = current.filter((t) => t.subject.trim() || t.body.trim()).length;
         const savedFilled = parsed.filter((t) => t.subject.trim() || t.body.trim()).length;
         if (savedFilled <= currentFilled) return current;
         toast.info("Recuperamos os moldes que você estava escrevendo.");
@@ -238,8 +230,6 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
-
-
   async function persist(patch: CampaignPatch) {
     try {
       await save({ data: { id: campaign.id, patch } });
@@ -269,7 +259,6 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
       toast.success("Rascunho salvo");
     }
   }
-
 
   function patchTemplate(id: string, patch: Partial<MoldeTemplate>) {
     setTemplates((current) =>
@@ -308,7 +297,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   function removeTemplate(id: string) {
     setTemplates((current) => current.filter((template) => template.id !== id));
     setRecipients((current) =>
-      current.map((row) => (row[TEMPLATE_ID_COLUMN] === id ? { ...row, [TEMPLATE_ID_COLUMN]: "" } : row)),
+      current.map((row) =>
+        row[TEMPLATE_ID_COLUMN] === id ? { ...row, [TEMPLATE_ID_COLUMN]: "" } : row,
+      ),
     );
   }
 
@@ -335,7 +326,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   function assignTemplate(index: number, templateId: string) {
     setRecipients((current) =>
       current.map((row, i) =>
-        i === index ? { ...row, [TEMPLATE_ID_COLUMN]: templateId === "auto" ? "" : templateId } : row,
+        i === index
+          ? { ...row, [TEMPLATE_ID_COLUMN]: templateId === "auto" ? "" : templateId }
+          : row,
       ),
     );
   }
@@ -374,7 +367,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     const [message] = messagesFor([sample]);
     if (!message) return;
     if (htmlSizeBytes(message.html) >= GMAIL_SAFE_HTML_BYTES) {
-      toast.error("Este HTML está muito pesado. Otimize-o e troque imagens embutidas antes do teste.");
+      toast.error(
+        "Este HTML está muito pesado. Otimize-o e troque imagens embutidas antes do teste.",
+      );
       return;
     }
 
@@ -481,7 +476,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
         if ((index + 1) % 10 === 0) {
           const risk = await guard.checkRisk();
           if (risk.stop) {
-            toast.error(risk.alerts[0]?.message ?? "Taxa de bounce/spam alta: disparo interrompido.");
+            toast.error(
+              risk.alerts[0]?.message ?? "Taxa de bounce/spam alta: disparo interrompido.",
+            );
             break;
           }
         }
@@ -561,7 +558,6 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                 ? `Salvo ${savedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
                 : "Salvo"}
           </span>
-
         </div>
       </header>
 
@@ -667,9 +663,8 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
 
               {templates.map((template) => {
                 const sample =
-                  recipients.find(
-                    (row) => resolveTemplate(row, templates)?.id === template.id,
-                  ) ?? recipients[0];
+                  recipients.find((row) => resolveTemplate(row, templates)?.id === template.id) ??
+                  recipients[0];
                 const count = recipients.filter(
                   (row) => resolveTemplate(row, templates)?.id === template.id,
                 ).length;
@@ -698,7 +693,11 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                   ? renderTemplateHtml(template, sample ?? {}, "B")
                   : "";
                 const sizes = [
-                  { variant: "A", bytes: htmlSizeBytes(renderedA), level: htmlSizeLevel(renderedA) },
+                  {
+                    variant: "A",
+                    bytes: htmlSizeBytes(renderedA),
+                    level: htmlSizeLevel(renderedA),
+                  },
                   ...(renderedB
                     ? [
                         {
@@ -739,7 +738,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor={`assunto-${template.id}`}>Assunto {template.ab && "(A)"}</Label>
+                      <Label htmlFor={`assunto-${template.id}`}>
+                        Assunto {template.ab && "(A)"}
+                      </Label>
                       <Input
                         id={`assunto-${template.id}`}
                         value={template.subject}
@@ -790,7 +791,8 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
 
                     <div className="space-y-1.5">
                       <Label htmlFor={`corpo-${template.id}`}>
-                        {template.html ? "HTML do e-mail" : "Texto do e-mail"} {template.ab && "(A)"}
+                        {template.html ? "HTML do e-mail" : "Texto do e-mail"}{" "}
+                        {template.ab && "(A)"}
                       </Label>
                       <div className="flex flex-wrap gap-1.5">
                         {variables.map((variable) => (
@@ -816,7 +818,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                         disabled={locked}
                         rows={template.html ? 18 : 10}
                         className={
-                          template.html ? "bg-muted/40 font-mono text-xs leading-relaxed" : undefined
+                          template.html
+                            ? "bg-muted/40 font-mono text-xs leading-relaxed"
+                            : undefined
                         }
                         placeholder={
                           template.html
@@ -915,9 +919,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
 
                     {template.html &&
                       (() => {
-                        const images = templateImages(
-                          `${template.body}\n${template.bodyB ?? ""}`,
-                        );
+                        const images = templateImages(`${template.body}\n${template.bodyB ?? ""}`);
                         if (images.length === 0) return null;
                         const broken = images.filter((image) => image.problem);
                         return (
@@ -949,11 +951,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                                     if (!next || next === image.src) return;
                                     patchTemplate(template.id, {
                                       body: replaceImageSrc(template.body, image.src, next),
-                                      bodyB: replaceImageSrc(
-                                        template.bodyB ?? "",
-                                        image.src,
-                                        next,
-                                      ),
+                                      bodyB: replaceImageSrc(template.bodyB ?? "", image.src, next),
                                     });
                                   }}
                                 />
@@ -982,7 +980,8 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                                   variant={size.level === "blocked" ? "destructive" : "outline"}
                                 >
                                   {hasVariantB(template) ? `${size.variant}: ` : ""}
-                                  {formatHtmlSize(size.bytes)} · {size.level === "safe"
+                                  {formatHtmlSize(size.bytes)} ·{" "}
+                                  {size.level === "safe"
                                     ? "Seguro"
                                     : size.level === "warning"
                                       ? "Atenção"
@@ -1152,7 +1151,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
             <Send className="text-primary size-4" />
             Enviar
           </CardTitle>
-          <CardDescription>1 e-mail por segundo. Só as empresas prontas são enviadas.</CardDescription>
+          <CardDescription>
+            1 e-mail por segundo. Só as empresas prontas são enviadas.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -1208,9 +1209,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
           )}
 
           <Button
-            disabled={
-              locked || readyRows.length === 0 || guard.limitReached || oversizedCount > 0
-            }
+            disabled={locked || readyRows.length === 0 || guard.limitReached || oversizedCount > 0}
             onClick={() => void handleSend()}
           >
             {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}

@@ -149,9 +149,7 @@ export function resolveTemplate(
 
 /** A/B ativo e variação B preenchida. */
 export function hasVariantB(template: MoldeTemplate): boolean {
-  return Boolean(
-    template.ab && (template.subjectB ?? "").trim() && (template.bodyB ?? "").trim(),
-  );
+  return Boolean(template.ab && (template.subjectB ?? "").trim() && (template.bodyB ?? "").trim());
 }
 
 /**
@@ -186,10 +184,7 @@ export function indexInTemplate(
 
 type VariantContent = { subject: string; body: string; previewText: string };
 
-export function variantContent(
-  template: MoldeTemplate,
-  variant: VariantLabel,
-): VariantContent {
+export function variantContent(template: MoldeTemplate, variant: VariantLabel): VariantContent {
   if (variant === "B") {
     return {
       subject: template.subjectB ?? "",
@@ -402,9 +397,7 @@ export function optimizeEmailHtml(html: string): string {
 
   let optimized = html
     .replace(/<!--[\s\S]*?-->/g, (comment) =>
-      /^<!--\[if\s/i.test(comment) || /<!\[endif\]-->$/i.test(comment)
-        ? protect(comment)
-        : "",
+      /^<!--\[if\s/i.test(comment) || /<!\[endif\]-->$/i.test(comment) ? protect(comment) : "",
     )
     .replace(/<(pre|textarea)\b[\s\S]*?<\/\1>/gi, protect)
     .replace(/>\s+</g, "><")
