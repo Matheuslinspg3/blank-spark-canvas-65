@@ -330,7 +330,8 @@ function imageProblem(src: string): string | null {
   const value = src.trim();
   if (!value) return "Endereço da imagem vazio.";
   if (value.startsWith("{{") || /\{\{/.test(value)) return null;
-  if (value.startsWith("data:")) return null;
+  if (value.startsWith("data:"))
+    return "Imagem embutida no código (data:) — deixa o e-mail pesado e o Gmail corta a mensagem. Hospede a imagem e cole o link https aqui.";
   if (value.startsWith("cid:")) return "Imagem anexada (cid:) — não aparece em e-mail enviado.";
   if (value.startsWith("//")) return "Endereço sem https:// — muitos e-mails bloqueiam.";
   if (!/^https?:\/\//i.test(value))
