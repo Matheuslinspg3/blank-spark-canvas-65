@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   FileText,
   Loader2,
+  Minimize2,
   Plus,
   Save,
   Send,
@@ -59,12 +60,7 @@ import { updateCampaign } from "@/lib/campaigns.functions";
 import { scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
-import {
-  DEFAULT_SCHEDULE,
-  sleep,
-  waitForWindow,
-  type SendSchedule,
-} from "@/lib/send-schedule";
+import { DEFAULT_SCHEDULE, sleep, waitForWindow, type SendSchedule } from "@/lib/send-schedule";
 import {
   SAMPLE_TEMPLATE_BODY,
   TEMPLATE_ID_COLUMN,
@@ -74,9 +70,14 @@ import {
   categoryOf,
   ensureTemplatesForRows,
   hasVariantB,
+  htmlSizeBytes,
+  htmlSizeLevel,
+  formatHtmlSize,
+  GMAIL_SAFE_HTML_BYTES,
   indexInTemplate,
   isRowReady,
   newTemplate,
+  optimizeEmailHtml,
   parseTemplatePlan,
   renderBody,
   renderSubject,
@@ -120,7 +121,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   const cancelRef = useRef(false);
   const [dirty, setDirty] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
-
+  const [optimizationSavings, setOptimizationSavings] = useState<Record<string, string>>({});
 
   const bodyRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
@@ -174,9 +175,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
       setTemplates((current) => {
         const json = serializeTemplatePlan({ templates: current });
         if (json === saved) return current;
-        const currentFilled = current.filter(
-          (t) => t.subject.trim() || t.body.trim(),
-        ).length;
+        const currentFilled = current.filter((t) => t.subject.trim() || t.body.trim()).length;
         const savedFilled = parsed.filter((t) => t.subject.trim() || t.body.trim()).length;
         if (savedFilled <= currentFilled) return current;
         toast.info("Recuperamos os moldes que você estava escrevendo.");
@@ -231,8 +230,6 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
-
-
   async function persist(patch: CampaignPatch) {
     try {
       await save({ data: { id: campaign.id, patch } });
@@ -263,11 +260,25 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     }
   }
 
-
   function patchTemplate(id: string, patch: Partial<MoldeTemplate>) {
     setTemplates((current) =>
       current.map((template) => (template.id === id ? { ...template, ...patch } : template)),
     );
+  }
+
+  function optimizeTemplate(template: MoldeTemplate) {
+    const before = htmlSizeBytes(template.body) + htmlSizeBytes(template.bodyB ?? "");
+    const body = optimizeEmailHtml(template.body);
+    const bodyB = template.bodyB ? optimizeEmailHtml(template.bodyB) : template.bodyB;
+    const after = htmlSizeBytes(body) + htmlSizeBytes(bodyB ?? "");
+    const saved = Math.max(0, before - after);
+    patchTemplate(template.id, bodyB === undefined ? { body } : { body, bodyB });
+    const message =
+      saved > 0
+        ? `${formatHtmlSize(saved)} removidos · agora ${formatHtmlSize(after)}`
+        : `Já está otimizado · ${formatHtmlSize(after)}`;
+    setOptimizationSavings((current) => ({ ...current, [template.id]: message }));
+    toast.success(message);
   }
 
   function addTemplate() {
@@ -286,7 +297,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   function removeTemplate(id: string) {
     setTemplates((current) => current.filter((template) => template.id !== id));
     setRecipients((current) =>
-      current.map((row) => (row[TEMPLATE_ID_COLUMN] === id ? { ...row, [TEMPLATE_ID_COLUMN]: "" } : row)),
+      current.map((row) =>
+        row[TEMPLATE_ID_COLUMN] === id ? { ...row, [TEMPLATE_ID_COLUMN]: "" } : row,
+      ),
     );
   }
 
@@ -313,7 +326,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   function assignTemplate(index: number, templateId: string) {
     setRecipients((current) =>
       current.map((row, i) =>
-        i === index ? { ...row, [TEMPLATE_ID_COLUMN]: templateId === "auto" ? "" : templateId } : row,
+        i === index
+          ? { ...row, [TEMPLATE_ID_COLUMN]: templateId === "auto" ? "" : templateId }
+          : row,
       ),
     );
   }
@@ -351,6 +366,12 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
 
     const [message] = messagesFor([sample]);
     if (!message) return;
+    if (htmlSizeBytes(message.html) >= GMAIL_SAFE_HTML_BYTES) {
+      toast.error(
+        "Este HTML está muito pesado. Otimize-o e troque imagens embutidas antes do teste.",
+      );
+      return;
+    }
 
     setTesting(true);
     try {
@@ -374,6 +395,15 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     const messages = messagesFor(readyRows);
     if (messages.length === 0) {
       toast.error("Nenhum e-mail pronto para enviar.");
+      return;
+    }
+    const oversized = messages.filter(
+      (message) => htmlSizeBytes(message.html) >= GMAIL_SAFE_HTML_BYTES,
+    );
+    if (oversized.length > 0) {
+      toast.error(
+        `${oversized.length} e-mail(is) ultrapassam 90 KB. Otimize o HTML antes de enviar.`,
+      );
       return;
     }
     if (!senderEmail.trim()) {
@@ -446,7 +476,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
         if ((index + 1) % 10 === 0) {
           const risk = await guard.checkRisk();
           if (risk.stop) {
-            toast.error(risk.alerts[0]?.message ?? "Taxa de bounce/spam alta: disparo interrompido.");
+            toast.error(
+              risk.alerts[0]?.message ?? "Taxa de bounce/spam alta: disparo interrompido.",
+            );
             break;
           }
         }
@@ -477,6 +509,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   }
 
   const missingCount = recipients.length - readyRows.length;
+  const oversizedCount = messagesFor(readyRows).filter(
+    (message) => htmlSizeBytes(message.html) >= GMAIL_SAFE_HTML_BYTES,
+  ).length;
 
   return (
     <main className="mx-auto w-full max-w-[900px] space-y-6 px-4 py-8">
@@ -523,7 +558,6 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                 ? `Salvo ${savedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
                 : "Salvo"}
           </span>
-
         </div>
       </header>
 
@@ -629,9 +663,8 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
 
               {templates.map((template) => {
                 const sample =
-                  recipients.find(
-                    (row) => resolveTemplate(row, templates)?.id === template.id,
-                  ) ?? recipients[0];
+                  recipients.find((row) => resolveTemplate(row, templates)?.id === template.id) ??
+                  recipients[0];
                 const count = recipients.filter(
                   (row) => resolveTemplate(row, templates)?.id === template.id,
                 ).length;
@@ -655,6 +688,27 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                   ],
                   sample,
                 );
+                const renderedA = renderTemplateHtml(template, sample ?? {}, "A");
+                const renderedB = hasVariantB(template)
+                  ? renderTemplateHtml(template, sample ?? {}, "B")
+                  : "";
+                const sizes = [
+                  {
+                    variant: "A",
+                    bytes: htmlSizeBytes(renderedA),
+                    level: htmlSizeLevel(renderedA),
+                  },
+                  ...(renderedB
+                    ? [
+                        {
+                          variant: "B",
+                          bytes: htmlSizeBytes(renderedB),
+                          level: htmlSizeLevel(renderedB),
+                        },
+                      ]
+                    : []),
+                ];
+                const hasBlockedSize = sizes.some((size) => size.level === "blocked");
 
                 return (
                   <TabsContent key={template.id} value={template.id} className="space-y-4 pt-4">
@@ -684,7 +738,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor={`assunto-${template.id}`}>Assunto {template.ab && "(A)"}</Label>
+                      <Label htmlFor={`assunto-${template.id}`}>
+                        Assunto {template.ab && "(A)"}
+                      </Label>
                       <Input
                         id={`assunto-${template.id}`}
                         value={template.subject}
@@ -735,7 +791,8 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
 
                     <div className="space-y-1.5">
                       <Label htmlFor={`corpo-${template.id}`}>
-                        {template.html ? "HTML do e-mail" : "Texto do e-mail"} {template.ab && "(A)"}
+                        {template.html ? "HTML do e-mail" : "Texto do e-mail"}{" "}
+                        {template.ab && "(A)"}
                       </Label>
                       <div className="flex flex-wrap gap-1.5">
                         {variables.map((variable) => (
@@ -761,7 +818,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                         disabled={locked}
                         rows={template.html ? 18 : 10}
                         className={
-                          template.html ? "bg-muted/40 font-mono text-xs leading-relaxed" : undefined
+                          template.html
+                            ? "bg-muted/40 font-mono text-xs leading-relaxed"
+                            : undefined
                         }
                         placeholder={
                           template.html
@@ -860,9 +919,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
 
                     {template.html &&
                       (() => {
-                        const images = templateImages(
-                          `${template.body}\n${template.bodyB ?? ""}`,
-                        );
+                        const images = templateImages(`${template.body}\n${template.bodyB ?? ""}`);
                         if (images.length === 0) return null;
                         const broken = images.filter((image) => image.problem);
                         return (
@@ -894,11 +951,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                                     if (!next || next === image.src) return;
                                     patchTemplate(template.id, {
                                       body: replaceImageSrc(template.body, image.src, next),
-                                      bodyB: replaceImageSrc(
-                                        template.bodyB ?? "",
-                                        image.src,
-                                        next,
-                                      ),
+                                      bodyB: replaceImageSrc(template.bodyB ?? "", image.src, next),
                                     });
                                   }}
                                 />
@@ -915,24 +968,59 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                         );
                       })()}
 
-                    {template.html &&
-                      (() => {
-                        const totalKb = Math.round(
-                          (template.body.length + (template.bodyB ?? "").length) / 1024,
-                        );
-                        if (totalKb < 90) return null;
-                        return (
+                    {template.html && (
+                      <div className="space-y-3 rounded-lg border p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">Peso do HTML final</p>
+                            <div className="flex flex-wrap gap-2">
+                              {sizes.map((size) => (
+                                <Badge
+                                  key={size.variant}
+                                  variant={size.level === "blocked" ? "destructive" : "outline"}
+                                >
+                                  {hasVariantB(template) ? `${size.variant}: ` : ""}
+                                  {formatHtmlSize(size.bytes)} ·{" "}
+                                  {size.level === "safe"
+                                    ? "Seguro"
+                                    : size.level === "warning"
+                                      ? "Atenção"
+                                      : "Muito pesado"}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={locked}
+                            onClick={() => optimizeTemplate(template)}
+                          >
+                            <Minimize2 className="size-4" />
+                            Otimizar HTML
+                          </Button>
+                        </div>
+                        {optimizationSavings[template.id] && (
+                          <p className="text-muted-foreground text-xs">
+                            {optimizationSavings[template.id]}
+                          </p>
+                        )}
+                        {hasBlockedSize ? (
                           <Alert variant="destructive">
-                            <AlertTitle>HTML muito pesado ({totalKb} KB)</AlertTitle>
+                            <AlertTitle>Envio bloqueado para evitar corte no Gmail</AlertTitle>
                             <AlertDescription>
-                              O Gmail corta mensagens acima de ~100 KB e o leitor só vê o conteúdo
-                              ao clicar em &quot;Exibir toda a mensagem&quot;. O peso quase sempre
-                              vem de imagens embutidas no código — hospede as imagens na internet e
-                              use os links https no lugar.
+                              Reduza para menos de 90 KB. Clique em Otimizar HTML e substitua
+                              imagens embutidas por endereços https.
                             </AlertDescription>
                           </Alert>
-                        );
-                      })()}
+                        ) : (
+                          <p className="text-muted-foreground text-xs">
+                            Limite preventivo: 90 KB. O Gmail costuma cortar perto de 102 KB.
+                          </p>
+                        )}
+                      </div>
+                    )}
 
                     {template.html && missingVars.length > 0 && (
                       <Alert>
@@ -1063,7 +1151,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
             <Send className="text-primary size-4" />
             Enviar
           </CardTitle>
-          <CardDescription>1 e-mail por segundo. Só as empresas prontas são enviadas.</CardDescription>
+          <CardDescription>
+            1 e-mail por segundo. Só as empresas prontas são enviadas.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -1101,6 +1191,16 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
             limitReached={guard.limitReached}
           />
 
+          {oversizedCount > 0 && (
+            <Alert variant="destructive">
+              <AlertTitle>Envio bloqueado: HTML acima de 90 KB</AlertTitle>
+              <AlertDescription>
+                {oversizedCount} e-mail(is) seriam cortados pelo Gmail. Abra o molde correspondente,
+                clique em Otimizar HTML e substitua imagens embutidas por links https.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {sending && <Progress value={progress} />}
           {waiting && (
             <p className="text-muted-foreground text-xs">
@@ -1109,7 +1209,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
           )}
 
           <Button
-            disabled={locked || readyRows.length === 0 || guard.limitReached}
+            disabled={locked || readyRows.length === 0 || guard.limitReached || oversizedCount > 0}
             onClick={() => void handleSend()}
           >
             {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
