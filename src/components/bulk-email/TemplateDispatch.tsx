@@ -915,6 +915,25 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
                         );
                       })()}
 
+                    {template.html &&
+                      (() => {
+                        const totalKb = Math.round(
+                          (template.body.length + (template.bodyB ?? "").length) / 1024,
+                        );
+                        if (totalKb < 90) return null;
+                        return (
+                          <Alert variant="destructive">
+                            <AlertTitle>HTML muito pesado ({totalKb} KB)</AlertTitle>
+                            <AlertDescription>
+                              O Gmail corta mensagens acima de ~100 KB e o leitor só vê o conteúdo
+                              ao clicar em &quot;Exibir toda a mensagem&quot;. O peso quase sempre
+                              vem de imagens embutidas no código — hospede as imagens na internet e
+                              use os links https no lugar.
+                            </AlertDescription>
+                          </Alert>
+                        );
+                      })()}
+
                     {template.html && missingVars.length > 0 && (
                       <Alert>
                         <AlertTitle>Variáveis sem valor no CSV</AlertTitle>
