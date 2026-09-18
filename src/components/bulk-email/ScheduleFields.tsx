@@ -1,5 +1,6 @@
-import { Clock } from "lucide-react";
+import { CalendarCheck2, CalendarClock, Clock, Loader2, XCircle } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -10,10 +11,29 @@ type Props = {
   pending: number;
   disabled?: boolean;
   onChange: (schedule: SendSchedule) => void;
+  /** Grava a fila no servidor para o robô enviar no horário. */
+  onSchedule?: () => void;
+  scheduling?: boolean;
+  /** Campanha já programada no servidor. */
+  scheduled?: boolean;
+  nextSendAt?: string | null;
+  onCancelSchedule?: () => void;
+  cancelling?: boolean;
 };
 
-/** Janela de horário + intervalo entre e-mails. */
-export function ScheduleFields({ schedule, pending, disabled, onChange }: Props) {
+/** Janela de horário + intervalo entre e-mails, com salvamento no servidor. */
+export function ScheduleFields({
+  schedule,
+  pending,
+  disabled,
+  onChange,
+  onSchedule,
+  scheduling,
+  scheduled,
+  nextSendAt,
+  onCancelSchedule,
+  cancelling,
+}: Props) {
   return (
     <div className="space-y-3 rounded-md border p-3">
       <div className="flex items-center justify-between gap-3">
@@ -24,7 +44,7 @@ export function ScheduleFields({ schedule, pending, disabled, onChange }: Props)
         <Switch
           id="agenda"
           checked={schedule.enabled}
-          disabled={disabled}
+          disabled={disabled || scheduled}
           onCheckedChange={(enabled) => onChange({ ...schedule, enabled })}
         />
       </div>
@@ -40,7 +60,7 @@ export function ScheduleFields({ schedule, pending, disabled, onChange }: Props)
               type="time"
               className="h-9 w-[120px]"
               value={schedule.startTime}
-              disabled={disabled}
+              disabled={disabled || scheduled}
               onChange={(event) => onChange({ ...schedule, startTime: event.target.value })}
             />
           </div>
@@ -53,7 +73,7 @@ export function ScheduleFields({ schedule, pending, disabled, onChange }: Props)
               type="time"
               className="h-9 w-[120px]"
               value={schedule.endTime}
-              disabled={disabled}
+              disabled={disabled || scheduled}
               onChange={(event) => onChange({ ...schedule, endTime: event.target.value })}
             />
           </div>
@@ -68,9 +88,12 @@ export function ScheduleFields({ schedule, pending, disabled, onChange }: Props)
               max={3600}
               className="h-9 w-[140px]"
               value={schedule.intervalSeconds}
-              disabled={disabled}
+              disabled={disabled || scheduled}
               onChange={(event) =>
-                onChange({ ...schedule, intervalSeconds: clampInterval(Number(event.target.value)) })
+                onChange({
+                  ...schedule,
+                  intervalSeconds: clampInterval(Number(event.target.value)),
+                })
               }
             />
           </div>
@@ -78,6 +101,52 @@ export function ScheduleFields({ schedule, pending, disabled, onChange }: Props)
       )}
 
       <p className="text-muted-foreground text-xs">{describeSchedule(schedule, pending)}</p>
+
+      {schedule.enabled && !scheduled && onSchedule && (
+        <div className="space-y-2 border-t pt-3">
+          <Button
+            type="button"
+            size="sm"
+            disabled={disabled || scheduling || pending === 0}
+            onClick={onSchedule}
+          >
+            {scheduling ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CalendarClock className="size-4" />
+            )}
+            {scheduling ? "Programando…" : `Salvar e programar ${pending} e-mails`}
+          </Button>
+          <p className="text-muted-foreground text-xs">
+            Clique aqui para guardar o horário: o envio passa a ser feito pelo servidor, mesmo com o
+            site fechado. Sem clicar, nada fica programado.
+          </p>
+        </div>
+      )}
+
+      {scheduled && (
+        <div className="space-y-2 border-t pt-3">
+          <p className="flex items-center gap-2 text-xs font-medium text-emerald-600">
+            <CalendarCheck2 className="size-4" />
+            Programado no servidor
+            {nextSendAt
+              ? ` · próximo envio ${new Date(nextSendAt).toLocaleString("pt-BR")}`
+              : " · começa assim que a janela abrir"}
+          </p>
+          {onCancelSchedule && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={cancelling}
+              onClick={onCancelSchedule}
+            >
+              <XCircle className="size-4" />
+              {cancelling ? "Cancelando…" : "Cancelar agendamento"}
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

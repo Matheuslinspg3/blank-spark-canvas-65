@@ -41,17 +41,17 @@ import {
   type AiSettings,
 } from "@/lib/ai-config";
 import { downloadFile, buildReportCsv, type Recipient, type SendResult } from "@/lib/bulk-email";
-import { STATUS_LABEL, type Campaign, type CampaignPatch, type CampaignStatus } from "@/lib/campaigns";
+import {
+  STATUS_LABEL,
+  type Campaign,
+  type CampaignPatch,
+  type CampaignStatus,
+} from "@/lib/campaigns";
 import { updateCampaign } from "@/lib/campaigns.functions";
-import { scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
+import { cancelScheduleFn, scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
-import {
-  DEFAULT_SCHEDULE,
-  sleep,
-  waitForWindow,
-  type SendSchedule,
-} from "@/lib/send-schedule";
+import { DEFAULT_SCHEDULE, sleep, waitForWindow, type SendSchedule } from "@/lib/send-schedule";
 import {
   SIMPLE_BODY_COLUMN,
   SIMPLE_SUBJECT_COLUMN,
@@ -79,6 +79,7 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
   const save = useServerFn(updateCampaign);
   const sendSimple = useServerFn(sendSimpleEmailsFn);
   const scheduleCampaign = useServerFn(scheduleCampaignFn);
+  const cancelSchedule = useServerFn(cancelScheduleFn);
   const guard = useSendGuard(campaign.id);
 
   const [name, setName] = useState(campaign.name);
@@ -124,6 +125,9 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
   const configured = isAiConfigured(settings);
   const readyCount = recipients.filter(isReady).length;
   const locked = sending || status === "enviando";
+  const isScheduled = status === "agendado";
+  const [scheduling, setScheduling] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const briefJson = useMemo(() => JSON.stringify(brief), [brief]);
 
@@ -166,7 +170,9 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
       const { subject, body } = parseSimpleEmail(raw);
       setRecipients(
         latest.current.map((row, i) =>
-          i === index ? { ...row, [SIMPLE_SUBJECT_COLUMN]: subject, [SIMPLE_BODY_COLUMN]: body } : row,
+          i === index
+            ? { ...row, [SIMPLE_SUBJECT_COLUMN]: subject, [SIMPLE_BODY_COLUMN]: body }
+            : row,
         ),
       );
       setStatuses((prev) => ({ ...prev, [index]: "ok" }));
@@ -216,7 +222,11 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
     setGenerating(false);
 
     const ok = latest.current.filter(isReady).length;
-    await persist({ recipients: latest.current, brief: briefJson, total_count: latest.current.length });
+    await persist({
+      recipients: latest.current,
+      brief: briefJson,
+      total_count: latest.current.length,
+    });
     if (stopRef.current) toast.info(`Geração interrompida com ${ok} e-mails prontos`);
     else if (ok === recipients.length) toast.success(`${ok} e-mails prontos`);
     else toast.warning(`${ok} de ${recipients.length} e-mails prontos`);
@@ -259,6 +269,28 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
       toast.error(error instanceof Error ? error.message : "Falha ao enviar o teste.");
     } finally {
       setTesting(false);
+    }
+  }
+
+  async function handleSchedule() {
+    setScheduling(true);
+    try {
+      await handleSend();
+    } finally {
+      setScheduling(false);
+    }
+  }
+
+  async function handleCancelSchedule() {
+    setCancelling(true);
+    try {
+      await cancelSchedule({ data: { campaignId: campaign.id } });
+      setStatus("rascunho");
+      toast.success("Agendamento cancelado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao cancelar.");
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -354,7 +386,9 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
         if ((index + 1) % 10 === 0) {
           const risk = await guard.checkRisk();
           if (risk.stop) {
-            toast.error(risk.alerts[0]?.message ?? "Taxa de bounce/spam alta: disparo interrompido.");
+            toast.error(
+              risk.alerts[0]?.message ?? "Taxa de bounce/spam alta: disparo interrompido.",
+            );
             break;
           }
         }
@@ -413,7 +447,12 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
               Configurações
             </Link>
           </Button>
-          <Button size="sm" variant="secondary" disabled={saving || locked} onClick={() => void handleSave()}>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={saving || locked}
+            onClick={() => void handleSave()}
+          >
             <Save className="size-4" />
             Salvar rascunho
           </Button>
@@ -427,7 +466,8 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
             Quem envia
           </CardTitle>
           <CardDescription>
-            Use um remetente verificado na Brevo (ex.: rh@cafcm.org.br) e o nome que assina o e-mail.
+            Use um remetente verificado na Brevo (ex.: rh@cafcm.org.br) e o nome que assina o
+            e-mail.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -472,8 +512,8 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
             Proposta do disparo
           </CardTitle>
           <CardDescription>
-            Em uma ou duas frases, diga o objetivo. A IA escreve o resto usando a proposta comercial da
-            CAFCM.
+            Em uma ou duas frases, diga o objetivo. A IA escreve o resto usando a proposta comercial
+            da CAFCM.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -494,7 +534,9 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
             <Upload className="text-primary size-4" />
             Lista de contatos
           </CardTitle>
-          <CardDescription>CSV com a coluna email. Nome, empresa e segmento ajudam a IA.</CardDescription>
+          <CardDescription>
+            CSV com a coluna email. Nome, empresa e segmento ajudam a IA.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <CSVUploader
@@ -539,7 +581,11 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
               disabled={locked || generating || recipients.length === 0}
               onClick={() => void generateAll(true)}
             >
-              {generating ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+              {generating ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Sparkles className="size-4" />
+              )}
               {generating ? "Gerando…" : "Gerar textos com IA"}
             </Button>
             <Button
@@ -586,7 +632,11 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
                     <div className="flex items-center gap-2">
                       <Badge
                         variant={
-                          rowStatus === "ok" ? "default" : rowStatus === "erro" ? "destructive" : "secondary"
+                          rowStatus === "ok"
+                            ? "default"
+                            : rowStatus === "erro"
+                              ? "destructive"
+                              : "secondary"
                         }
                       >
                         {rowStatus === "ok"
@@ -643,7 +693,9 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
             <Send className="text-primary size-4" />
             Enviar
           </CardTitle>
-          <CardDescription>1 e-mail por segundo. Só as linhas prontas são enviadas.</CardDescription>
+          <CardDescription>
+            1 e-mail por segundo. Só as linhas prontas são enviadas.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -656,7 +708,12 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
               placeholder="voce@empresa.com"
               onChange={(e) => setTestEmail(e.target.value)}
             />
-            <Button variant="outline" size="sm" disabled={locked || testing} onClick={() => void handleTest()}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={locked || testing}
+              onClick={() => void handleTest()}
+            >
               <TestTube2 className="size-4" />
               {testing ? "Enviando…" : "Enviar teste"}
             </Button>
@@ -667,6 +724,12 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
             pending={readyCount}
             disabled={locked}
             onChange={setSchedule}
+            onSchedule={() => void handleSchedule()}
+            scheduling={scheduling}
+            scheduled={isScheduled}
+            nextSendAt={campaign.next_send_at}
+            onCancelSchedule={() => void handleCancelSchedule()}
+            cancelling={cancelling}
           />
 
           <DailyLimitBanner
@@ -684,7 +747,9 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
           )}
 
           <Button
-            disabled={locked || readyCount === 0 || guard.limitReached}
+            disabled={
+              locked || readyCount === 0 || guard.limitReached || schedule.enabled || isScheduled
+            }
             onClick={() => void handleSend()}
           >
             {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
