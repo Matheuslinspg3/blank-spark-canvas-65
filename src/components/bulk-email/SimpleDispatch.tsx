@@ -716,7 +716,9 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
           )}
 
           <Button
-            disabled={locked || readyCount === 0 || guard.limitReached}
+            disabled={
+              locked || readyCount === 0 || guard.limitReached || schedule.enabled || isScheduled
+            }
             onClick={() => void handleSend()}
           >
             {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
