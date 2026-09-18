@@ -141,6 +141,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   }, [templates, activeTab]);
 
   const locked = sending || status === "enviando";
+  const isScheduled = status === "agendado";
+  const [scheduling, setScheduling] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const planJson = useMemo(() => serializeTemplatePlan({ templates }), [templates]);
   const readyRows = useMemo(
     () => recipients.filter((row) => isRowReady(row, templates)),
