@@ -47,6 +47,8 @@ export function ScheduleFields({
   onCancelSchedule,
   cancelling,
 }: Props) {
+  const warning = windowWarning(schedule, pending);
+
   return (
     <div className="space-y-3 rounded-md border p-3">
       <div className="flex items-center justify-between gap-3">
