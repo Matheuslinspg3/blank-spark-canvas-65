@@ -43,7 +43,7 @@ import {
 import { downloadFile, buildReportCsv, type Recipient, type SendResult } from "@/lib/bulk-email";
 import { STATUS_LABEL, type Campaign, type CampaignPatch, type CampaignStatus } from "@/lib/campaigns";
 import { updateCampaign } from "@/lib/campaigns.functions";
-import { scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
+import { cancelScheduleFn, scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
 import {
