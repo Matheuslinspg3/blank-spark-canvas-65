@@ -1206,8 +1206,14 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
           <ScheduleFields
             schedule={schedule}
             pending={readyRows.length}
-            disabled={locked}
+            disabled={locked || oversizedCount > 0}
             onChange={setSchedule}
+            onSchedule={() => void handleSchedule()}
+            scheduling={scheduling}
+            scheduled={isScheduled}
+            nextSendAt={campaign.next_send_at}
+            onCancelSchedule={() => void handleCancelSchedule()}
+            cancelling={cancelling}
           />
 
           <DailyLimitBanner
