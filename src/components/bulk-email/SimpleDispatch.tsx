@@ -79,6 +79,7 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
   const save = useServerFn(updateCampaign);
   const sendSimple = useServerFn(sendSimpleEmailsFn);
   const scheduleCampaign = useServerFn(scheduleCampaignFn);
+  const cancelSchedule = useServerFn(cancelScheduleFn);
   const guard = useSendGuard(campaign.id);
 
   const [name, setName] = useState(campaign.name);
