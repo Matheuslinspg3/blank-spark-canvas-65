@@ -338,6 +338,28 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
     }
   }
 
+  async function handleSchedule() {
+    setScheduling(true);
+    try {
+      await runSendAll();
+    } finally {
+      setScheduling(false);
+    }
+  }
+
+  async function handleCancelSchedule() {
+    setCancelling(true);
+    try {
+      await cancelSchedule({ data: { campaignId: campaign.id } });
+      setStatus("rascunho");
+      toast.success("Agendamento cancelado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao cancelar.");
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   async function runSendAll() {
     const ready = latest.current.filter(isReady);
     if (ready.length === 0) {
