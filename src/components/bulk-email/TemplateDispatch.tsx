@@ -57,7 +57,7 @@ import {
   type CampaignStatus,
 } from "@/lib/campaigns";
 import { updateCampaign } from "@/lib/campaigns.functions";
-import { scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
+import { cancelScheduleFn, scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
 import { DEFAULT_SCHEDULE, sleep, waitForWindow, type SendSchedule } from "@/lib/send-schedule";
