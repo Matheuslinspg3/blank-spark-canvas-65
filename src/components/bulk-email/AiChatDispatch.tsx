@@ -21,7 +21,6 @@ import { DeliverabilityReport } from "./DeliverabilityReport";
 import { ResultsTable } from "./ResultsTable";
 import { ScheduleFields } from "./ScheduleFields";
 
-
 import { useSendGuard } from "@/hooks/use-send-guard";
 
 import { Badge } from "@/components/ui/badge";
@@ -53,17 +52,17 @@ import {
   type Recipient,
   type SendResult,
 } from "@/lib/bulk-email";
-import { STATUS_LABEL, type Campaign, type CampaignPatch, type CampaignStatus } from "@/lib/campaigns";
+import {
+  STATUS_LABEL,
+  type Campaign,
+  type CampaignPatch,
+  type CampaignStatus,
+} from "@/lib/campaigns";
 import { listCampaigns, updateCampaign } from "@/lib/campaigns.functions";
 import { cancelScheduleFn, scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
-import {
-  DEFAULT_SCHEDULE,
-  sleep,
-  waitForWindow,
-  type SendSchedule,
-} from "@/lib/send-schedule";
+import { DEFAULT_SCHEDULE, sleep, waitForWindow, type SendSchedule } from "@/lib/send-schedule";
 import {
   TEMPLATE_PRESETS,
   parseTemplatePlan,
@@ -152,7 +151,6 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
     return [...saved, ...presets];
   }, [allCampaigns]);
 
-
   const fileRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sendCancelRef = useRef(false);
@@ -175,7 +173,9 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
     if (sender) {
       setSenderName((current) => current || sender.name);
       setSenderEmail((current) => current || sender.email);
-      setBrief((current) => (current.senderName ? current : { ...current, senderName: sender.name }));
+      setBrief((current) =>
+        current.senderName ? current : { ...current, senderName: sender.name },
+      );
     }
     try {
       const raw = localStorage.getItem(backupKey(campaign.id));
@@ -246,7 +246,10 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
   }, []);
 
   function pushAssistant(content: string, extra: Partial<ChatMessage> = {}) {
-    setChat((prev) => [...prev, { role: "assistant", content, at: new Date().toISOString(), ...extra }]);
+    setChat((prev) => [
+      ...prev,
+      { role: "assistant", content, at: new Date().toISOString(), ...extra },
+    ]);
   }
 
   function snapshot() {
@@ -332,7 +335,9 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
           ],
         },
       });
-      return result?.success ? `Teste enviado para ${target}.` : (result?.error ?? "Falha no teste.");
+      return result?.success
+        ? `Teste enviado para ${target}.`
+        : (result?.error ?? "Falha no teste.");
     } catch (error) {
       return error instanceof Error ? error.message : "Falha no teste.";
     }
@@ -474,7 +479,6 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
     } finally {
       setSending(false);
       setWaiting(false);
-
     }
   }
 
@@ -659,7 +663,6 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
     pushAssistant(`Apliquei os moldes por categoria em ${applied} e-mail(s).`);
   }
 
-
   return (
     <main className="mx-auto w-full max-w-[1200px] space-y-4 px-4 py-8">
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -729,8 +732,8 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
                 <div className="border-primary/40 bg-primary/5 space-y-2 rounded-lg border p-3 text-sm">
                   <p className="font-medium">Confirmar envio</p>
                   <p className="text-muted-foreground text-xs">
-                    {readyCount} e-mails · remetente {senderName || "—"} &lt;{senderEmail || "—"}&gt; ·
-                    restam {Math.max(guard.dailyLimit - guard.sentLast24h, 0)} envios hoje.
+                    {readyCount} e-mails · remetente {senderName || "—"} &lt;{senderEmail || "—"}
+                    &gt; · restam {Math.max(guard.dailyLimit - guard.sentLast24h, 0)} envios hoje.
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -794,7 +797,11 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
                   disabled={thinking || locked || !input.trim()}
                   onClick={() => void submit(input)}
                 >
-                  {thinking ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                  {thinking ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Send className="size-4" />
+                  )}
                   Enviar
                 </Button>
               </div>
@@ -918,7 +925,6 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
                 Fora da janela de envio — aguardando {schedule.startTime} para continuar.
               </p>
             )}
-
 
             {recipients.length === 0 && (
               <p className="text-muted-foreground text-sm">

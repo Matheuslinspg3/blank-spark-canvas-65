@@ -90,7 +90,10 @@ export function ScheduleFields({
               value={schedule.intervalSeconds}
               disabled={disabled || scheduled}
               onChange={(event) =>
-                onChange({ ...schedule, intervalSeconds: clampInterval(Number(event.target.value)) })
+                onChange({
+                  ...schedule,
+                  intervalSeconds: clampInterval(Number(event.target.value)),
+                })
               }
             />
           </div>
