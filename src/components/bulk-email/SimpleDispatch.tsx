@@ -124,6 +124,9 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
   const configured = isAiConfigured(settings);
   const readyCount = recipients.filter(isReady).length;
   const locked = sending || status === "enviando";
+  const isScheduled = status === "agendado";
+  const [scheduling, setScheduling] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const briefJson = useMemo(() => JSON.stringify(brief), [brief]);
 
