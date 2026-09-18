@@ -1241,7 +1241,14 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
           )}
 
           <Button
-            disabled={locked || readyRows.length === 0 || guard.limitReached || oversizedCount > 0}
+            disabled={
+              locked ||
+              readyRows.length === 0 ||
+              guard.limitReached ||
+              oversizedCount > 0 ||
+              schedule.enabled ||
+              isScheduled
+            }
             onClick={() => void handleSend()}
           >
             {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
