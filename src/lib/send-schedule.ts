@@ -79,6 +79,61 @@ export function describeSchedule(schedule: SendSchedule, pending: number): strin
   return `Das ${schedule.startTime} às ${schedule.endTime}, 1 e-mail a cada ${schedule.intervalSeconds}s (~${totalMinutes} min para ${pending} e-mails).`;
 }
 
+/** Duração da janela em minutos (considera janelas que viram a meia-noite). */
+export function windowMinutes(schedule: SendSchedule): number {
+  const start = minutesOf(schedule.startTime);
+  const end = minutesOf(schedule.endTime);
+  if (start === end) return 0;
+  return start > end ? 24 * 60 - start + end : end - start;
+}
+
+/** Quantos e-mails cabem na janela com o intervalo escolhido. */
+export function windowCapacity(schedule: SendSchedule): number {
+  const seconds = windowMinutes(schedule) * 60;
+  if (seconds <= 0) return 0;
+  return Math.floor(seconds / Math.max(1, schedule.intervalSeconds)) + 1;
+}
+
+/**
+ * Aviso quando a janela de horário é curta demais para a quantidade de e-mails:
+ * o robô envia só o que couber e o resto fica parado até o dia seguinte.
+ */
+export function windowWarning(
+  schedule: SendSchedule,
+  pending: number,
+): { capacity: number; leftovers: number; minutesNeeded: number; message: string } | null {
+  if (!schedule.enabled || pending <= 0) return null;
+  const capacity = windowCapacity(schedule);
+  if (capacity >= pending) return null;
+
+  const leftovers = pending - capacity;
+  const minutesNeeded = Math.max(1, Math.ceil(((pending - 1) * schedule.intervalSeconds) / 60));
+
+  if (capacity === 0) {
+    return {
+      capacity,
+      leftovers,
+      minutesNeeded,
+      message: `A janela das ${schedule.startTime} às ${schedule.endTime} não tem duração nenhuma — nenhum e-mail será enviado. Aumente o horário final para pelo menos ${minutesNeeded} min depois do inicial.`,
+    };
+  }
+
+  return {
+    capacity,
+    leftovers,
+    minutesNeeded,
+    message: `Nesse horário só cabem ${capacity} de ${pending} e-mails: os outros ${leftovers} ficam parados esperando a janela abrir de novo (amanhã). Para enviar todos hoje, deixe a janela com pelo menos ${minutesNeeded} min (ex.: das ${schedule.startTime} às ${addMinutes(schedule.startTime, minutesNeeded)}) ou diminua o intervalo.`,
+  };
+}
+
+/** Soma minutos a um horário "HH:MM". */
+export function addMinutes(time: string, minutes: number): string {
+  const total = (minutesOf(time) + minutes) % (24 * 60);
+  const h = String(Math.floor(total / 60)).padStart(2, "0");
+  const m = String(total % 60).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Espera respeitando a janela; resolve false se o envio foi cancelado. */

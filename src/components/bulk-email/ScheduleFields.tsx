@@ -1,10 +1,23 @@
-import { CalendarCheck2, CalendarClock, Clock, Loader2, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarCheck2,
+  CalendarClock,
+  Clock,
+  Loader2,
+  XCircle,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { clampInterval, describeSchedule, type SendSchedule } from "@/lib/send-schedule";
+import {
+  addMinutes,
+  clampInterval,
+  describeSchedule,
+  windowWarning,
+  type SendSchedule,
+} from "@/lib/send-schedule";
 
 type Props = {
   schedule: SendSchedule;
@@ -34,6 +47,8 @@ export function ScheduleFields({
   onCancelSchedule,
   cancelling,
 }: Props) {
+  const warning = windowWarning(schedule, pending);
+
   return (
     <div className="space-y-3 rounded-md border p-3">
       <div className="flex items-center justify-between gap-3">
@@ -102,12 +117,36 @@ export function ScheduleFields({
 
       <p className="text-muted-foreground text-xs">{describeSchedule(schedule, pending)}</p>
 
+      {warning && !scheduled && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <div className="space-y-2">
+            <p>{warning.message}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7"
+              disabled={disabled || scheduled}
+              onClick={() =>
+                onChange({
+                  ...schedule,
+                  endTime: addMinutes(schedule.startTime, warning.minutesNeeded + 5),
+                })
+              }
+            >
+              Ajustar horário final para {addMinutes(schedule.startTime, warning.minutesNeeded + 5)}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {schedule.enabled && !scheduled && onSchedule && (
         <div className="space-y-2 border-t pt-3">
           <Button
             type="button"
             size="sm"
-            disabled={disabled || scheduling || pending === 0}
+            disabled={disabled || scheduling || pending === 0 || warning?.capacity === 0}
             onClick={onSchedule}
           >
             {scheduling ? (
