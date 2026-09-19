@@ -256,6 +256,27 @@ function CampaignsPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <Select
+                  value={campaign.marketing_campaign_id ?? "none"}
+                  onValueChange={(value) =>
+                    linkMutation.mutate({
+                      dispatchId: campaign.id,
+                      marketingCampaignId: value === "none" ? null : value,
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-[190px]" aria-label="Campanha vinculada">
+                    <SelectValue placeholder="Sem campanha" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem campanha</SelectItem>
+                    {(marketingCampaigns ?? []).map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {campaign.mode === "ia" && <Badge variant="outline">IA</Badge>}
                 {campaign.mode === "simples" && <Badge variant="outline">Simples</Badge>}
                 {campaign.mode === "molde" && <Badge variant="outline">Molde</Badge>}
