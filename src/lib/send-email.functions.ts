@@ -29,7 +29,7 @@ export const sendBulkEmailsFn = createServerFn({ method: "POST" })
       allowed.push(recipient);
     }
 
-    const sent = allowed.length > 0 ? await sendCampaignViaBrevo({ ...data, recipients: allowed }) : [];
+    const sent = allowed.length > 0 ? await sendCampaignViaBrevo({ ...data, recipients: allowed }, { supabase: context.supabase, userId: context.userId, campaignId: data.campaignId }) : [];
     await logSendResults(context.supabase, context.userId, data.campaignId ?? null, sent);
     return [...sent, ...results];
   });
@@ -58,7 +58,7 @@ export const sendSimpleEmailsFn = createServerFn({ method: "POST" })
 
     const sent =
       allowed.length > 0
-        ? await sendSimpleCampaignViaBrevo({ ...data, messages: allowed })
+        ? await sendSimpleCampaignViaBrevo({ ...data, messages: allowed }, { supabase: context.supabase, userId: context.userId, campaignId: data.campaignId })
         : [];
     await logSendResults(context.supabase, context.userId, data.campaignId ?? null, sent);
     return [...sent, ...results];
