@@ -106,11 +106,12 @@ function LinksPage() {
       toast.error("E-mail do destinatário inválido");
       return;
     }
-    createMutation.mutate({
+    const input: { destinationUrl: string; recipientEmail?: string; campaignId?: string } = {
       destinationUrl: trimmed,
-      recipientEmail: email || undefined,
-      campaignId: campaignId === "none" ? undefined : campaignId,
-    });
+    };
+    if (email) input.recipientEmail = email;
+    if (campaignId !== "none") input.campaignId = campaignId;
+    createMutation.mutate(input);
   };
 
   const handleCopy = async (id: string, trackingUrl: string | null) => {
