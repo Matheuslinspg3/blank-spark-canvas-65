@@ -22,3 +22,10 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+## Rastreamento de links por e-mail
+
+O Disparo Tracker substitui automaticamente cada link HTTP/HTTPS presente no HTML de uma entrega por um token aleatório exclusivo daquele destinatário. O clique fica vinculado ao evento de envio e à campanha, sem expor e-mail, CPF, telefone ou IDs internos na URL.
+
+Configure o segredo de ambiente `TRACKING_ORIGIN` com a origem HTTPS pública desta aplicação, por exemplo `https://disparos.cafcm.org.br`. Sem essa configuração, o e-mail é enviado normalmente e os links originais não são modificados.
+
+O sistema registra somente data/hora, origem do referenciador quando disponível e user-agent resumido. Não coleta IP, localização precisa ou fingerprint.
