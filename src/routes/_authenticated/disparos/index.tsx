@@ -6,6 +6,7 @@ import {
   CalendarClock,
   FilePlus2,
   LayoutTemplate,
+  Link2,
   LogOut,
   Mail,
   Settings2,
@@ -106,7 +107,12 @@ function CampaignsPage() {
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
-
+            <Link to="/links">
+              <Link2 className="size-4" />
+              Links
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
             <Link to="/configuracoes">
               <Settings2 className="size-4" />
               Configurar IA
