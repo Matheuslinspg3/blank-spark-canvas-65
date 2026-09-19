@@ -10,6 +10,7 @@ import {
   LogOut,
   Mail,
   Settings2,
+  Target,
   Trash2,
   Users,
   XCircle,
