@@ -57,11 +57,13 @@ export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
     queryFn: () => fetchEvents({ data: { campaignId } }),
     refetchInterval: 60_000,
   });
-  const { data: links = [], isFetching: linksLoading } = useQuery({
+  const { data: tracking, isFetching: linksLoading } = useQuery({
     queryKey: ["email-link-tracking", campaignId],
     queryFn: () => fetchTracking({ data: { campaignId } }),
     refetchInterval: 60_000,
   });
+  const links = tracking?.links ?? [];
+  const trackingConfigured = tracking?.configured ?? true;
 
   const syncMutation = useMutation({
     mutationFn: () => syncBrevo({ data: { days: 30 } }),
