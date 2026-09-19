@@ -23,6 +23,7 @@ import { DeliverabilityReport } from "./DeliverabilityReport";
 import { ScheduleFields } from "./ScheduleFields";
 import { ResultsTable } from "./ResultsTable";
 import { SenderFields } from "./SenderFields";
+import { LinkCreatorDialog } from "./LinkCreatorDialog";
 
 import { useSendGuard } from "@/hooks/use-send-guard";
 
@@ -562,6 +563,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
           </div>
         </div>
         <div className="flex gap-2">
+          <LinkCreatorDialog />
           <Button variant="outline" size="sm" asChild>
             <Link to="/configuracoes">
               <Settings2 className="size-4" />
