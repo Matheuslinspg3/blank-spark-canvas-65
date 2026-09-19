@@ -72,6 +72,7 @@ export async function createTrackedHtml(
       .insert({
         user_id: context.userId,
         campaign_id: context.campaignId ?? null,
+        marketing_campaign_id: marketingCampaignId,
         recipient_email: email,
         destination_url: destinationUrl,
         token,
