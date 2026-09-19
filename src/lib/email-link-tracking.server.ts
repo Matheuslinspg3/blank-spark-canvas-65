@@ -24,7 +24,8 @@ async function resolveMarketingCampaignId(context: EmailTrackingContext): Promis
     .select("marketing_campaign_id")
     .eq("id", context.campaignId)
     .maybeSingle();
-  const value = (data as { marketing_campaign_id?: string | null } | null)?.marketing_campaign_id ?? null;
+  const value =
+    (data as { marketing_campaign_id?: string | null } | null)?.marketing_campaign_id ?? null;
   context.marketingCampaignId = value;
   return value;
 }
@@ -57,7 +58,9 @@ export async function createTrackedHtml(
   context: EmailTrackingContext | undefined,
 ): Promise<TrackedHtml> {
   const origin = trackingOrigin();
-  const email = String(recipient["email"] ?? "").trim().toLowerCase();
+  const email = String(recipient["email"] ?? "")
+    .trim()
+    .toLowerCase();
   if (!context || !origin || !email || !html.includes("href")) return { html, trackingLinkIds: [] };
 
   const marketingCampaignId = await resolveMarketingCampaignId(context);
@@ -84,13 +87,16 @@ export async function createTrackedHtml(
   }
 
   let cursor = 0;
-  const tracked = html.replace(anchorRe, (full, prefix: string, _quote: string, href: string, suffix: string) => {
-    const destinationUrl = validDestination(String(href));
-    if (!destinationUrl) return full;
-    const record = records[cursor++];
-    if (!record || record.destinationUrl !== destinationUrl) return full;
-    return `${prefix}${origin}/r/${record.token}${suffix}`;
-  });
+  const tracked = html.replace(
+    anchorRe,
+    (full, prefix: string, _quote: string, href: string, suffix: string) => {
+      const destinationUrl = validDestination(String(href));
+      if (!destinationUrl) return full;
+      const record = records[cursor++];
+      if (!record || record.destinationUrl !== destinationUrl) return full;
+      return `${prefix}${origin}/r/${record.token}${suffix}`;
+    },
+  );
   return { html: tracked, trackingLinkIds: records.map((record) => record.id) };
 }
 

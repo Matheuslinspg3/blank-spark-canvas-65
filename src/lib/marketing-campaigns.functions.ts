@@ -8,6 +8,9 @@ import type {
   MarketingCampaignWithStats,
 } from "./marketing-campaigns";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LooseClient = { from: (table: string) => any };
+
 const linkSchema = z.object({
   label: z.string().trim().max(120).default(""),
   url: z
@@ -42,9 +45,7 @@ function rowToCampaign(row: Record<string, unknown>): MarketingCampaign {
 export const listMarketingCampaignsFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<MarketingCampaignWithStats[]> => {
-    const supabase = context.supabase as unknown as {
-      from: (table: string) => any;
-    };
+    const supabase = context.supabase as unknown as LooseClient;
     const { data: rows, error } = await supabase
       .from("marketing_campaigns")
       .select("*")
@@ -66,11 +67,13 @@ export const listMarketingCampaignsFn = createServerFn({ method: "GET" })
       .in("marketing_campaign_id", ids);
 
     return campaigns.map((campaign) => {
-      const own = ((tracks ?? []) as {
-        marketing_campaign_id: string;
-        recipient_email: string;
-        click_count: number;
-      }[]).filter((track) => track.marketing_campaign_id === campaign.id);
+      const own = (
+        (tracks ?? []) as {
+          marketing_campaign_id: string;
+          recipient_email: string;
+          click_count: number;
+        }[]
+      ).filter((track) => track.marketing_campaign_id === campaign.id);
       const clicked = new Set(
         own.filter((track) => track.click_count > 0).map((track) => track.recipient_email),
       );
@@ -94,7 +97,7 @@ export const createMarketingCampaignFn = createServerFn({ method: "POST" })
     z.object({ name: z.string().trim().max(160).optional() }).parse(data ?? {}),
   )
   .handler(async ({ data, context }): Promise<MarketingCampaign> => {
-    const supabase = context.supabase as unknown as { from: (table: string) => any };
+    const supabase = context.supabase as unknown as LooseClient;
     const { data: row, error } = await supabase
       .from("marketing_campaigns")
       .insert({
@@ -111,7 +114,7 @@ export const updateMarketingCampaignFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => patchSchema.parse(data))
   .handler(async ({ data, context }): Promise<MarketingCampaign> => {
-    const supabase = context.supabase as unknown as { from: (table: string) => any };
+    const supabase = context.supabase as unknown as LooseClient;
     const { data: row, error } = await supabase
       .from("marketing_campaigns")
       .update(data.patch)
@@ -127,7 +130,7 @@ export const deleteMarketingCampaignFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
-    const supabase = context.supabase as unknown as { from: (table: string) => any };
+    const supabase = context.supabase as unknown as LooseClient;
     const { error } = await supabase
       .from("marketing_campaigns")
       .delete()
@@ -149,7 +152,7 @@ export const linkDispatchToCampaignFn = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
-    const supabase = context.supabase as unknown as { from: (table: string) => any };
+    const supabase = context.supabase as unknown as LooseClient;
     const { error } = await supabase
       .from("campaigns")
       .update({ marketing_campaign_id: data.marketingCampaignId })
@@ -171,7 +174,7 @@ export const listMarketingCampaignClicksFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }): Promise<CampaignClick[]> => {
-    const supabase = context.supabase as unknown as { from: (table: string) => any };
+    const supabase = context.supabase as unknown as LooseClient;
     const { data: rows, error } = await supabase
       .from("email_link_tracks")
       .select("recipient_email,destination_url,click_count,last_clicked_at,campaign_id")
@@ -182,7 +185,9 @@ export const listMarketingCampaignClicksFn = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
 
     const list = (rows ?? []) as (CampaignClick & { campaign_id: string | null })[];
-    const dispatchIds = [...new Set(list.map((row) => row.campaign_id).filter(Boolean))] as string[];
+    const dispatchIds = [
+      ...new Set(list.map((row) => row.campaign_id).filter(Boolean)),
+    ] as string[];
     const names = new Map<string, string>();
     if (dispatchIds.length > 0) {
       const { data: dispatches } = await supabase
