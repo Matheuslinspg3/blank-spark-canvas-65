@@ -8,7 +8,26 @@ export type EmailTrackingContext = {
   supabase: Client;
   userId: string;
   campaignId?: string | null | undefined;
+  /** Preenchido automaticamente a partir do disparo (campanha de marketing vinculada). */
+  marketingCampaignId?: string | null | undefined;
 };
+
+/** Descobre (uma vez por envio) a campanha vinculada ao disparo. */
+async function resolveMarketingCampaignId(context: EmailTrackingContext): Promise<string | null> {
+  if (context.marketingCampaignId !== undefined) return context.marketingCampaignId ?? null;
+  if (!context.campaignId) {
+    context.marketingCampaignId = null;
+    return null;
+  }
+  const { data } = await context.supabase
+    .from("campaigns")
+    .select("marketing_campaign_id")
+    .eq("id", context.campaignId)
+    .maybeSingle();
+  const value = (data as { marketing_campaign_id?: string | null } | null)?.marketing_campaign_id ?? null;
+  context.marketingCampaignId = value;
+  return value;
+}
 
 export type TrackedHtml = { html: string; trackingLinkIds: string[] };
 
