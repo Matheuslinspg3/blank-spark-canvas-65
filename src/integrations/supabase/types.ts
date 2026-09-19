@@ -270,6 +270,101 @@ export type Database = {
           },
         ]
       }
+      email_link_click_events: {
+        Row: {
+          email_link_track_id: string
+          id: string
+          occurred_at: string
+          referrer_origin: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          email_link_track_id: string
+          id?: string
+          occurred_at?: string
+          referrer_origin?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          email_link_track_id?: string
+          id?: string
+          occurred_at?: string
+          referrer_origin?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_link_click_events_email_link_track_id_fkey"
+            columns: ["email_link_track_id"]
+            isOneToOne: false
+            referencedRelation: "email_link_tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_link_tracks: {
+        Row: {
+          campaign_id: string | null
+          click_count: number
+          created_at: string
+          destination_url: string
+          email_event_id: string | null
+          expires_at: string | null
+          first_clicked_at: string | null
+          id: string
+          is_active: boolean
+          last_clicked_at: string | null
+          recipient_email: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          click_count?: number
+          created_at?: string
+          destination_url: string
+          email_event_id?: string | null
+          expires_at?: string | null
+          first_clicked_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_clicked_at?: string | null
+          recipient_email: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          click_count?: number
+          created_at?: string
+          destination_url?: string
+          email_event_id?: string | null
+          expires_at?: string | null
+          first_clicked_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_clicked_at?: string | null
+          recipient_email?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_link_tracks_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_link_tracks_email_event_id_fkey"
+            columns: ["email_event_id"]
+            isOneToOne: false
+            referencedRelation: "email_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressions: {
         Row: {
           created_at: string
