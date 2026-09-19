@@ -10,6 +10,7 @@ import {
   LogOut,
   Mail,
   Settings2,
+  Target,
   Trash2,
   Users,
   XCircle,
@@ -20,6 +21,17 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  linkDispatchToCampaignFn,
+  listMarketingCampaignsFn,
+} from "@/lib/marketing-campaigns.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS_LABEL, type CampaignStatus } from "@/lib/campaigns";
 import { createCampaign, deleteCampaign, listCampaigns } from "@/lib/campaigns.functions";
@@ -52,6 +64,21 @@ function CampaignsPage() {
   });
 
   const scheduled = campaigns.filter((campaign) => campaign.status === "agendado");
+
+  const { data: marketingCampaigns = [] } = useQuery({
+    queryKey: ["marketing-campaigns"],
+    queryFn: () => listMarketingCampaignsFn(),
+  });
+
+  const linkMutation = useMutation({
+    mutationFn: (input: { dispatchId: string; marketingCampaignId: string | null }) =>
+      linkDispatchToCampaignFn({ data: input }),
+    onSuccess: () => {
+      toast.success("Campanha do disparo atualizada");
+      void queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   const cancelMutation = useMutation({
     mutationFn: (campaignId: string) => cancelSchedule({ data: { campaignId } }),
@@ -104,6 +131,12 @@ function CampaignsPage() {
             <Link to="/contatos">
               <Users className="size-4" />
               Contatos e IA
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/campanhas">
+              <Target className="size-4" />
+              Campanhas
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
@@ -249,6 +282,27 @@ function CampaignsPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <Select
+                  value={campaign.marketing_campaign_id ?? "none"}
+                  onValueChange={(value) =>
+                    linkMutation.mutate({
+                      dispatchId: campaign.id,
+                      marketingCampaignId: value === "none" ? null : value,
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-[190px]" aria-label="Campanha vinculada">
+                    <SelectValue placeholder="Sem campanha" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem campanha</SelectItem>
+                    {(marketingCampaigns ?? []).map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {campaign.mode === "ia" && <Badge variant="outline">IA</Badge>}
                 {campaign.mode === "simples" && <Badge variant="outline">Simples</Badge>}
                 {campaign.mode === "molde" && <Badge variant="outline">Molde</Badge>}

@@ -22,6 +22,7 @@ export type Database = {
           finished_at: string | null
           html_template: string
           id: string
+          marketing_campaign_id: string | null
           mode: string
           name: string
           next_send_at: string | null
@@ -47,6 +48,7 @@ export type Database = {
           finished_at?: string | null
           html_template?: string
           id?: string
+          marketing_campaign_id?: string | null
           mode?: string
           name?: string
           next_send_at?: string | null
@@ -72,6 +74,7 @@ export type Database = {
           finished_at?: string | null
           html_template?: string
           id?: string
+          marketing_campaign_id?: string | null
           mode?: string
           name?: string
           next_send_at?: string | null
@@ -90,7 +93,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_marketing_campaign_id_fkey"
+            columns: ["marketing_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cron_config: {
         Row: {
@@ -314,6 +325,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_clicked_at: string | null
+          marketing_campaign_id: string | null
           recipient_email: string
           token: string
           user_id: string
@@ -329,6 +341,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_clicked_at?: string | null
+          marketing_campaign_id?: string | null
           recipient_email: string
           token: string
           user_id: string
@@ -344,6 +357,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_clicked_at?: string | null
+          marketing_campaign_id?: string | null
           recipient_email?: string
           token?: string
           user_id?: string
@@ -363,7 +377,47 @@ export type Database = {
             referencedRelation: "email_events"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "email_link_tracks_marketing_campaign_id_fkey"
+            columns: ["marketing_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_campaigns"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      marketing_campaigns: {
+        Row: {
+          audience: string
+          created_at: string
+          id: string
+          links: Json
+          name: string
+          objective: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          audience?: string
+          created_at?: string
+          id?: string
+          links?: Json
+          name?: string
+          objective?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          audience?: string
+          created_at?: string
+          id?: string
+          links?: Json
+          name?: string
+          objective?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       suppressions: {
         Row: {

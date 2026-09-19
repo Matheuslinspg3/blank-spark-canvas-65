@@ -8,7 +8,27 @@ export type EmailTrackingContext = {
   supabase: Client;
   userId: string;
   campaignId?: string | null | undefined;
+  /** Preenchido automaticamente a partir do disparo (campanha de marketing vinculada). */
+  marketingCampaignId?: string | null | undefined;
 };
+
+/** Descobre (uma vez por envio) a campanha vinculada ao disparo. */
+async function resolveMarketingCampaignId(context: EmailTrackingContext): Promise<string | null> {
+  if (context.marketingCampaignId !== undefined) return context.marketingCampaignId ?? null;
+  if (!context.campaignId) {
+    context.marketingCampaignId = null;
+    return null;
+  }
+  const { data } = await context.supabase
+    .from("campaigns")
+    .select("marketing_campaign_id")
+    .eq("id", context.campaignId)
+    .maybeSingle();
+  const value =
+    (data as { marketing_campaign_id?: string | null } | null)?.marketing_campaign_id ?? null;
+  context.marketingCampaignId = value;
+  return value;
+}
 
 export type TrackedHtml = { html: string; trackingLinkIds: string[] };
 
@@ -38,9 +58,12 @@ export async function createTrackedHtml(
   context: EmailTrackingContext | undefined,
 ): Promise<TrackedHtml> {
   const origin = trackingOrigin();
-  const email = String(recipient["email"] ?? "").trim().toLowerCase();
+  const email = String(recipient["email"] ?? "")
+    .trim()
+    .toLowerCase();
   if (!context || !origin || !email || !html.includes("href")) return { html, trackingLinkIds: [] };
 
+  const marketingCampaignId = await resolveMarketingCampaignId(context);
   const anchorRe = /(<a\b[^>]*?\bhref=(["']))(.*?)(\2[^>]*>)/gi;
   const records: { id: string; destinationUrl: string; token: string }[] = [];
   for (const match of [...html.matchAll(anchorRe)]) {
@@ -52,6 +75,7 @@ export async function createTrackedHtml(
       .insert({
         user_id: context.userId,
         campaign_id: context.campaignId ?? null,
+        marketing_campaign_id: marketingCampaignId,
         recipient_email: email,
         destination_url: destinationUrl,
         token,
@@ -63,13 +87,16 @@ export async function createTrackedHtml(
   }
 
   let cursor = 0;
-  const tracked = html.replace(anchorRe, (full, prefix: string, _quote: string, href: string, suffix: string) => {
-    const destinationUrl = validDestination(String(href));
-    if (!destinationUrl) return full;
-    const record = records[cursor++];
-    if (!record || record.destinationUrl !== destinationUrl) return full;
-    return `${prefix}${origin}/r/${record.token}${suffix}`;
-  });
+  const tracked = html.replace(
+    anchorRe,
+    (full, prefix: string, _quote: string, href: string, suffix: string) => {
+      const destinationUrl = validDestination(String(href));
+      if (!destinationUrl) return full;
+      const record = records[cursor++];
+      if (!record || record.destinationUrl !== destinationUrl) return full;
+      return `${prefix}${origin}/r/${record.token}${suffix}`;
+    },
+  );
   return { html: tracked, trackingLinkIds: records.map((record) => record.id) };
 }
 
