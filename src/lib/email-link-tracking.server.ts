@@ -38,13 +38,13 @@ export async function createTrackedHtml(
   context: EmailTrackingContext | undefined,
 ): Promise<TrackedHtml> {
   const origin = trackingOrigin();
-  const email = (recipient.email ?? "").trim().toLowerCase();
+  const email = String(recipient["email"] ?? "").trim().toLowerCase();
   if (!context || !origin || !email || !html.includes("href")) return { html, trackingLinkIds: [] };
 
+  const anchorRe = /(<a\b[^>]*?\bhref=(["']))(.*?)(\2[^>]*>)/gi;
   const records: { id: string; destinationUrl: string; token: string }[] = [];
-  const matches = [...html.matchAll(/<a\\b[^>]*?\\bhref=(['"])(.*?)\\1[^>]*>/gi)];
-  for (const match of matches) {
-    const destinationUrl = validDestination(match[2] ?? "");
+  for (const match of [...html.matchAll(anchorRe)]) {
+    const destinationUrl = validDestination(match[3] ?? "");
     if (!destinationUrl) continue;
     const token = crypto.randomUUID().replaceAll("-", "");
     const { data, error } = await context.supabase
@@ -59,11 +59,11 @@ export async function createTrackedHtml(
       .select("id")
       .single();
     if (error) throw new Error(`Não foi possível preparar o link rastreável: ${error.message}`);
-    records.push({ id: data.id, destinationUrl, token });
+    records.push({ id: (data as { id: string }).id, destinationUrl, token });
   }
 
   let cursor = 0;
-  const tracked = html.replace(/(<a\\b[^>]*?\\bhref=(['"]))(.*?)(\\2[^>]*>)/gi, (full, prefix, quote, href, suffix) => {
+  const tracked = html.replace(anchorRe, (full, prefix: string, _quote: string, href: string, suffix: string) => {
     const destinationUrl = validDestination(String(href));
     if (!destinationUrl) return full;
     const record = records[cursor++];
