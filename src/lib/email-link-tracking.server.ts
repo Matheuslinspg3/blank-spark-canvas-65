@@ -7,7 +7,7 @@ type Client = SupabaseClient<any, any, any>;
 export type EmailTrackingContext = {
   supabase: Client;
   userId: string;
-  campaignId?: string | null;
+  campaignId?: string | null | undefined;
 };
 
 export type TrackedHtml = { html: string; trackingLinkIds: string[] };
