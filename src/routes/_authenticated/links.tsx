@@ -9,10 +9,18 @@ import {
   listTrackedLinksFn,
   createTrackedLinkFn,
 } from "@/lib/tracked-links.functions";
+import { listCampaigns } from "@/lib/campaigns.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -50,6 +58,8 @@ function formatDate(value: string | null): string {
 function LinksPage() {
   const queryClient = useQueryClient();
   const [url, setUrl] = useState("");
+  const [recipient, setRecipient] = useState("");
+  const [campaignId, setCampaignId] = useState<string>("none");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -58,10 +68,18 @@ function LinksPage() {
     refetchInterval: 30_000,
   });
 
+  const { data: campaigns } = useQuery({
+    queryKey: ["campaigns"],
+    queryFn: () => listCampaigns(),
+  });
+
   const createMutation = useMutation({
-    mutationFn: (destinationUrl: string) => createTrackedLinkFn({ data: { destinationUrl } }),
+    mutationFn: (input: { destinationUrl: string; recipientEmail?: string; campaignId?: string }) =>
+      createTrackedLinkFn({ data: input }),
     onSuccess: () => {
       setUrl("");
+      setRecipient("");
+      setCampaignId("none");
       toast.success("Link criado");
       void queryClient.invalidateQueries({ queryKey: ["tracked-links"] });
     },
@@ -83,7 +101,16 @@ function LinksPage() {
       toast.error("Cole um endereço começando com http:// ou https://");
       return;
     }
-    createMutation.mutate(trimmed);
+    const email = recipient.trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("E-mail do destinatário inválido");
+      return;
+    }
+    createMutation.mutate({
+      destinationUrl: trimmed,
+      recipientEmail: email || undefined,
+      campaignId: campaignId === "none" ? undefined : campaignId,
+    });
   };
 
   const handleCopy = async (id: string, trackingUrl: string | null) => {
@@ -116,8 +143,8 @@ function LinksPage() {
             Links rastreados
           </h1>
           <p className="text-muted-foreground text-sm">
-            Crie links curtos que contam cada clique. Cole o link gerado em qualquer e-mail ou
-            molde.
+            Crie links curtos que contam cada clique. Vincule um destinatário e um disparo para
+            saber exatamente quem clicou.
           </p>
         </div>
       </header>
@@ -138,13 +165,13 @@ function LinksPage() {
         <CardHeader>
           <CardTitle className="text-base">Criar novo link</CardTitle>
           <CardDescription>
-            Informe o endereço de destino (site, WhatsApp, formulário). O sistema gera um link curto
-            que registra cada clique.
+            Informe o endereço de destino (site, WhatsApp, formulário). Se quiser saber quem
+            clicou, preencha o destinatário e/ou vincule a um disparo.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <Label htmlFor="new-link-url">Endereço de destino</Label>
-          <div className="flex gap-2">
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="new-link-url">Endereço de destino</Label>
             <Input
               id="new-link-url"
               placeholder="https://wa.me/5513… ou https://seusite.com.br"
@@ -154,14 +181,41 @@ function LinksPage() {
                 if (event.key === "Enter") handleCreate();
               }}
             />
-            <Button onClick={handleCreate} disabled={createMutation.isPending}>
-              {createMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                "Gerar link"
-              )}
-            </Button>
           </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="new-link-recipient">Destinatário (opcional)</Label>
+              <Input
+                id="new-link-recipient"
+                type="email"
+                placeholder="contato@empresa.com.br"
+                value={recipient}
+                onChange={(event) => setRecipient(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") handleCreate();
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Disparo vinculado (opcional)</Label>
+              <Select value={campaignId} onValueChange={setCampaignId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhum" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {(campaigns ?? []).map((campaign) => (
+                    <SelectItem key={campaign.id} value={campaign.id}>
+                      {campaign.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <Button onClick={handleCreate} disabled={createMutation.isPending}>
+            {createMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : "Gerar link"}
+          </Button>
         </CardContent>
       </Card>
 
@@ -187,18 +241,28 @@ function LinksPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Destinatário</TableHead>
                   <TableHead>Destino</TableHead>
+                  <TableHead>Disparo</TableHead>
                   <TableHead>Link rastreado</TableHead>
                   <TableHead className="text-right">Cliques</TableHead>
                   <TableHead>Último clique</TableHead>
-                  <TableHead className="w-[100px]" />
+                  <TableHead className="w-[60px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {links.map((link) => (
                   <TableRow key={link.id}>
-                    <TableCell className="max-w-[260px] truncate" title={link.destination_url}>
+                    <TableCell className="max-w-[180px] truncate" title={link.recipient_email}>
+                      {link.recipient_email || (
+                        <span className="text-muted-foreground">Não identificado</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="max-w-[220px] truncate" title={link.destination_url}>
                       {link.destination_url}
+                    </TableCell>
+                    <TableCell className="max-w-[160px] truncate" title={link.campaign_name ?? ""}>
+                      {link.campaign_name ?? <span className="text-muted-foreground">—</span>}
                     </TableCell>
                     <TableCell>
                       {link.tracking_url ? (
@@ -212,7 +276,7 @@ function LinksPage() {
                           ) : (
                             <Copy className="size-4" />
                           )}
-                          {copiedId === link.id ? "Copiado" : "Copiar link"}
+                          {copiedId === link.id ? "Copiado" : "Copiar"}
                         </Button>
                       ) : (
                         <span className="text-muted-foreground text-xs">Indisponível</span>
