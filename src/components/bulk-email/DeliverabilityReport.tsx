@@ -57,11 +57,13 @@ export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
     queryFn: () => fetchEvents({ data: { campaignId } }),
     refetchInterval: 60_000,
   });
-  const { data: links = [], isFetching: linksLoading } = useQuery({
+  const { data: tracking, isFetching: linksLoading } = useQuery({
     queryKey: ["email-link-tracking", campaignId],
     queryFn: () => fetchTracking({ data: { campaignId } }),
     refetchInterval: 60_000,
   });
+  const links = tracking?.links ?? [];
+  const trackingConfigured = tracking?.configured ?? true;
 
   const syncMutation = useMutation({
     mutationFn: () => syncBrevo({ data: { days: 30 } }),
@@ -141,26 +143,72 @@ export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
       </CardHeader>
 
       <CardContent className="space-y-5">
-        {links.length > 0 && (
-          <section className="space-y-3 rounded-lg border p-4">
+        <section className="space-y-3 rounded-lg border p-4">
+          <div>
+            <h3 className="font-medium">Cliques nos links</h3>
+            <p className="text-muted-foreground text-sm">
+              Cada link é único por destinatário; um clique não representa abertura do e-mail.
+            </p>
+          </div>
+
+          {!trackingConfigured && (
+            <Alert variant="destructive">
+              <AlertTriangle className="size-4" />
+              <AlertTitle>Rastreio de cliques desligado</AlertTitle>
+              <AlertDescription>
+                Falta informar o endereço público deste sistema (TRACKING_ORIGIN) nas configurações do
+                projeto. Enquanto isso, os links são enviados normalmente, mas os cliques não são contados.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <h3 className="font-medium">Cliques nos links</h3>
-              <p className="text-muted-foreground text-sm">Cada link é único por entrega; um clique não representa abertura do e-mail.</p>
+              <p className="text-muted-foreground text-xs">Links rastreados</p>
+              <strong>{links.length}</strong>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div><p className="text-muted-foreground text-xs">Links enviados</p><strong>{links.length}</strong></div>
-              <div><p className="text-muted-foreground text-xs">Destinatários que clicaram</p><strong>{uniqueRecipientsClicked}</strong></div>
-              <div><p className="text-muted-foreground text-xs">Cliques totais</p><strong>{links.reduce((total, link) => total + link.click_count, 0)}</strong></div>
+            <div>
+              <p className="text-muted-foreground text-xs">Destinatários que clicaram</p>
+              <strong>{uniqueRecipientsClicked}</strong>
             </div>
+            <div>
+              <p className="text-muted-foreground text-xs">Cliques totais</p>
+              <strong>{links.reduce((total, link) => total + link.click_count, 0)}</strong>
+            </div>
+          </div>
+
+          {clickedLinks.length === 0 ? (
+            <p className="text-muted-foreground text-sm">Ainda não houve cliques nesta campanha.</p>
+          ) : (
             <div className="max-h-64 overflow-auto rounded-md border">
               <Table>
-                <TableHeader><TableRow><TableHead>Destinatário</TableHead><TableHead>Destino</TableHead><TableHead>Cliques</TableHead><TableHead>Último clique</TableHead></TableRow></TableHeader>
-                <TableBody>{links.slice(0, 100).map((link) => <TableRow key={link.id}><TableCell>{link.recipient_email}</TableCell><TableCell className="max-w-56 truncate">{link.destination_url}</TableCell><TableCell>{link.click_count}</TableCell><TableCell>{link.last_clicked_at ? new Date(link.last_clicked_at).toLocaleString("pt-BR") : "—"}</TableCell></TableRow>)}</TableBody>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Destinatário</TableHead>
+                    <TableHead>Destino</TableHead>
+                    <TableHead>Cliques</TableHead>
+                    <TableHead>Último clique</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {clickedLinks.slice(0, 100).map((link) => (
+                    <TableRow key={link.id}>
+                      <TableCell>{link.recipient_email}</TableCell>
+                      <TableCell className="max-w-56 truncate">{link.destination_url}</TableCell>
+                      <TableCell>{link.click_count}</TableCell>
+                      <TableCell>
+                        {link.last_clicked_at
+                          ? new Date(link.last_clicked_at).toLocaleString("pt-BR")
+                          : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
               </Table>
             </div>
-            {linksLoading && <p className="text-muted-foreground text-xs">Atualizando cliques…</p>}
-          </section>
-        )}
+          )}
+          {linksLoading && <p className="text-muted-foreground text-xs">Atualizando cliques…</p>}
+        </section>
         {alerts.map((alert) => (
           <Alert key={alert.message} variant={alert.level === "critico" ? "destructive" : "default"}>
             <AlertTriangle className="size-4" />
