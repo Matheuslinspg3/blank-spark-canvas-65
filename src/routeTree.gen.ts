@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as AuthenticatedContatosRouteImport } from './routes/_authenticated/contatos'
+import { Route as AuthenticatedLinksRouteImport } from './routes/_authenticated/links'
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
 import { Route as RTokenRouteImport } from './routes/r/$token'
 import { Route as AuthenticatedDisparosIndexRouteImport } from './routes/_authenticated/disparos/index'
@@ -43,6 +44,11 @@ const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
 const AuthenticatedContatosRoute = AuthenticatedContatosRouteImport.update({
   id: '/contatos',
   path: '/contatos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLinksRoute = AuthenticatedLinksRouteImport.update({
+  id: '/links',
+  path: '/links',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRevisaoRoute = AuthenticatedRevisaoRouteImport.update({
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contatos': typeof AuthenticatedContatosRoute
+  '/links': typeof AuthenticatedLinksRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/r/$token': typeof RTokenRoute
   '/disparos/$id': typeof AuthenticatedDisparosIdRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contatos': typeof AuthenticatedContatosRoute
+  '/links': typeof AuthenticatedLinksRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/r/$token': typeof RTokenRoute
   '/disparos/$id': typeof AuthenticatedDisparosIdRoute
@@ -108,6 +116,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/_authenticated/contatos': typeof AuthenticatedContatosRoute
+  '/_authenticated/links': typeof AuthenticatedLinksRoute
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
   '/r/$token': typeof RTokenRoute
   '/_authenticated/disparos/$id': typeof AuthenticatedDisparosIdRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/configuracoes'
     | '/contatos'
+    | '/links'
     | '/revisao'
     | '/r/$token'
     | '/disparos/$id'
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/configuracoes'
     | '/contatos'
+    | '/links'
     | '/revisao'
     | '/r/$token'
     | '/disparos/$id'
@@ -147,6 +158,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/configuracoes'
     | '/_authenticated/contatos'
+    | '/_authenticated/links'
     | '/_authenticated/revisao'
     | '/r/$token'
     | '/_authenticated/disparos/$id'
@@ -202,6 +214,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedContatosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/links': {
+      id: '/_authenticated/links'
+      path: '/links'
+      fullPath: '/links'
+      preLoaderRoute: typeof AuthenticatedLinksRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/revisao': {
       id: '/_authenticated/revisao'
       path: '/revisao'
@@ -249,6 +268,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedContatosRoute: typeof AuthenticatedContatosRoute
+  AuthenticatedLinksRoute: typeof AuthenticatedLinksRoute
   AuthenticatedRevisaoRoute: typeof AuthenticatedRevisaoRoute
   AuthenticatedDisparosIdRoute: typeof AuthenticatedDisparosIdRoute
   AuthenticatedDisparosIndexRoute: typeof AuthenticatedDisparosIndexRoute
@@ -256,6 +276,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedContatosRoute: AuthenticatedContatosRoute,
+  AuthenticatedLinksRoute: AuthenticatedLinksRoute,
   AuthenticatedRevisaoRoute: AuthenticatedRevisaoRoute,
   AuthenticatedDisparosIdRoute: AuthenticatedDisparosIdRoute,
   AuthenticatedDisparosIndexRoute: AuthenticatedDisparosIndexRoute,
