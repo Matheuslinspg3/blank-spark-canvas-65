@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as AuthenticatedContatosRouteImport } from './routes/_authenticated/contatos'
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
+import { Route as RTokenRouteImport } from './routes/r/$token'
 import { Route as AuthenticatedDisparosIndexRouteImport } from './routes/_authenticated/disparos/index'
 import { Route as AuthenticatedDisparosIdRouteImport } from './routes/_authenticated/disparos/$id'
 import { Route as ApiPublicCronDispatchRouteImport } from './routes/api/public/cron/dispatch'
@@ -49,6 +50,11 @@ const AuthenticatedRevisaoRoute = AuthenticatedRevisaoRouteImport.update({
   path: '/revisao',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const RTokenRoute = RTokenRouteImport.update({
+  id: '/r/$token',
+  path: '/r/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedDisparosIndexRoute =
   AuthenticatedDisparosIndexRouteImport.update({
     id: '/disparos/',
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof ConfiguracoesRoute
   '/contatos': typeof AuthenticatedContatosRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
+  '/r/$token': typeof RTokenRoute
   '/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/disparos/': typeof AuthenticatedDisparosIndexRoute
   '/api/public/cron/dispatch': typeof ApiPublicCronDispatchRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof ConfiguracoesRoute
   '/contatos': typeof AuthenticatedContatosRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
+  '/r/$token': typeof RTokenRoute
   '/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/disparos': typeof AuthenticatedDisparosIndexRoute
   '/api/public/cron/dispatch': typeof ApiPublicCronDispatchRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/configuracoes': typeof ConfiguracoesRoute
   '/_authenticated/contatos': typeof AuthenticatedContatosRoute
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
+  '/r/$token': typeof RTokenRoute
   '/_authenticated/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/_authenticated/disparos/': typeof AuthenticatedDisparosIndexRoute
   '/api/public/cron/dispatch': typeof ApiPublicCronDispatchRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/contatos'
     | '/revisao'
+    | '/r/$token'
     | '/disparos/$id'
     | '/disparos/'
     | '/api/public/cron/dispatch'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/contatos'
     | '/revisao'
+    | '/r/$token'
     | '/disparos/$id'
     | '/disparos'
     | '/api/public/cron/dispatch'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/_authenticated/contatos'
     | '/_authenticated/revisao'
+    | '/r/$token'
     | '/_authenticated/disparos/$id'
     | '/_authenticated/disparos/'
     | '/api/public/cron/dispatch'
@@ -148,6 +160,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
+  RTokenRoute: typeof RTokenRoute
   ApiPublicCronDispatchRoute: typeof ApiPublicCronDispatchRoute
   ApiPublicHooksBrevoRoute: typeof ApiPublicHooksBrevoRoute
 }
@@ -195,6 +208,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/revisao'
       preLoaderRoute: typeof AuthenticatedRevisaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/r/$token': {
+      id: '/r/$token'
+      path: '/r/$token'
+      fullPath: '/r/$token'
+      preLoaderRoute: typeof RTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/disparos/': {
       id: '/_authenticated/disparos/'
@@ -249,6 +269,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
+  RTokenRoute: RTokenRoute,
   ApiPublicCronDispatchRoute: ApiPublicCronDispatchRoute,
   ApiPublicHooksBrevoRoute: ApiPublicHooksBrevoRoute,
 }
