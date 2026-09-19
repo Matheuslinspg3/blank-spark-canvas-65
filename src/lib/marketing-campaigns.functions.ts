@@ -158,3 +158,46 @@ export const linkDispatchToCampaignFn = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export type CampaignClick = {
+  recipient_email: string;
+  destination_url: string;
+  click_count: number;
+  last_clicked_at: string | null;
+  dispatch_name: string | null;
+};
+
+export const listMarketingCampaignClicksFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }): Promise<CampaignClick[]> => {
+    const supabase = context.supabase as unknown as { from: (table: string) => any };
+    const { data: rows, error } = await supabase
+      .from("email_link_tracks")
+      .select("recipient_email,destination_url,click_count,last_clicked_at,campaign_id")
+      .eq("marketing_campaign_id", data.id)
+      .gt("click_count", 0)
+      .order("last_clicked_at", { ascending: false })
+      .limit(1000);
+    if (error) throw new Error(error.message);
+
+    const list = (rows ?? []) as (CampaignClick & { campaign_id: string | null })[];
+    const dispatchIds = [...new Set(list.map((row) => row.campaign_id).filter(Boolean))] as string[];
+    const names = new Map<string, string>();
+    if (dispatchIds.length > 0) {
+      const { data: dispatches } = await supabase
+        .from("campaigns")
+        .select("id,name")
+        .in("id", dispatchIds);
+      for (const row of (dispatches ?? []) as { id: string; name: string }[]) {
+        names.set(row.id, row.name);
+      }
+    }
+    return list.map((row) => ({
+      recipient_email: row.recipient_email,
+      destination_url: row.destination_url,
+      click_count: row.click_count,
+      last_clicked_at: row.last_clicked_at,
+      dispatch_name: row.campaign_id ? (names.get(row.campaign_id) ?? null) : null,
+    }));
+  });
