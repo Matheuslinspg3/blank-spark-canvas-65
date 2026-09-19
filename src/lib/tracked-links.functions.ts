@@ -46,7 +46,9 @@ export const createTrackedLinkFn = createServerFn({ method: "POST" })
         destination_url: data.destinationUrl,
         token,
       })
-      .select("id,destination_url,recipient_email,click_count,first_clicked_at,last_clicked_at,created_at")
+      .select(
+        "id,destination_url,recipient_email,click_count,first_clicked_at,last_clicked_at,created_at",
+      )
       .single();
     if (error) throw new Error(error.message);
     const origin = trackingOrigin();
@@ -75,7 +77,9 @@ export const listTrackedLinksFn = createServerFn({ method: "GET" })
     const origin = trackingOrigin();
     const { data: rows, error } = await (context.supabase as any)
       .from("email_link_tracks")
-      .select("id,destination_url,recipient_email,click_count,first_clicked_at,last_clicked_at,created_at,token")
+      .select(
+        "id,destination_url,recipient_email,click_count,first_clicked_at,last_clicked_at,created_at,token",
+      )
       .is("campaign_id", null)
       .order("created_at", { ascending: false })
       .limit(500);

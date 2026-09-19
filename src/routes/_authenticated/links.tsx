@@ -116,7 +116,8 @@ function LinksPage() {
             Links rastreados
           </h1>
           <p className="text-muted-foreground text-sm">
-            Crie links curtos que contam cada clique. Cole o link gerado em qualquer e-mail ou molde.
+            Crie links curtos que contam cada clique. Cole o link gerado em qualquer e-mail ou
+            molde.
           </p>
         </div>
       </header>
@@ -154,7 +155,11 @@ function LinksPage() {
               }}
             />
             <Button onClick={handleCreate} disabled={createMutation.isPending}>
-              {createMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : "Gerar link"}
+              {createMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                "Gerar link"
+              )}
             </Button>
           </div>
         </CardContent>
@@ -167,7 +172,8 @@ function LinksPage() {
             Seus links
           </CardTitle>
           <CardDescription>
-            {links.length} links criados · {clickedLinks} com cliques · {totalClicks} cliques no total
+            {links.length} links criados · {clickedLinks} com cliques · {totalClicks} cliques no
+            total
           </CardDescription>
         </CardHeader>
         <CardContent>
