@@ -60,6 +60,7 @@ export async function createTrackedHtml(
   const email = String(recipient["email"] ?? "").trim().toLowerCase();
   if (!context || !origin || !email || !html.includes("href")) return { html, trackingLinkIds: [] };
 
+  const marketingCampaignId = await resolveMarketingCampaignId(context);
   const anchorRe = /(<a\b[^>]*?\bhref=(["']))(.*?)(\2[^>]*>)/gi;
   const records: { id: string; destinationUrl: string; token: string }[] = [];
   for (const match of [...html.matchAll(anchorRe)]) {
