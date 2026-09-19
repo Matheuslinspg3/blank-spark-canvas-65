@@ -107,6 +107,12 @@ function CampaignsPage() {
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
+            <Link to="/campanhas">
+              <Target className="size-4" />
+              Campanhas
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
             <Link to="/links">
               <Link2 className="size-4" />
               Links
