@@ -65,6 +65,21 @@ function CampaignsPage() {
 
   const scheduled = campaigns.filter((campaign) => campaign.status === "agendado");
 
+  const { data: marketingCampaigns = [] } = useQuery({
+    queryKey: ["marketing-campaigns"],
+    queryFn: () => listMarketingCampaignsFn(),
+  });
+
+  const linkMutation = useMutation({
+    mutationFn: (input: { dispatchId: string; marketingCampaignId: string | null }) =>
+      linkDispatchToCampaignFn({ data: input }),
+    onSuccess: () => {
+      toast.success("Campanha do disparo atualizada");
+      void queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const cancelMutation = useMutation({
     mutationFn: (campaignId: string) => cancelSchedule({ data: { campaignId } }),
     onSuccess: () => {
