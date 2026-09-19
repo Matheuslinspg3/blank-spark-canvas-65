@@ -38,6 +38,7 @@ import {
   type EmailEventStatus,
 } from "@/lib/deliverability";
 import { listCampaignEvents, syncBrevoEventsFn } from "@/lib/deliverability.functions";
+import { listCampaignLinkTracking } from "@/lib/email-link-tracking.functions";
 
 function statusVariant(status: EmailEventStatus): "default" | "secondary" | "destructive" {
   if (status === "entregue") return "default";
@@ -48,11 +49,17 @@ function statusVariant(status: EmailEventStatus): "default" | "secondary" | "des
 export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
   const fetchEvents = useServerFn(listCampaignEvents);
   const syncBrevo = useServerFn(syncBrevoEventsFn);
+  const fetchTracking = useServerFn(listCampaignLinkTracking);
   const queryClient = useQueryClient();
 
   const { data, isFetching, refetch } = useQuery({
     queryKey: ["deliverability", campaignId],
     queryFn: () => fetchEvents({ data: { campaignId } }),
+    refetchInterval: 60_000,
+  });
+  const { data: links = [], isFetching: linksLoading } = useQuery({
+    queryKey: ["email-link-tracking", campaignId],
+    queryFn: () => fetchTracking({ data: { campaignId } }),
     refetchInterval: 60_000,
   });
 
@@ -72,6 +79,8 @@ export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
   const metrics = computeMetrics(events);
   const alerts = riskAlerts(metrics);
   const tips = recommendations(metrics);
+  const clickedLinks = links.filter((link) => link.click_count > 0);
+  const uniqueRecipientsClicked = new Set(clickedLinks.map((link) => link.recipient_email)).size;
 
   const cards = [
     { label: "Enviados", value: metrics.total, hint: "total registrado" },
@@ -132,6 +141,26 @@ export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
       </CardHeader>
 
       <CardContent className="space-y-5">
+        {links.length > 0 && (
+          <section className="space-y-3 rounded-lg border p-4">
+            <div>
+              <h3 className="font-medium">Cliques nos links</h3>
+              <p className="text-muted-foreground text-sm">Cada link é único por entrega; um clique não representa abertura do e-mail.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div><p className="text-muted-foreground text-xs">Links enviados</p><strong>{links.length}</strong></div>
+              <div><p className="text-muted-foreground text-xs">Destinatários que clicaram</p><strong>{uniqueRecipientsClicked}</strong></div>
+              <div><p className="text-muted-foreground text-xs">Cliques totais</p><strong>{links.reduce((total, link) => total + link.click_count, 0)}</strong></div>
+            </div>
+            <div className="max-h-64 overflow-auto rounded-md border">
+              <Table>
+                <TableHeader><TableRow><TableHead>Destinatário</TableHead><TableHead>Destino</TableHead><TableHead>Cliques</TableHead><TableHead>Último clique</TableHead></TableRow></TableHeader>
+                <TableBody>{links.slice(0, 100).map((link) => <TableRow key={link.id}><TableCell>{link.recipient_email}</TableCell><TableCell className="max-w-56 truncate">{link.destination_url}</TableCell><TableCell>{link.click_count}</TableCell><TableCell>{link.last_clicked_at ? new Date(link.last_clicked_at).toLocaleString("pt-BR") : "—"}</TableCell></TableRow>)}</TableBody>
+              </Table>
+            </div>
+            {linksLoading && <p className="text-muted-foreground text-xs">Atualizando cliques…</p>}
+          </section>
+        )}
         {alerts.map((alert) => (
           <Alert key={alert.message} variant={alert.level === "critico" ? "destructive" : "default"}>
             <AlertTriangle className="size-4" />
