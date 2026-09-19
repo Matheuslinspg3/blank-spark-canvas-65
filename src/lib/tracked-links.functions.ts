@@ -38,7 +38,7 @@ export const createTrackedLinkFn = createServerFn({ method: "POST" })
   .inputValidator((data) => createSchema.parse(data))
   .handler(async ({ data, context }): Promise<TrackedLink> => {
     const token = crypto.randomUUID().replaceAll("-", "");
-    const { data: row, error } = await (context.supabase as any)
+    const { data: row, error } = await context.supabase
       .from("email_link_tracks")
       .insert({
         user_id: context.userId,
@@ -62,7 +62,7 @@ export const deleteTrackedLinkFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
-    const { error } = await (context.supabase as any)
+    const { error } = await context.supabase
       .from("email_link_tracks")
       .delete()
       .eq("id", data.id)
@@ -75,7 +75,7 @@ export const listTrackedLinksFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<TrackedLinksResult> => {
     const origin = trackingOrigin();
-    const { data: rows, error } = await (context.supabase as any)
+    const { data: rows, error } = await context.supabase
       .from("email_link_tracks")
       .select(
         "id,destination_url,recipient_email,click_count,first_clicked_at,last_clicked_at,created_at,token",
