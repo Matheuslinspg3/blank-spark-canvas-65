@@ -84,7 +84,7 @@ export const listTrackedLinksFn = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(500);
     if (error) throw new Error(error.message);
-    const links: TrackedLink[] = (rows ?? []).map((row: any) => ({
+    const links: TrackedLink[] = (rows ?? []).map((row) => ({
       id: row.id,
       destination_url: row.destination_url,
       recipient_email: row.recipient_email,
