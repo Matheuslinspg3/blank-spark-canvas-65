@@ -33,6 +33,7 @@ export type Campaign = {
   schedule: SendSchedule | null;
   queue: QueuedMessage[];
   next_send_at: string | null;
+  marketing_campaign_id: string | null;
 };
 
 export type CampaignPatch = Partial<

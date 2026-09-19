@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as AuthenticatedCampanhasRouteImport } from './routes/_authenticated/campanhas'
 import { Route as AuthenticatedContatosRouteImport } from './routes/_authenticated/contatos'
 import { Route as AuthenticatedLinksRouteImport } from './routes/_authenticated/links'
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
@@ -40,6 +41,11 @@ const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedCampanhasRoute = AuthenticatedCampanhasRouteImport.update({
+  id: '/campanhas',
+  path: '/campanhas',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedContatosRoute = AuthenticatedContatosRouteImport.update({
   id: '/contatos',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/campanhas': typeof AuthenticatedCampanhasRoute
   '/contatos': typeof AuthenticatedContatosRoute
   '/links': typeof AuthenticatedLinksRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/campanhas': typeof AuthenticatedCampanhasRoute
   '/contatos': typeof AuthenticatedContatosRoute
   '/links': typeof AuthenticatedLinksRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/_authenticated/campanhas': typeof AuthenticatedCampanhasRoute
   '/_authenticated/contatos': typeof AuthenticatedContatosRoute
   '/_authenticated/links': typeof AuthenticatedLinksRoute
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/configuracoes'
+    | '/campanhas'
     | '/contatos'
     | '/links'
     | '/revisao'
@@ -143,6 +153,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/configuracoes'
+    | '/campanhas'
     | '/contatos'
     | '/links'
     | '/revisao'
@@ -157,6 +168,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/configuracoes'
+    | '/_authenticated/campanhas'
     | '/_authenticated/contatos'
     | '/_authenticated/links'
     | '/_authenticated/revisao'
@@ -206,6 +218,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/configuracoes'
       preLoaderRoute: typeof ConfiguracoesRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/campanhas': {
+      id: '/_authenticated/campanhas'
+      path: '/campanhas'
+      fullPath: '/campanhas'
+      preLoaderRoute: typeof AuthenticatedCampanhasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/contatos': {
       id: '/_authenticated/contatos'
@@ -267,6 +286,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedCampanhasRoute: typeof AuthenticatedCampanhasRoute
   AuthenticatedContatosRoute: typeof AuthenticatedContatosRoute
   AuthenticatedLinksRoute: typeof AuthenticatedLinksRoute
   AuthenticatedRevisaoRoute: typeof AuthenticatedRevisaoRoute
@@ -275,6 +295,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedCampanhasRoute: AuthenticatedCampanhasRoute,
   AuthenticatedContatosRoute: AuthenticatedContatosRoute,
   AuthenticatedLinksRoute: AuthenticatedLinksRoute,
   AuthenticatedRevisaoRoute: AuthenticatedRevisaoRoute,
