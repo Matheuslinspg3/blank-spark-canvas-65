@@ -9,6 +9,7 @@ import {
   type SendBulkPayload,
   type SendResult,
 } from "./bulk-email";
+import { createTrackedHtml, type EmailTrackingContext } from "./email-link-tracking.server";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/brevo";
 /** Brevo is called at most once per second to respect the campaign rate limit. */
@@ -73,7 +74,7 @@ async function postEmail(
   return { ok: false, error: lastError };
 }
 
-export async function sendCampaignViaBrevo(payload: SendBulkPayload): Promise<SendResult[]> {
+export async function sendCampaignViaBrevo(payload: SendBulkPayload, tracking?: EmailTrackingContext): Promise<SendResult[]> {
   const lovableApiKey = process.env["LOVABLE_API_KEY"];
   const brevoKey = process.env["BREVO_API_KEY"];
 
@@ -105,7 +106,9 @@ export async function sendCampaignViaBrevo(payload: SendBulkPayload): Promise<Se
 
     if (index > 0) await sleep(DELAY_MS);
 
-    const htmlContent = renderEmailHtml(payload.htmlTemplate, recipient);
+    const rendered = renderEmailHtml(payload.htmlTemplate, recipient);
+    const tracked = await createTrackedHtml(rendered, recipient, tracking);
+    const htmlContent = tracked.html;
 
     const outcome = await postEmail(lovableApiKey, brevoKey, {
       sender: { name: payload.senderName, email: payload.senderEmail },
@@ -119,7 +122,7 @@ export async function sendCampaignViaBrevo(payload: SendBulkPayload): Promise<Se
 
     results.push(
       outcome.ok
-        ? { email, success: true, ...(outcome.messageId ? { messageId: outcome.messageId } : {}) }
+        ? { email, success: true, ...(outcome.messageId ? { messageId: outcome.messageId } : {}), ...(tracked.trackingLinkIds.length ? { trackingLinkIds: tracked.trackingLinkIds } : {}) }
         : { email, success: false, error: outcome.error },
     );
   }
@@ -140,6 +143,7 @@ export type SimpleSendPayload = {
  */
 export async function sendSimpleCampaignViaBrevo(
   payload: SimpleSendPayload,
+  tracking?: EmailTrackingContext,
 ): Promise<SendResult[]> {
   const lovableApiKey = process.env["LOVABLE_API_KEY"];
   const brevoKey = process.env["BREVO_API_KEY"];
@@ -176,17 +180,18 @@ export async function sendSimpleCampaignViaBrevo(
 
     if (index > 0) await sleep(DELAY_MS);
 
+    const tracked = await createTrackedHtml(message.html, { email }, tracking);
     const outcome = await postEmail(lovableApiKey, brevoKey, {
       sender: { name: payload.senderName, email: payload.senderEmail },
       to: [{ email }],
       subject: message.subject.trim(),
-      htmlContent: message.html,
-      textContent: htmlToPlainText(message.html),
+      htmlContent: tracked.html,
+      textContent: htmlToPlainText(tracked.html),
     });
 
     results.push(
       outcome.ok
-        ? { email, success: true, ...(outcome.messageId ? { messageId: outcome.messageId } : {}) }
+        ? { email, success: true, ...(outcome.messageId ? { messageId: outcome.messageId } : {}), ...(tracked.trackingLinkIds.length ? { trackingLinkIds: tracked.trackingLinkIds } : {}) }
         : { email, success: false, error: outcome.error },
     );
   }
