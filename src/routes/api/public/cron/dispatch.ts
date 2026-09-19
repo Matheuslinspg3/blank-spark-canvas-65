@@ -70,7 +70,7 @@ async function processCampaign(row: Row): Promise<string> {
       senderName: row.sender_name,
       senderEmail: row.sender_email,
       messages: [message],
-    });
+    }, { supabase: supabaseAdmin, userId: row.user_id, campaignId: row.id });
     result = sent ?? { email: message.email, success: false, error: "Sem resposta do provedor." };
     await logSendResults(supabaseAdmin, row.user_id, row.id, [result]);
   }
