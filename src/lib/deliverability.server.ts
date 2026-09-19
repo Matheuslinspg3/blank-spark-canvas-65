@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { SendResult } from "./bulk-email";
 import { clampLimit } from "./deliverability";
+import { attachTracksToEmailEvent } from "./email-link-tracking.server";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Client = SupabaseClient<any, any, any>;
@@ -45,20 +46,18 @@ export async function logSendResults(
   campaignId: string | null,
   results: SendResult[],
 ): Promise<void> {
-  const rows = results
-    .filter((result) => !result.blocked)
-    .map((result) => ({
+  for (const result of results.filter((item) => !item.blocked)) {
+    const { data, error } = await supabase.from("email_events").insert({
       user_id: userId,
       campaign_id: campaignId,
       email: result.email.trim().toLowerCase(),
       message_id: result.messageId ?? null,
       status: result.success ? "enviado" : "erro",
       reason: result.error ?? null,
-    }));
-  if (rows.length === 0) return;
-
-  const { error } = await supabase.from("email_events").insert(rows);
-  if (error) console.error(`[deliverability] falha ao registrar envio: ${error.message}`);
+    } as any).select("id").single();
+    if (error || !data) { console.error(`[deliverability] falha ao registrar envio: ${error?.message ?? "sem evento"}`); continue; }
+    await attachTracksToEmailEvent(supabase, userId, data.id, result.trackingLinkIds);
+  }
 }
 
 export type Guard = {
