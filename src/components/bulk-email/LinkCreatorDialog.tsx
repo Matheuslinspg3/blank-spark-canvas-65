@@ -119,8 +119,8 @@ export function LinkCreatorDialog({
         <DialogHeader>
           <DialogTitle>Criar link rastreado</DialogTitle>
           <DialogDescription>
-            Cole o endereço de destino. Para saber quem clicou, informe o destinatário e/ou
-            vincule o link a um disparo.
+            Cole o endereço de destino. Para saber quem clicou, informe o destinatário e/ou vincule
+            o link a um disparo.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">

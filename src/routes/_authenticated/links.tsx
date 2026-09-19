@@ -166,8 +166,8 @@ function LinksPage() {
         <CardHeader>
           <CardTitle className="text-base">Criar novo link</CardTitle>
           <CardDescription>
-            Informe o endereço de destino (site, WhatsApp, formulário). Se quiser saber quem
-            clicou, preencha o destinatário e/ou vincule a um disparo.
+            Informe o endereço de destino (site, WhatsApp, formulário). Se quiser saber quem clicou,
+            preencha o destinatário e/ou vincule a um disparo.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

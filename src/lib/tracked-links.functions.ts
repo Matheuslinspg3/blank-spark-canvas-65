@@ -105,7 +105,9 @@ export const listTrackedLinksFn = createServerFn({ method: "GET" })
       .limit(500);
     if (error) throw new Error(error.message);
 
-    const campaignIds = [...new Set((rows ?? []).map((r) => r.campaign_id).filter(Boolean))] as string[];
+    const campaignIds = [
+      ...new Set((rows ?? []).map((r) => r.campaign_id).filter(Boolean)),
+    ] as string[];
     const campaignNames = new Map<string, string>();
     if (campaignIds.length > 0) {
       const { data: campaigns } = await context.supabase
