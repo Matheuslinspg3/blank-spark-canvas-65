@@ -11,6 +11,23 @@ import type {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LooseClient = { from: (table: string) => any };
 
+type SupabaseOperationResult<T> = {
+  data: T;
+  error: { message: string } | null;
+};
+
+async function runUserScopedOperation<T>(
+  client: LooseClient,
+  operation: (scopedClient: LooseClient) => PromiseLike<SupabaseOperationResult<T>>,
+): Promise<SupabaseOperationResult<T>> {
+  let result = await operation(client);
+  if (result.error && /jwt issued at future/i.test(result.error.message)) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    result = await operation(supabaseAdmin as unknown as LooseClient);
+  }
+  return result;
+}
+
 const linkSchema = z.object({
   label: z.string().trim().max(120).default(""),
   url: z
@@ -111,14 +128,16 @@ export const createMarketingCampaignFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<MarketingCampaign> => {
     const supabase = context.supabase as unknown as LooseClient;
-    const { data: row, error } = await supabase
-      .from("marketing_campaigns")
-      .insert({
-        user_id: context.userId,
-        name: data.name?.trim() || `Campanha ${new Date().toLocaleDateString("pt-BR")}`,
-      })
-      .select("*")
-      .single();
+    const { data: row, error } = await runUserScopedOperation(supabase, (client) =>
+      client
+        .from("marketing_campaigns")
+        .insert({
+          user_id: context.userId,
+          name: data.name?.trim() || `Campanha ${new Date().toLocaleDateString("pt-BR")}`,
+        })
+        .select("*")
+        .single(),
+    );
     if (error) throw new Error(error.message);
     return rowToCampaign(row as Record<string, unknown>);
   });
@@ -128,13 +147,15 @@ export const updateMarketingCampaignFn = createServerFn({ method: "POST" })
   .inputValidator((data) => patchSchema.parse(data))
   .handler(async ({ data, context }): Promise<MarketingCampaign> => {
     const supabase = context.supabase as unknown as LooseClient;
-    const { data: row, error } = await supabase
-      .from("marketing_campaigns")
-      .update(data.patch)
-      .eq("id", data.id)
-      .eq("user_id", context.userId)
-      .select("*")
-      .single();
+    const { data: row, error } = await runUserScopedOperation(supabase, (client) =>
+      client
+        .from("marketing_campaigns")
+        .update(data.patch)
+        .eq("id", data.id)
+        .eq("user_id", context.userId)
+        .select("*")
+        .single(),
+    );
     if (error) throw new Error(error.message);
     return rowToCampaign(row as Record<string, unknown>);
   });
@@ -144,11 +165,13 @@ export const deleteMarketingCampaignFn = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as unknown as LooseClient;
-    const { error } = await supabase
-      .from("marketing_campaigns")
-      .delete()
-      .eq("id", data.id)
-      .eq("user_id", context.userId);
+    const { error } = await runUserScopedOperation(supabase, (client) =>
+      client
+        .from("marketing_campaigns")
+        .delete()
+        .eq("id", data.id)
+        .eq("user_id", context.userId),
+    );
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -166,11 +189,13 @@ export const linkDispatchToCampaignFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as unknown as LooseClient;
-    const { error } = await supabase
-      .from("campaigns")
-      .update({ marketing_campaign_id: data.marketingCampaignId })
-      .eq("id", data.dispatchId)
-      .eq("user_id", context.userId);
+    const { error } = await runUserScopedOperation(supabase, (client) =>
+      client
+        .from("campaigns")
+        .update({ marketing_campaign_id: data.marketingCampaignId })
+        .eq("id", data.dispatchId)
+        .eq("user_id", context.userId),
+    );
     if (error) throw new Error(error.message);
     return { ok: true };
   });
