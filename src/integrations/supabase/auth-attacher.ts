@@ -23,7 +23,9 @@ async function getUsableAccessToken(): Promise<string | undefined> {
 
   const issuedAt = getIssuedAtMs(token);
   if (issuedAt !== null && issuedAt > Date.now()) {
-    await new Promise((resolve) => setTimeout(resolve, Math.min(issuedAt - Date.now() + 1_500, 15_000)));
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(issuedAt - Date.now() + 1_500, 15_000)),
+    );
   }
   return token;
 }

@@ -41,7 +41,9 @@ export const getCampaign = createServerFn({ method: "GET" })
 
 export const createCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { name?: string; mode?: "completo" | "simples" | "molde" | "ia" }) => input ?? {})
+  .inputValidator(
+    (input: { name?: string; mode?: "completo" | "simples" | "molde" | "ia" }) => input ?? {},
+  )
   .handler(async ({ data, context }) => {
     const allowed = ["simples", "molde", "ia"] as const;
     const mode = allowed.find((value) => value === data.mode) ?? "completo";
