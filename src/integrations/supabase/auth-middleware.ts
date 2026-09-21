@@ -46,7 +46,7 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
     // Supabase services can briefly disagree about the current time just after
     // a session is issued. Retrying here also covers PostgREST queries, whereas
     // retrying only auth.getClaims leaves the first database request vulnerable.
-    const retryDelays = [1_000, 2_000, 4_000, 8_000, 15_000];
+    const retryDelays = [1_500, 3_000, 5_000];
     let waitedForRemoteClock = false;
     for (let attempt = 0; ; attempt += 1) {
       const requestInput =
@@ -68,7 +68,10 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
           ? issuedAt - remoteNow + 1_500
           : 0;
       const fallbackDelay = retryDelays[attempt] ?? 15_000;
-      const delay = remoteSkew > 0 ? Math.min(remoteSkew, 90_000) : fallbackDelay;
+      // Keep a server-function request below the hosting timeout. If the skew
+      // is larger, the client keeps the same token so the next query can use
+      // the time already elapsed instead of resetting iat through a refresh.
+      const delay = remoteSkew > 0 ? Math.min(remoteSkew, 5_000) : fallbackDelay;
       waitedForRemoteClock = waitedForRemoteClock || remoteSkew > 0;
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
@@ -126,7 +129,7 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       };
       const skewMs = typeof payload.iat === 'number' ? payload.iat * 1000 - Date.now() : 0;
       if (skewMs > 0) {
-        await new Promise((resolve) => setTimeout(resolve, Math.min(skewMs + 1000, 20_000)));
+        await new Promise((resolve) => setTimeout(resolve, Math.min(skewMs + 1000, 5_000)));
       }
     } catch {
       // malformed payload: let the normal validation below reject it
