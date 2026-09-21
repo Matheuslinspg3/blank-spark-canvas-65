@@ -10,6 +10,22 @@ function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
 }
 
+function getTokenIssuedAtMs(authorization: string | null): number | null {
+  if (!authorization?.startsWith('Bearer ')) return null;
+  const token = authorization.slice('Bearer '.length);
+  const payloadPart = token.split('.')[1];
+  if (!payloadPart) return null;
+
+  try {
+    const payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8')) as {
+      iat?: unknown;
+    };
+    return typeof payload.iat === 'number' ? payload.iat * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 function createSupabaseFetch(supabaseKey: string): typeof fetch {
   return async (input, init) => {
     const headers = new Headers(
@@ -30,7 +46,8 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
     // Supabase services can briefly disagree about the current time just after
     // a session is issued. Retrying here also covers PostgREST queries, whereas
     // retrying only auth.getClaims leaves the first database request vulnerable.
-    const retryDelays = [1_000, 2_000, 4_000, 8_000];
+    const retryDelays = [1_000, 2_000, 4_000, 8_000, 15_000];
+    let waitedForRemoteClock = false;
     for (let attempt = 0; ; attempt += 1) {
       const requestInput =
         typeof Request !== 'undefined' && input instanceof Request ? input.clone() : input;
@@ -41,7 +58,19 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
       const body = await response.clone().text();
       if (!/jwt issued at future/i.test(body)) return response;
 
-      await new Promise((resolve) => setTimeout(resolve, retryDelays[attempt]));
+      // PostgREST can be behind this worker's clock. Its Date response header is
+      // the relevant clock for JWT validation, so wait until that clock reaches
+      // the token's iat instead of relying only on Date.now().
+      const remoteNow = Date.parse(response.headers.get('date') ?? '');
+      const issuedAt = getTokenIssuedAtMs(headers.get('Authorization'));
+      const remoteSkew: number =
+        !waitedForRemoteClock && Number.isFinite(remoteNow) && issuedAt !== null
+          ? issuedAt - remoteNow + 1_500
+          : 0;
+      const fallbackDelay = retryDelays[attempt] ?? 15_000;
+      const delay = remoteSkew > 0 ? Math.min(remoteSkew, 90_000) : fallbackDelay;
+      waitedForRemoteClock = waitedForRemoteClock || remoteSkew > 0;
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   };
 }
@@ -90,9 +119,11 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
     // A token whose `iat` is ahead of this server's clock is rejected by
     // PostgREST with "JWT issued at future". Wait out the skew before querying.
     try {
-      const payload = JSON.parse(
-        Buffer.from(token.split('.')[1]!, 'base64url').toString('utf8'),
-      ) as { iat?: number };
+      const payloadPart = token.split('.')[1];
+      if (!payloadPart) throw new Error('Invalid token payload');
+      const payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8')) as {
+        iat?: number;
+      };
       const skewMs = typeof payload.iat === 'number' ? payload.iat * 1000 - Date.now() : 0;
       if (skewMs > 0) {
         await new Promise((resolve) => setTimeout(resolve, Math.min(skewMs + 1000, 20_000)));
