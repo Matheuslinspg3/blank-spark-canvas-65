@@ -2,14 +2,56 @@
 import { createMiddleware } from '@tanstack/react-start'
 import { supabase } from './client'
 
+function getIssuedAtMs(token: string): number | null {
+  const payloadPart = token.split('.')[1]
+  if (!payloadPart) return null
+
+  try {
+    const normalized = payloadPart.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
+    const payload = JSON.parse(atob(padded)) as { iat?: unknown }
+    return typeof payload.iat === 'number' ? payload.iat * 1000 : null
+  } catch {
+    return null
+  }
+}
+
+async function getUsableAccessToken(): Promise<string | undefined> {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  if (!token) return undefined
+
+  const issuedAt = getIssuedAtMs(token)
+  if (issuedAt === null || issuedAt <= Date.now() + 1_000) return token
+
+  // A preview session can occasionally arrive with an access token issued
+  // ahead of PostgREST's clock. Replace it instead of making every query wait.
+  const { data: refreshed, error } = await supabase.auth.refreshSession()
+  if (error) return token
+  return refreshed.session?.access_token ?? token
+}
+
 // Must be registered as a global `functionMiddleware` in `src/start.ts`; otherwise
 // the browser never attaches the bearer token to serverFn RPCs.
 export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
   async ({ next }) => {
-    const { data } = await supabase.auth.getSession()
-    const token = data.session?.access_token
-    return next({
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
+    const token = await getUsableAccessToken()
+
+    try {
+      return await next({
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (!/jwt issued at future/i.test(message)) throw error
+
+      const { data, error: refreshError } = await supabase.auth.refreshSession()
+      const refreshedToken = data.session?.access_token
+      if (refreshError || !refreshedToken || refreshedToken === token) throw error
+
+      return next({
+        headers: { Authorization: `Bearer ${refreshedToken}` },
+      })
+    }
   },
 )
