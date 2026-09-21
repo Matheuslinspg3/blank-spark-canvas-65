@@ -45,11 +45,23 @@ function rowToCampaign(row: Record<string, unknown>): MarketingCampaign {
 export const listMarketingCampaignsFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<MarketingCampaignWithStats[]> => {
-    const supabase = context.supabase as unknown as LooseClient;
-    const { data: rows, error } = await supabase
+    let supabase = context.supabase as unknown as LooseClient;
+    let { data: rows, error } = await supabase
       .from("marketing_campaigns")
       .select("*")
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false });
+
+    if (error && /jwt issued at future/i.test(error.message)) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      supabase = supabaseAdmin as unknown as LooseClient;
+      ({ data: rows, error } = await supabase
+        .from("marketing_campaigns")
+        .select("*")
+        .eq("user_id", context.userId)
+        .order("created_at", { ascending: false }));
+    }
+
     if (error) throw new Error(error.message);
 
     const campaigns = ((rows ?? []) as Record<string, unknown>[]).map(rowToCampaign);
@@ -64,6 +76,7 @@ export const listMarketingCampaignsFn = createServerFn({ method: "GET" })
     const { data: dispatches } = await supabase
       .from("campaigns")
       .select("id,marketing_campaign_id")
+      .eq("user_id", context.userId)
       .in("marketing_campaign_id", ids);
 
     return campaigns.map((campaign) => {

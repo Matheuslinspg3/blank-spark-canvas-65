@@ -2,44 +2,9 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { supabase } from "./client";
 
-function getIssuedAtMs(token: string): number | null {
-  const payloadPart = token.split(".")[1];
-  if (!payloadPart) return null;
-
-  try {
-    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    const payload = JSON.parse(atob(padded)) as { iat?: unknown };
-    return typeof payload.iat === "number" ? payload.iat * 1000 : null;
-  } catch {
-    return null;
-  }
-}
-
-async function waitUntilTokenIsCurrent(token: string): Promise<void> {
-  const issuedAt = getIssuedAtMs(token);
-  if (issuedAt === null) return;
-
-  const delay = issuedAt - Date.now() + 1_500;
-  if (delay > 0) {
-    await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 90_000)));
-  }
-}
-
 async function getUsableAccessToken(): Promise<string | undefined> {
   const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) return undefined;
-
-  const issuedAt = getIssuedAtMs(token);
-  if (issuedAt === null || issuedAt <= Date.now()) return token;
-
-  // A preview session can occasionally arrive with an access token issued
-  // ahead of PostgREST's clock. Replace it instead of making every query wait.
-  const { data: refreshed, error } = await supabase.auth.refreshSession();
-  const usableToken = error ? token : (refreshed.session?.access_token ?? token);
-  await waitUntilTokenIsCurrent(usableToken);
-  return usableToken;
+  return data.session?.access_token;
 }
 
 // Must be registered as a global `functionMiddleware` in `src/start.ts`; otherwise
@@ -48,22 +13,11 @@ export const attachSupabaseAuth = createMiddleware({ type: "function" }).client(
   async ({ next }) => {
     const token = await getUsableAccessToken();
 
-    try {
-      return await next({
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (!/jwt issued at future/i.test(message)) throw error;
-
-      const { data, error: refreshError } = await supabase.auth.refreshSession();
-      const refreshedToken = data.session?.access_token;
-      if (refreshError || !refreshedToken || refreshedToken === token) throw error;
-
-      await waitUntilTokenIsCurrent(refreshedToken);
-      return next({
-        headers: { Authorization: `Bearer ${refreshedToken}` },
-      });
-    }
+    // Never refresh specifically because PostgREST says the JWT is from the
+    // future. A refreshed token gets a newer iat and perpetuates the clock-skew
+    // loop. The server retries this same token until its iat is accepted.
+    return next({
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
   },
 );

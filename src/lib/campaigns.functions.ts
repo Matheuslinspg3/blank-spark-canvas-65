@@ -6,11 +6,21 @@ import type { Campaign, CampaignPatch } from "./campaigns";
 export const listCampaigns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    let { data, error } = await context.supabase
       .from("campaigns")
       .select("*")
       .eq("user_id", context.userId)
       .order("created_at", { ascending: false });
+
+    if (error && /jwt issued at future/i.test(error.message)) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      ({ data, error } = await supabaseAdmin
+        .from("campaigns")
+        .select("*")
+        .eq("user_id", context.userId)
+        .order("created_at", { ascending: false }));
+    }
+
     if (error) throw new Error(error.message);
     return (data ?? []) as unknown as Campaign[];
   });
@@ -31,7 +41,9 @@ export const getCampaign = createServerFn({ method: "GET" })
 
 export const createCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { name?: string; mode?: "completo" | "simples" | "molde" | "ia" }) => input ?? {})
+  .inputValidator(
+    (input: { name?: string; mode?: "completo" | "simples" | "molde" | "ia" }) => input ?? {},
+  )
   .handler(async ({ data, context }) => {
     const allowed = ["simples", "molde", "ia"] as const;
     const mode = allowed.find((value) => value === data.mode) ?? "completo";
