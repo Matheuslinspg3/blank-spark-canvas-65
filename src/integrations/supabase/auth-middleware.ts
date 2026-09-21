@@ -63,8 +63,8 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
       // the token's iat instead of relying only on Date.now().
       const remoteNow = Date.parse(response.headers.get('date') ?? '');
       const issuedAt = getTokenIssuedAtMs(headers.get('Authorization'));
-      const remoteSkew =
-        !waitedForRemoteClock && Number.isFinite(remoteNow) && issuedAt
+      const remoteSkew: number =
+        !waitedForRemoteClock && Number.isFinite(remoteNow) && issuedAt !== null
           ? issuedAt - remoteNow + 1_500
           : 0;
       const fallbackDelay = retryDelays[attempt] ?? 15_000;
