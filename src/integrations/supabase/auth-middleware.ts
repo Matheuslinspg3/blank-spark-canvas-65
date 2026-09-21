@@ -47,7 +47,7 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
     // Supabase services can briefly disagree about the current time just after
     // a session is issued. Retrying here also covers PostgREST queries, whereas
     // retrying only auth.getClaims leaves the first database request vulnerable.
-    const retryDelays = [1_500, 3_000, 5_000];
+    const retryDelays = [750, 1_500];
     let waitedForRemoteClock = false;
     for (let attempt = 0; ; attempt += 1) {
       const requestInput =
@@ -72,7 +72,7 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
       // Keep a server-function request below the hosting timeout. If the skew
       // is larger, the client keeps the same token so the next query can use
       // the time already elapsed instead of resetting iat through a refresh.
-      const delay = remoteSkew > 0 ? Math.min(remoteSkew, 5_000) : fallbackDelay;
+      const delay = remoteSkew > 0 ? Math.min(remoteSkew, 1_500) : fallbackDelay;
       waitedForRemoteClock = waitedForRemoteClock || remoteSkew > 0;
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
@@ -119,22 +119,6 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
       throw new Error("Unauthorized: Invalid token");
     }
 
-    // A token whose `iat` is ahead of this server's clock is rejected by
-    // PostgREST with "JWT issued at future". Wait out the skew before querying.
-    try {
-      const payloadPart = token.split(".")[1];
-      if (!payloadPart) throw new Error("Invalid token payload");
-      const payload = JSON.parse(Buffer.from(payloadPart, "base64url").toString("utf8")) as {
-        iat?: number;
-      };
-      const skewMs = typeof payload.iat === "number" ? payload.iat * 1000 - Date.now() : 0;
-      if (skewMs > 0) {
-        await new Promise((resolve) => setTimeout(resolve, Math.min(skewMs + 1000, 5_000)));
-      }
-    } catch {
-      // malformed payload: let the normal validation below reject it
-    }
-
     const supabase = createClient<Database>(SUPABASE_URL!, SUPABASE_PUBLISHABLE_KEY!, {
       global: {
         fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY!),
@@ -154,7 +138,7 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
     // Small clock skew between the app server and the auth server can make a
     // freshly issued token look like it comes from the future. Wait briefly and retry once.
     if (error && /issued at future/i.test(error.message ?? "")) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 750));
       ({ data, error } = await supabase.auth.getClaims(token));
     }
 

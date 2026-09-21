@@ -2,32 +2,9 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { supabase } from "./client";
 
-function getIssuedAtMs(token: string): number | null {
-  const payloadPart = token.split(".")[1];
-  if (!payloadPart) return null;
-
-  try {
-    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    const payload = JSON.parse(atob(padded)) as { iat?: unknown };
-    return typeof payload.iat === "number" ? payload.iat * 1000 : null;
-  } catch {
-    return null;
-  }
-}
-
 async function getUsableAccessToken(): Promise<string | undefined> {
   const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) return undefined;
-
-  const issuedAt = getIssuedAtMs(token);
-  if (issuedAt !== null && issuedAt > Date.now()) {
-    await new Promise((resolve) =>
-      setTimeout(resolve, Math.min(issuedAt - Date.now() + 1_500, 15_000)),
-    );
-  }
-  return token;
+  return data.session?.access_token;
 }
 
 // Must be registered as a global `functionMiddleware` in `src/start.ts`; otherwise
