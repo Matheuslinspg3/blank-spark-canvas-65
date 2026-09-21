@@ -87,6 +87,20 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       throw new Error('Unauthorized: Invalid token');
     }
 
+    // A token whose `iat` is ahead of this server's clock is rejected by
+    // PostgREST with "JWT issued at future". Wait out the skew before querying.
+    try {
+      const payload = JSON.parse(
+        Buffer.from(token.split('.')[1]!, 'base64url').toString('utf8'),
+      ) as { iat?: number };
+      const skewMs = typeof payload.iat === 'number' ? payload.iat * 1000 - Date.now() : 0;
+      if (skewMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, Math.min(skewMs + 1000, 20_000)));
+      }
+    } catch {
+      // malformed payload: let the normal validation below reject it
+    }
+
     const supabase = createClient<Database>(
       SUPABASE_URL!,
       SUPABASE_PUBLISHABLE_KEY!,
