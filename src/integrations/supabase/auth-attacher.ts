@@ -16,19 +16,30 @@ function getIssuedAtMs(token: string): number | null {
   }
 }
 
+async function waitUntilTokenIsCurrent(token: string): Promise<void> {
+  const issuedAt = getIssuedAtMs(token)
+  if (issuedAt === null) return
+
+  const delay = issuedAt - Date.now() + 1_500
+  if (delay > 0) {
+    await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 90_000)))
+  }
+}
+
 async function getUsableAccessToken(): Promise<string | undefined> {
   const { data } = await supabase.auth.getSession()
   const token = data.session?.access_token
   if (!token) return undefined
 
   const issuedAt = getIssuedAtMs(token)
-  if (issuedAt === null || issuedAt <= Date.now() + 1_000) return token
+  if (issuedAt === null || issuedAt <= Date.now()) return token
 
   // A preview session can occasionally arrive with an access token issued
   // ahead of PostgREST's clock. Replace it instead of making every query wait.
   const { data: refreshed, error } = await supabase.auth.refreshSession()
-  if (error) return token
-  return refreshed.session?.access_token ?? token
+  const usableToken = error ? token : (refreshed.session?.access_token ?? token)
+  await waitUntilTokenIsCurrent(usableToken)
+  return usableToken
 }
 
 // Must be registered as a global `functionMiddleware` in `src/start.ts`; otherwise
@@ -49,6 +60,7 @@ export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
       const refreshedToken = data.session?.access_token
       if (refreshError || !refreshedToken || refreshedToken === token) throw error
 
+      await waitUntilTokenIsCurrent(refreshedToken)
       return next({
         headers: { Authorization: `Bearer ${refreshedToken}` },
       })
