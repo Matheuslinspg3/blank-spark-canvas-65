@@ -4,10 +4,28 @@ import { supabase } from './client'
 
 // Must be registered as a global `functionMiddleware` in `src/start.ts`; otherwise
 // the browser never attaches the bearer token to serverFn RPCs.
+// A freshly issued token can carry an `iat` slightly ahead of the app/db clock,
+// which PostgREST rejects with "JWT issued at future". Wait it out before sending.
+async function waitUntilTokenIsValid(token: string) {
+  try {
+    const payload = JSON.parse(
+      atob(token.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/')),
+    ) as { iat?: number }
+    if (typeof payload.iat !== 'number') return
+    const skewMs = payload.iat * 1000 - Date.now()
+    if (skewMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, Math.min(skewMs + 1000, 15_000)))
+    }
+  } catch {
+    // ignore malformed tokens; the server will reject them anyway
+  }
+}
+
 export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
   async ({ next }) => {
     const { data } = await supabase.auth.getSession()
     const token = data.session?.access_token
+    if (token) await waitUntilTokenIsValid(token)
     return next({
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
