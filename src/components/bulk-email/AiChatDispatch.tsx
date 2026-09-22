@@ -911,6 +911,7 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
             <ScheduleFields
               schedule={schedule}
               pending={readyCount}
+              contentToCheck={recipients.map((row) => row[SIMPLE_BODY_COLUMN] ?? "")}
               disabled={locked}
               onChange={setSchedule}
               onSchedule={() => void handleSchedule()}

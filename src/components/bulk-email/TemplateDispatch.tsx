@@ -1208,6 +1208,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
           <ScheduleFields
             schedule={schedule}
             pending={readyRows.length}
+            contentToCheck={messagesFor(readyRows).map((message) => message.html)}
             disabled={locked || oversizedCount > 0}
             onChange={setSchedule}
             onSchedule={() => void handleSchedule()}
