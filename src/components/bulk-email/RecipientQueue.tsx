@@ -131,7 +131,8 @@ export function RecipientQueue({ recipients, disabled, onChange }: RecipientQueu
     const ok = latest.current.filter((r) => (r[AI_COLUMN] ?? "").trim().length > 0).length;
     if (stopRef.current) toast.info(`Geração interrompida com ${ok} textos prontos`);
     else if (ok === recipients.length) toast.success(`${ok} textos prontos na fila`);
-    else if (ok === 0) toast.error("A IA não conseguiu gerar nenhum texto. Verifique as configurações.");
+    else if (ok === 0)
+      toast.error("A IA não conseguiu gerar nenhum texto. Verifique as configurações.");
     else toast.warning(`${ok} de ${recipients.length} textos prontos`);
   }
 
@@ -150,8 +151,8 @@ export function RecipientQueue({ recipients, disabled, onChange }: RecipientQueu
           <Settings2 className="size-4" />
           <AlertTitle>IA não configurada</AlertTitle>
           <AlertDescription>
-            Você ainda pode escrever os textos manualmente. Para gerar com IA, informe a base URL e a
-            API key na página de configurações.
+            Você ainda pode escrever os textos manualmente. Para gerar com IA, informe a base URL e
+            a API key na página de configurações.
           </AlertDescription>
         </Alert>
       )}
@@ -231,7 +232,10 @@ export function RecipientQueue({ recipients, disabled, onChange }: RecipientQueu
               <div className="grid gap-2 sm:grid-cols-3">
                 {DYNAMIC_FIELDS.map((field) => (
                   <div key={field} className="space-y-1">
-                    <Label htmlFor={`${field}-${index}`} className="text-muted-foreground text-xs capitalize">
+                    <Label
+                      htmlFor={`${field}-${index}`}
+                      className="text-muted-foreground text-xs capitalize"
+                    >
                       {field}
                     </Label>
                     <Input
@@ -239,7 +243,9 @@ export function RecipientQueue({ recipients, disabled, onChange }: RecipientQueu
                       className="h-8 text-xs"
                       value={recipient[field] ?? ""}
                       disabled={disabled}
-                      placeholder={field === "cargo" ? "Diretor" : field === "empresa" ? "Acme" : "Ana"}
+                      placeholder={
+                        field === "cargo" ? "Diretor" : field === "empresa" ? "Acme" : "Ana"
+                      }
                       onChange={(event) => setField(index, field, event.target.value)}
                     />
                   </div>

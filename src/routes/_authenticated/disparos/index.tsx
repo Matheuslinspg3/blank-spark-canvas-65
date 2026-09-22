@@ -15,6 +15,8 @@ import {
   Users,
   XCircle,
   Zap,
+  Pause,
+  Play,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,7 +37,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS_LABEL, type CampaignStatus } from "@/lib/campaigns";
 import { createCampaign, deleteCampaign, listCampaigns } from "@/lib/campaigns.functions";
-import { cancelScheduleFn } from "@/lib/schedule-dispatch.functions";
+import { cancelScheduleFn, setCampaignPausedFn } from "@/lib/schedule-dispatch.functions";
+import { brtDateKey, estimateFinish, parseSchedule } from "@/lib/send-schedule";
 
 export const Route = createFileRoute("/_authenticated/disparos/")({
   component: CampaignsPage,
@@ -55,6 +58,16 @@ function CampaignsPage() {
   const remove = useServerFn(deleteCampaign);
 
   const cancelSchedule = useServerFn(cancelScheduleFn);
+  const setPaused = useServerFn(setCampaignPausedFn);
+
+  const pauseMutation = useMutation({
+    mutationFn: (input: { campaignId: string; paused: boolean }) => setPaused({ data: input }),
+    onSuccess: (result) => {
+      toast.success(result.paused ? "Disparo pausado." : "Disparo retomado.");
+      void queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["campaigns"],
@@ -220,8 +233,12 @@ function CampaignsPage() {
           </CardHeader>
           <CardContent className="grid gap-3">
             {scheduled.map((campaign) => {
-              const schedule = campaign.schedule;
+              const schedule = campaign.schedule ? parseSchedule(campaign.schedule) : null;
               const pending = Math.max(0, (campaign.total_count ?? 0) - (campaign.sent_count ?? 0));
+              const today = brtDateKey();
+              const sentToday =
+                campaign.daily_sent_date === today ? (campaign.daily_sent_count ?? 0) : 0;
+              const paused = Boolean(campaign.paused);
               return (
                 <div
                   key={campaign.id}
@@ -241,22 +258,46 @@ function CampaignsPage() {
                         ? ` · das ${schedule.startTime} às ${schedule.endTime}, 1 a cada ${schedule.intervalSeconds}s`
                         : " · envio contínuo"}
                     </p>
+                    {schedule?.enabled && (
+                      <p className="text-muted-foreground text-xs">
+                        Hoje: {sentToday}/{schedule.dailyLimit} e-mails ·{" "}
+                        {pending > 0
+                          ? `previsão de término em ${estimateFinish(schedule, pending)}`
+                          : "fila concluída"}
+                      </p>
+                    )}
                     <p className="text-muted-foreground text-xs">
-                      Próximo envio:{" "}
-                      {campaign.next_send_at
-                        ? new Date(campaign.next_send_at).toLocaleString("pt-BR")
-                        : "assim que a janela abrir"}
+                      {paused
+                        ? "Pausado — nenhum e-mail sai até você retomar."
+                        : `Próximo envio: ${
+                            campaign.next_send_at
+                              ? new Date(campaign.next_send_at).toLocaleString("pt-BR")
+                              : "assim que a janela abrir"
+                          }`}
                     </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={cancelMutation.isPending}
-                    onClick={() => cancelMutation.mutate(campaign.id)}
-                  >
-                    <XCircle className="size-4" />
-                    Cancelar
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={pauseMutation.isPending}
+                      onClick={() =>
+                        pauseMutation.mutate({ campaignId: campaign.id, paused: !paused })
+                      }
+                    >
+                      {paused ? <Play className="size-4" /> : <Pause className="size-4" />}
+                      {paused ? "Retomar" : "Pausar"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={cancelMutation.isPending}
+                      onClick={() => cancelMutation.mutate(campaign.id)}
+                    >
+                      <XCircle className="size-4" />
+                      Cancelar
+                    </Button>
+                  </div>
                 </div>
               );
             })}

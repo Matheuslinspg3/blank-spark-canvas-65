@@ -166,11 +166,7 @@ export const deleteMarketingCampaignFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as unknown as LooseClient;
     const { error } = await runUserScopedOperation(supabase, (client) =>
-      client
-        .from("marketing_campaigns")
-        .delete()
-        .eq("id", data.id)
-        .eq("user_id", context.userId),
+      client.from("marketing_campaigns").delete().eq("id", data.id).eq("user_id", context.userId),
     );
     if (error) throw new Error(error.message);
     return { ok: true };

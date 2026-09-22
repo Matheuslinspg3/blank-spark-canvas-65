@@ -62,7 +62,12 @@ import {
   type Reviews,
   type SendResult,
 } from "@/lib/bulk-email";
-import { STATUS_LABEL, type Campaign, type CampaignPatch, type CampaignStatus } from "@/lib/campaigns";
+import {
+  STATUS_LABEL,
+  type Campaign,
+  type CampaignPatch,
+  type CampaignStatus,
+} from "@/lib/campaigns";
 import { updateCampaign } from "@/lib/campaigns.functions";
 import { sendBulkEmails } from "@/lib/send-campaign";
 import { sendTestEmailFn } from "@/lib/send-email.functions";
@@ -155,8 +160,6 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
       setFormData((prev) => ({ ...prev, senderName: sender.name, senderEmail: sender.email }));
     }
   }, [campaign.sender_email]);
-
-
 
   const persist = useRef(async (patch: CampaignPatch) => {
     await save({ data: { id: campaign.id, patch } });
@@ -321,7 +324,8 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
         finished_at: finishedAt,
       });
       if (ok === sendResults.length) toast.success(`${ok} e-mails enviados com sucesso`);
-      else if (ok === 0) toast.error("Nenhum e-mail pôde ser enviado. Verifique o relatório de falhas.");
+      else if (ok === 0)
+        toast.error("Nenhum e-mail pôde ser enviado. Verifique o relatório de falhas.");
       else toast.warning(`${ok} de ${sendResults.length} e-mails enviados`);
     } finally {
       setLoading(false);
@@ -366,7 +370,9 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.senderEmail.trim())) {
-      toast.error("Preencha o e-mail do remetente (o endereço que aparece como 'De:') antes do teste.");
+      toast.error(
+        "Preencha o e-mail do remetente (o endereço que aparece como 'De:') antes do teste.",
+      );
       return;
     }
     const sample = approvedRecipients[0] ?? recipients[0];
@@ -586,9 +592,9 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
               <AlertTriangle className="size-4" />
               <AlertTitle>Lote grande</AlertTitle>
               <AlertDescription>
-                Você está prestes a enviar {approvedRecipients.length} e-mails de uma vez. Isso pode levar
-                cerca de {Math.ceil(approvedRecipients.length / RATE_LIMIT_PER_SECOND / 60)} minutos e
-                aumenta o risco de bloqueio por spam.
+                Você está prestes a enviar {approvedRecipients.length} e-mails de uma vez. Isso pode
+                levar cerca de {Math.ceil(approvedRecipients.length / RATE_LIMIT_PER_SECOND / 60)}{" "}
+                minutos e aumenta o risco de bloqueio por spam.
               </AlertDescription>
             </Alert>
           )}
@@ -667,7 +673,6 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
 
       <DeliverabilityReport campaignId={campaign.id} />
 
-
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -679,15 +684,16 @@ export function BulkEmailDashboard({ campaign }: { campaign: Campaign }) {
                   {rejeitadosLabel(rejectedCount)}.
                 </p>
                 <p>
-                  Remetente: <strong>{formData.senderName || "—"}</strong> &lt;{formData.senderEmail}&gt;
+                  Remetente: <strong>{formData.senderName || "—"}</strong> &lt;
+                  {formData.senderEmail}&gt;
                 </p>
                 <p>
                   Assunto: <strong>{formData.subject}</strong>
                 </p>
                 <p className="text-muted-foreground">
                   Tempo estimado: ~
-                  {Math.max(1, Math.ceil(approvedRecipients.length / RATE_LIMIT_PER_SECOND / 60))} min.
-                  Esta ação não pode ser desfeita.
+                  {Math.max(1, Math.ceil(approvedRecipients.length / RATE_LIMIT_PER_SECOND / 60))}{" "}
+                  min. Esta ação não pode ser desfeita.
                 </p>
               </div>
             </AlertDialogDescription>

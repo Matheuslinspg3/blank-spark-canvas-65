@@ -84,8 +84,8 @@ export function DeliverabilitySettings() {
             Limite diário de disparo
           </CardTitle>
           <CardDescription>
-            Máximo de e-mails em 24 horas. O app avisa a partir de 80% e pausa o disparo ao atingir o
-            limite — isso evita picos que queimam a reputação do domínio.
+            Máximo de e-mails em 24 horas. O app avisa a partir de 80% e pausa o disparo ao atingir
+            o limite — isso evita picos que queimam a reputação do domínio.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-end gap-3">

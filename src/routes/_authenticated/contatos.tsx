@@ -14,7 +14,6 @@ import {
   Upload,
   UserPlus,
   Users,
-
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -66,7 +65,6 @@ import {
   logCsvRowEvent,
   updateCsvRow,
 } from "@/lib/csv-rows.functions";
-
 
 const searchSchema = z.object({
   q: fallback(z.string(), "").default(""),
@@ -120,7 +118,6 @@ function ContatosPage() {
   const [phase, setPhase] = useState<Record<string, "pesquisando" | "escrevendo">>({});
   const [manual, setManual] = useState({ nome: "", email: "", categoria: "" });
 
-
   const fetchRows = useServerFn(listCsvRows);
   const fetchEvents = useServerFn(listCsvRowEvents);
   const importRows = useServerFn(importCsvRows);
@@ -128,7 +125,6 @@ function ContatosPage() {
   const removeRow = useServerFn(deleteCsvRow);
   const research = useServerFn(researchCompany);
   const logEvent = useServerFn(logCsvRowEvent);
-
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["csv-rows"],
@@ -212,7 +208,9 @@ function ContatosPage() {
     const settings = loadAiSettings();
     const fromStatus = row.status;
     setPhase((prev) => ({ ...prev, [row.id]: "pesquisando" }));
-    await updateRow({ data: { id: row.id, patch: { status: "processando", error_message: null } } });
+    await updateRow({
+      data: { id: row.id, patch: { status: "processando", error_message: null } },
+    });
     await record({
       csv_row_id: row.id,
       run_id: runId,
@@ -264,7 +262,6 @@ function ContatosPage() {
     const prompt = dossier
       ? buildPersonalizedPrompt({ nome: row.nome, categoria: row.categoria, dossier })
       : buildGenericPrompt({ nome: row.nome, categoria: row.categoria });
-
 
     setPhase((prev) => ({ ...prev, [row.id]: "escrevendo" }));
 
@@ -327,7 +324,6 @@ function ContatosPage() {
       });
     }
   }
-
 
   async function runBatch(target: CsvRow[]) {
     if (!isAiConfigured(loadAiSettings())) {
@@ -441,36 +437,35 @@ function ContatosPage() {
             </Button>
           </form>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void handleFile(file);
-              e.target.value = "";
-            }}
-          />
-          <Button disabled={importMutation.isPending} onClick={() => inputRef.current?.click()}>
-            {importMutation.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Upload className="size-4" />
-            )}
-            Importar CSV
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => downloadFile("exemplo-contatos.csv", SAMPLE_CONTACTS_CSV)}
-          >
-            <Download className="size-4" />
-            CSV de exemplo
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleFile(file);
+                e.target.value = "";
+              }}
+            />
+            <Button disabled={importMutation.isPending} onClick={() => inputRef.current?.click()}>
+              {importMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Upload className="size-4" />
+              )}
+              Importar CSV
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => downloadFile("exemplo-contatos.csv", SAMPLE_CONTACTS_CSV)}
+            >
+              <Download className="size-4" />
+              CSV de exemplo
+            </Button>
           </div>
         </CardContent>
-
       </Card>
 
       <Card>
@@ -480,7 +475,6 @@ function ContatosPage() {
             Cada contato passa por duas fases: pesquisa na web (site da empresa + busca) e escrita
             do e-mail com base no dossiê. Sem pesquisa confiável, o texto sai genérico.
           </CardDescription>
-
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -601,7 +595,9 @@ function ContatosPage() {
                     <TableRow key={row.id}>
                       <TableCell className="font-medium">{row.nome || "—"}</TableCell>
                       <TableCell className="text-muted-foreground">{row.email}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.categoria || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {row.categoria || "—"}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           {phase[row.id] ? (

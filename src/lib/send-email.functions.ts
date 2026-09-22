@@ -1,7 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { sendCampaignViaBrevo, sendSimpleCampaignViaBrevo, type SimpleSendPayload } from "./brevo.server";
+import {
+  sendCampaignViaBrevo,
+  sendSimpleCampaignViaBrevo,
+  type SimpleSendPayload,
+} from "./brevo.server";
 import type { Recipient, SendBulkPayload, SendResult } from "./bulk-email";
 import { blockedResult, buildGuard, logSendResults } from "./deliverability.server";
 
@@ -29,7 +33,13 @@ export const sendBulkEmailsFn = createServerFn({ method: "POST" })
       allowed.push(recipient);
     }
 
-    const sent = allowed.length > 0 ? await sendCampaignViaBrevo({ ...data, recipients: allowed }, { supabase: context.supabase, userId: context.userId, campaignId: data.campaignId }) : [];
+    const sent =
+      allowed.length > 0
+        ? await sendCampaignViaBrevo(
+            { ...data, recipients: allowed },
+            { supabase: context.supabase, userId: context.userId, campaignId: data.campaignId },
+          )
+        : [];
     await logSendResults(context.supabase, context.userId, data.campaignId ?? null, sent);
     return [...sent, ...results];
   });
@@ -58,7 +68,10 @@ export const sendSimpleEmailsFn = createServerFn({ method: "POST" })
 
     const sent =
       allowed.length > 0
-        ? await sendSimpleCampaignViaBrevo({ ...data, messages: allowed }, { supabase: context.supabase, userId: context.userId, campaignId: data.campaignId })
+        ? await sendSimpleCampaignViaBrevo(
+            { ...data, messages: allowed },
+            { supabase: context.supabase, userId: context.userId, campaignId: data.campaignId },
+          )
         : [];
     await logSendResults(context.supabase, context.userId, data.campaignId ?? null, sent);
     return [...sent, ...results];

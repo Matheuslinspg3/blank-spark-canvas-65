@@ -24,7 +24,9 @@ export const listCampaignLinkTracking = createServerFn({ method: "GET" })
     const configured = (process.env["TRACKING_ORIGIN"] ?? "").trim().startsWith("https://");
     const { data: rows, error } = await (context.supabase as any)
       .from("email_link_tracks")
-      .select("id,recipient_email,destination_url,click_count,first_clicked_at,last_clicked_at,created_at")
+      .select(
+        "id,recipient_email,destination_url,click_count,first_clicked_at,last_clicked_at,created_at",
+      )
       .eq("campaign_id", data.campaignId)
       .order("created_at", { ascending: false })
       .limit(2000);

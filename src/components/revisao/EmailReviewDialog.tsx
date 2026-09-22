@@ -1,4 +1,12 @@
-import { CheckCircle2, ChevronLeft, ChevronRight, Copy, Save, Sparkles, TriangleAlert } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Save,
+  Sparkles,
+  TriangleAlert,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { DossierPanel } from "@/components/revisao/DossierPanel";
@@ -75,9 +83,7 @@ export function EmailReviewDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {row && (
-          <DossierPanel dossier={row.research} sources={row.research_sources ?? []} />
-        )}
+        {row && <DossierPanel dossier={row.research} sources={row.research_sources ?? []} />}
 
         <Textarea
           rows={18}
@@ -85,7 +91,6 @@ export function EmailReviewDialog({
           value={text}
           onChange={(e) => onTextChange(e.target.value)}
         />
-
 
         <DialogFooter className="flex-wrap gap-2 sm:justify-between">
           <div className="flex gap-2">

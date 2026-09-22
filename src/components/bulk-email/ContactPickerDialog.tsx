@@ -52,7 +52,9 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
         setSelected(new Set(data.map((row) => row.id)));
       })
       .catch((err: unknown) =>
-        toast.error(err instanceof Error ? err.message : "Não foi possível carregar seus contatos."),
+        toast.error(
+          err instanceof Error ? err.message : "Não foi possível carregar seus contatos.",
+        ),
       )
       .finally(() => setLoading(false));
   }, [open, fetchContacts]);
@@ -67,9 +69,7 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
     const list = rows.filter((row) => {
       if (categoria !== "todos" && row.categoria !== categoria) return false;
       if (!term) return true;
-      return (
-        row.nome.toLowerCase().includes(term) || row.email.toLowerCase().includes(term)
-      );
+      return row.nome.toLowerCase().includes(term) || row.email.toLowerCase().includes(term);
     });
     const [field, dir] = sort.split("-") as ["nome" | "email", "asc" | "desc"];
     return [...list].sort((a, b) => {
@@ -88,8 +88,7 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
     setPage(1);
   }, [q, categoria, sort]);
 
-  const allFilteredSelected =
-    filtered.length > 0 && filtered.every((row) => selected.has(row.id));
+  const allFilteredSelected = filtered.length > 0 && filtered.every((row) => selected.has(row.id));
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -130,9 +129,7 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
             <Users className="size-4" />
             Selecionar contatos
           </DialogTitle>
-          <DialogDescription>
-            Busque e escolha quem entra neste disparo.
-          </DialogDescription>
+          <DialogDescription>Busque e escolha quem entra neste disparo.</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -207,17 +204,12 @@ export function ContactPickerDialog({ open, onOpenChange, onConfirm }: Props) {
               key={row.id}
               className="hover:bg-muted/60 flex cursor-pointer items-center gap-3 rounded-md px-3 py-2"
             >
-              <Checkbox
-                checked={selected.has(row.id)}
-                onCheckedChange={() => toggle(row.id)}
-              />
+              <Checkbox checked={selected.has(row.id)} onCheckedChange={() => toggle(row.id)} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">
                   {row.nome || "(sem nome)"}
                 </span>
-                <span className="text-muted-foreground block truncate text-xs">
-                  {row.email}
-                </span>
+                <span className="text-muted-foreground block truncate text-xs">{row.email}</span>
               </span>
               {row.categoria && (
                 <Badge variant="outline" className="shrink-0 text-xs">

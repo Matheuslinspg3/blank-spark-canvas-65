@@ -239,7 +239,9 @@ export function eventsToCsv(events: EmailEvent[]): string {
       cell(EVENT_LABEL[event.status]),
       cell(event.reason ?? ""),
       cell(new Date(event.sent_at).toLocaleString("pt-BR")),
-      cell(event.updated_status_at ? new Date(event.updated_status_at).toLocaleString("pt-BR") : ""),
+      cell(
+        event.updated_status_at ? new Date(event.updated_status_at).toLocaleString("pt-BR") : "",
+      ),
       cell(event.message_id ?? ""),
     ].join(","),
   );

@@ -34,6 +34,11 @@ export type Campaign = {
   queue: QueuedMessage[];
   next_send_at: string | null;
   marketing_campaign_id: string | null;
+  /** Disparo pausado pelo usuário (fila preservada). */
+  paused?: boolean | null;
+  /** Quantos e-mails saíram no dia corrente e a data desse contador. */
+  daily_sent_count?: number | null;
+  daily_sent_date?: string | null;
 };
 
 export type CampaignPatch = Partial<

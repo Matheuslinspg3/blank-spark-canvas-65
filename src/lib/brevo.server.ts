@@ -74,7 +74,10 @@ async function postEmail(
   return { ok: false, error: lastError };
 }
 
-export async function sendCampaignViaBrevo(payload: SendBulkPayload, tracking?: EmailTrackingContext): Promise<SendResult[]> {
+export async function sendCampaignViaBrevo(
+  payload: SendBulkPayload,
+  tracking?: EmailTrackingContext,
+): Promise<SendResult[]> {
   const lovableApiKey = process.env["LOVABLE_API_KEY"];
   const brevoKey = process.env["BREVO_API_KEY"];
 
@@ -122,7 +125,12 @@ export async function sendCampaignViaBrevo(payload: SendBulkPayload, tracking?: 
 
     results.push(
       outcome.ok
-        ? { email, success: true, ...(outcome.messageId ? { messageId: outcome.messageId } : {}), ...(tracked.trackingLinkIds.length ? { trackingLinkIds: tracked.trackingLinkIds } : {}) }
+        ? {
+            email,
+            success: true,
+            ...(outcome.messageId ? { messageId: outcome.messageId } : {}),
+            ...(tracked.trackingLinkIds.length ? { trackingLinkIds: tracked.trackingLinkIds } : {}),
+          }
         : { email, success: false, error: outcome.error },
     );
   }
@@ -191,7 +199,12 @@ export async function sendSimpleCampaignViaBrevo(
 
     results.push(
       outcome.ok
-        ? { email, success: true, ...(outcome.messageId ? { messageId: outcome.messageId } : {}), ...(tracked.trackingLinkIds.length ? { trackingLinkIds: tracked.trackingLinkIds } : {}) }
+        ? {
+            email,
+            success: true,
+            ...(outcome.messageId ? { messageId: outcome.messageId } : {}),
+            ...(tracked.trackingLinkIds.length ? { trackingLinkIds: tracked.trackingLinkIds } : {}),
+          }
         : { email, success: false, error: outcome.error },
     );
   }

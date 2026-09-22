@@ -41,10 +41,7 @@ export function ApprovalChecklist({
   const [index, setIndex] = useState(0);
   const sample = recipients[Math.min(index, Math.max(recipients.length - 1, 0))];
 
-  const subject = useMemo(
-    () => interpolate(formData.subject, sample),
-    [formData.subject, sample],
-  );
+  const subject = useMemo(() => interpolate(formData.subject, sample), [formData.subject, sample]);
   const html = useMemo(
     () => renderEmailHtml(formData.htmlTemplate, sample),
     [formData.htmlTemplate, sample],

@@ -74,7 +74,8 @@ export function ResultsTable({
           <ul className="text-muted-foreground space-y-0.5 text-xs">
             {failed.slice(0, 10).map((result, index) => (
               <li key={`${result.email}-${index}`} className="truncate">
-                <span className="font-medium">{result.email}</span> — {result.error ?? "erro desconhecido"}
+                <span className="font-medium">{result.email}</span> —{" "}
+                {result.error ?? "erro desconhecido"}
               </li>
             ))}
             {failed.length > 10 && <li>e mais {failed.length - 10}…</li>}

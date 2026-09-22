@@ -244,8 +244,7 @@ export function TemplateGenerator({
       </div>
       <p className="text-muted-foreground text-xs">
         Diga quem assina, a proposta e (opcional) o objetivo e o público. A IA escreve variações
-        completas de assunto e corpo, já com{" "}
-        <code className="font-mono">{"{{nome}}"}</code>,{" "}
+        completas de assunto e corpo, já com <code className="font-mono">{"{{nome}}"}</code>,{" "}
         <code className="font-mono">{"{{empresa}}"}</code>,{" "}
         <code className="font-mono">{"{{cargo}}"}</code> e{" "}
         <code className="font-mono">{"{{ia_conteudo}}"}</code>.

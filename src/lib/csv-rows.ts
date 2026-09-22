@@ -39,7 +39,6 @@ export type CsvRowPatch = Partial<
   >
 >;
 
-
 export const CSV_ROW_STATUS_LABEL: Record<CsvRowStatus, string> = {
   pendente: "Pendente",
   processando: "Processando",
@@ -106,7 +105,6 @@ Regras obrigatórias:
 - Tom profissional e direto, terminando com um convite claro para conversar.
 - Devolva apenas o corpo do e-mail em texto puro, sem assunto e sem HTML.`;
 }
-
 
 /** Prompt de fallback genérico (sem dados do site). */
 export function buildGenericPrompt(row: { nome: string; categoria: string }): string {

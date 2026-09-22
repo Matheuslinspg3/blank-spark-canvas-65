@@ -98,9 +98,9 @@ export function SenderFields({
         </div>
       </div>
       <p className="text-muted-foreground flex items-start gap-1.5 text-xs">
-        <Info className="mt-0.5 size-3 shrink-0" />
-        O e-mail precisa estar verificado na Brevo (Senders &amp; IPs → Senders). Cadastre seus
-        remetentes em Configurações para escolher de uma lista.
+        <Info className="mt-0.5 size-3 shrink-0" />O e-mail precisa estar verificado na Brevo
+        (Senders &amp; IPs → Senders). Cadastre seus remetentes em Configurações para escolher de
+        uma lista.
       </p>
     </div>
   );

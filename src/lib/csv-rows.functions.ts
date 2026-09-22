@@ -86,4 +86,3 @@ export const deleteCsvRow = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-

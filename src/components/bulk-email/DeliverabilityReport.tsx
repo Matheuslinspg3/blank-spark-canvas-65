@@ -111,7 +111,12 @@ export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
             </CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+            >
               <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
               Atualizar
             </Button>
@@ -121,7 +126,9 @@ export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
               disabled={syncMutation.isPending}
               onClick={() => syncMutation.mutate()}
             >
-              <CloudDownload className={`size-4 ${syncMutation.isPending ? "animate-pulse" : ""}`} />
+              <CloudDownload
+                className={`size-4 ${syncMutation.isPending ? "animate-pulse" : ""}`}
+              />
               {syncMutation.isPending ? "Sincronizando…" : "Sincronizar com a Brevo"}
             </Button>
             <Button
@@ -156,8 +163,9 @@ export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
               <AlertTriangle className="size-4" />
               <AlertTitle>Rastreio de cliques desligado</AlertTitle>
               <AlertDescription>
-                Falta informar o endereço público deste sistema (TRACKING_ORIGIN) nas configurações do
-                projeto. Enquanto isso, os links são enviados normalmente, mas os cliques não são contados.
+                Falta informar o endereço público deste sistema (TRACKING_ORIGIN) nas configurações
+                do projeto. Enquanto isso, os links são enviados normalmente, mas os cliques não são
+                contados.
               </AlertDescription>
             </Alert>
           )}
@@ -210,7 +218,10 @@ export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
           {linksLoading && <p className="text-muted-foreground text-xs">Atualizando cliques…</p>}
         </section>
         {alerts.map((alert) => (
-          <Alert key={alert.message} variant={alert.level === "critico" ? "destructive" : "default"}>
+          <Alert
+            key={alert.message}
+            variant={alert.level === "critico" ? "destructive" : "default"}
+          >
             <AlertTriangle className="size-4" />
             <AlertTitle>
               {alert.level === "critico" ? "Risco alto de reputação" : "Atenção"}
@@ -267,7 +278,9 @@ export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
                   <TableRow key={event.id}>
                     <TableCell className="max-w-[220px] truncate">{event.email}</TableCell>
                     <TableCell>
-                      <Badge variant={statusVariant(event.status)}>{EVENT_LABEL[event.status]}</Badge>
+                      <Badge variant={statusVariant(event.status)}>
+                        {EVENT_LABEL[event.status]}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground max-w-[240px] truncate text-xs">
                       {event.reason ?? "—"}
