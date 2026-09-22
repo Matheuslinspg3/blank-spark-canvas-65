@@ -43,9 +43,7 @@ export const SIMPLE_ANGLES = [
 
 /** Prompt de sistema: sempre ancorado na proposta comercial da CAFCM. */
 export function buildSimpleSystemPrompt(brief: SimpleBrief): string {
-  const signature = [brief.senderName.trim(), brief.senderRole.trim()]
-    .filter(Boolean)
-    .join(" — ");
+  const signature = [brief.senderName.trim(), brief.senderRole.trim()].filter(Boolean).join(" — ");
 
   return `Você é um vendedor experiente da CAFCM escrevendo e-mails frios em português do Brasil.
 
@@ -84,17 +82,22 @@ export function buildSimpleUserPrompt(recipient: Recipient, index = 0): string {
   const lines = Object.entries(recipient)
     .filter(
       ([key, value]) =>
-        key !== SIMPLE_SUBJECT_COLUMN && key !== SIMPLE_BODY_COLUMN && (value ?? "").trim().length > 0,
+        key !== SIMPLE_SUBJECT_COLUMN &&
+        key !== SIMPLE_BODY_COLUMN &&
+        (value ?? "").trim().length > 0,
     )
     .map(([key, value]) => `- ${key}: ${value}`);
   const angle = SIMPLE_ANGLES[index % SIMPLE_ANGLES.length];
   return `Dados do destinatário:\n${lines.join("\n")}\n\nÂngulo obrigatório para este e-mail: ${angle}\nEscreva de um jeito diferente dos e-mails anteriores deste disparo.`;
 }
 
-
 /** Extrai { assunto, corpo } da resposta do modelo, tolerando cercas de código. */
 export function parseSimpleEmail(raw: string): { subject: string; body: string } {
-  const cleaned = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  const cleaned = raw
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/, "")
+    .trim();
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
 
@@ -117,7 +120,10 @@ export function parseSimpleEmail(raw: string): { subject: string; body: string }
   // Fallback: primeira linha vira assunto, resto vira corpo.
   const [first = "", ...rest] = cleaned.split(/\r?\n/);
   return {
-    subject: first.replace(/^assunto:\s*/i, "").trim().slice(0, 80),
+    subject: first
+      .replace(/^assunto:\s*/i, "")
+      .trim()
+      .slice(0, 80),
     body: rest.join("\n").trim() || cleaned,
   };
 }

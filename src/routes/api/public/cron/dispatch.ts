@@ -36,8 +36,12 @@ async function processCampaign(row: Row): Promise<string> {
   if (queue.length === 0) {
     await supabaseAdmin
       .from("campaigns")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .update({ status: "concluido", finished_at: new Date().toISOString(), next_send_at: null } as any)
+
+      .update({
+        status: "concluido",
+        finished_at: new Date().toISOString(),
+        next_send_at: null,
+      } as any)
       .eq("id", row.id);
     return "vazio";
   }
@@ -81,11 +85,14 @@ async function processCampaign(row: Row): Promise<string> {
       .eq("id", row.id);
     return "limite-diario";
   } else {
-    const [sent] = await sendSimpleCampaignViaBrevo({
-      senderName: row.sender_name,
-      senderEmail: row.sender_email,
-      messages: [message],
-    }, { supabase: supabaseAdmin, userId: row.user_id, campaignId: row.id });
+    const [sent] = await sendSimpleCampaignViaBrevo(
+      {
+        senderName: row.sender_name,
+        senderEmail: row.sender_email,
+        messages: [message],
+      },
+      { supabase: supabaseAdmin, userId: row.user_id, campaignId: row.id },
+    );
     result = sent ?? { email: message.email, success: false, error: "Sem resposta do provedor." };
     await logSendResults(supabaseAdmin, row.user_id, row.id, [result]);
   }
@@ -94,7 +101,9 @@ async function processCampaign(row: Row): Promise<string> {
   const sentCount = results.filter((item) => item.success).length;
   const done = rest.length === 0;
   const intervalMs = (schedule.enabled ? schedule.intervalSeconds : 1) * 1000;
-  const nextAt = done ? null : nextSlotAt(schedule, new Date(Date.now() + intervalMs)).toISOString();
+  const nextAt = done
+    ? null
+    : nextSlotAt(schedule, new Date(Date.now() + intervalMs)).toISOString();
 
   await supabaseAdmin
     .from("campaigns")

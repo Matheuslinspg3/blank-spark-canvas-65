@@ -337,16 +337,12 @@ function valueFor(key: string, recipient: Recipient): string {
 /** Replaces {{coluna}} placeholders with the recipient's values. */
 export function interpolate(template: string, recipient: Recipient | undefined): string {
   if (!recipient) return template;
-  const filled = template.replace(
-    /\{\{\s*([^{}\n]{1,60}?)\s*\}\}/g,
-    (_match, raw: string) => {
-      const key = canonicalKey(raw);
-      return valueFor(key, recipient) || fallbackValue(key, recipient);
-    },
-  );
+  const filled = template.replace(/\{\{\s*([^{}\n]{1,60}?)\s*\}\}/g, (_match, raw: string) => {
+    const key = canonicalKey(raw);
+    return valueFor(key, recipient) || fallbackValue(key, recipient);
+  });
   return tidyInterpolated(filled);
 }
-
 
 /** Palavras/sinais que empurram o e-mail para a aba Promoções do Gmail. */
 const PROMO_SUBJECT_TERMS = [
@@ -399,8 +395,6 @@ export function htmlToPlainText(html: string): string {
     .trim();
 }
 
-
-
 /** Coluna do texto gerado na fila (passo 2). */
 const AI_TEXT_COLUMN = "ia_conteudo";
 
@@ -421,7 +415,6 @@ export function renderEmailHtml(template: string, recipient: Recipient | undefin
   if (/<body[^>]*>/i.test(html)) return html.replace(/(<body[^>]*>)/i, `$1${block}`);
   return `${block}${html}`;
 }
-
 
 /** Escapes user CSV values that land inside the preview iframe/HTML. */
 export function escapeHtml(value: string): string {
@@ -464,7 +457,6 @@ export const DEFAULT_TEMPLATE = `<!doctype html>
   </body>
 </html>`;
 
-
 /* -------------------------------------------------------------------------- */
 /* Backend                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -476,8 +468,6 @@ export type SendBulkPayload = {
   senderName: string;
   senderEmail: string;
 };
-
-
 
 /** Builds a downloadable CSV log from the send results. */
 export function resultsToCsv(results: SendResult[]): string {

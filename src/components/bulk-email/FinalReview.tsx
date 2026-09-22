@@ -199,14 +199,18 @@ export function FinalReview({
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-medium">{row["nome"] || email}</span>
-                        <span className="text-muted-foreground block truncate text-xs">{email}</span>
+                        <span className="text-muted-foreground block truncate text-xs">
+                          {email}
+                        </span>
                       </span>
                     </button>
                   </li>
                 );
               })}
               {filtered.length === 0 && (
-                <li className="text-muted-foreground p-3 text-sm">Nenhum destinatário encontrado.</li>
+                <li className="text-muted-foreground p-3 text-sm">
+                  Nenhum destinatário encontrado.
+                </li>
               )}
             </ul>
           </ScrollArea>
@@ -217,7 +221,9 @@ export function FinalReview({
             <div className="min-w-0">
               <p className="text-muted-foreground text-xs uppercase tracking-wide">Assunto</p>
               <p className="truncate font-medium">{subject || "—"}</p>
-              <p className="text-muted-foreground mt-1 truncate text-xs">Para: {currentEmail || "—"}</p>
+              <p className="text-muted-foreground mt-1 truncate text-xs">
+                Para: {currentEmail || "—"}
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -231,7 +237,8 @@ export function FinalReview({
                 <ChevronLeft className="size-4" />
               </Button>
               <span className="text-muted-foreground text-xs">
-                {filtered.length === 0 ? 0 : Math.min(index, filtered.length - 1) + 1}/{filtered.length}
+                {filtered.length === 0 ? 0 : Math.min(index, filtered.length - 1) + 1}/
+                {filtered.length}
               </span>
               <Button
                 type="button"

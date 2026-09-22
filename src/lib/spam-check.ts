@@ -154,7 +154,7 @@ export function analyzeSpamRisk(subject: string, html: string): SpamReport {
       weight: 14,
       title: 'Rodapé de newsletter ("cancelar inscrição")',
       suggestion:
-        "Em e-mail 1:1, ofereça a saída em texto simples (\"me avise que não envio mais\").",
+        'Em e-mail 1:1, ofereça a saída em texto simples ("me avise que não envio mais").',
     });
   }
 
@@ -237,7 +237,8 @@ export function analyzeSpamRisk(subject: string, html: string): SpamReport {
       area: "midia",
       weight: 10,
       title: "Proporção alta de imagens por parágrafo",
-      suggestion: "Aumente o texto ou remova imagens até ter no máximo 1 imagem a cada 3 parágrafos.",
+      suggestion:
+        "Aumente o texto ou remova imagens até ter no máximo 1 imagem a cada 3 parágrafos.",
     });
   }
 

@@ -200,11 +200,7 @@ function RevisaoPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <DossierPanel
-                  dossier={row.research}
-                  sources={row.research_sources ?? []}
-                  compact
-                />
+                <DossierPanel dossier={row.research} sources={row.research_sources ?? []} compact />
                 <Textarea
                   rows={10}
                   className="text-sm leading-relaxed"
@@ -253,9 +249,7 @@ function RevisaoPage() {
         saving={saveMutation.isPending}
         hasPrev={openIndex > 0}
         hasNext={openIndex >= 0 && openIndex < filtered.length - 1}
-        onTextChange={(value) =>
-          openRow && setDrafts((prev) => ({ ...prev, [openRow.id]: value }))
-        }
+        onTextChange={(value) => openRow && setDrafts((prev) => ({ ...prev, [openRow.id]: value }))}
         onSave={() =>
           openRow &&
           saveMutation.mutate(

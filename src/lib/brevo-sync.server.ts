@@ -100,7 +100,12 @@ async function fetchEvents(days: number): Promise<BrevoEvent[]> {
   return all;
 }
 
-export type SyncSummary = { fetched: number; updated: number; inserted: number; suppressed: number };
+export type SyncSummary = {
+  fetched: number;
+  updated: number;
+  inserted: number;
+  suppressed: number;
+};
 
 /**
  * Importa os eventos da Brevo para o usuário atual. Casa pelo message_id e,

@@ -39,9 +39,7 @@ export function SpamCheckPanel({ subject, html, disabled, onFixed }: SpamCheckPa
     }
     setFixing(true);
     try {
-      const problems = report.findings
-        .map((f) => `- ${f.title} → ${f.suggestion}`)
-        .join("\n");
+      const problems = report.findings.map((f) => `- ${f.title} → ${f.suggestion}`).join("\n");
       const raw = await callAi(
         settings,
         `Corrija SOMENTE os problemas listados, preservando a mensagem, a voz do autor e as variáveis {{nome}}, {{empresa}}, {{cargo}}, {{ia_conteudo}}.

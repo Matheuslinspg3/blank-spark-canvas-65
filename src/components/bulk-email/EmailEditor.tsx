@@ -7,11 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  promoSubjectWarnings,
-  TEMPLATE_STORAGE_KEY,
-  type EmailFormData,
-} from "@/lib/bulk-email";
+import { promoSubjectWarnings, TEMPLATE_STORAGE_KEY, type EmailFormData } from "@/lib/bulk-email";
 import type { EmailVariant } from "@/lib/bulk-email";
 import { SenderFields } from "./SenderFields";
 import { SpamCheckPanel } from "./SpamCheckPanel";
@@ -52,7 +48,6 @@ export function EmailEditor({
         onChange={onChange}
       />
 
-
       <div className="space-y-2">
         <Label htmlFor="subject">Assunto</Label>
         <Input
@@ -80,7 +75,6 @@ export function EmailEditor({
         }
       />
 
-
       <SpamCheckPanel
         subject={formData.subject}
         html={formData.htmlTemplate}
@@ -94,8 +88,7 @@ export function EmailEditor({
         <AlertDescription className="space-y-2">
           <p>
             Use <code className="font-mono">{"{{coluna}}"}</code> no assunto ou no HTML para
-            personalizar cada envio — por exemplo{" "}
-            <code className="font-mono">{"{{nome}}"}</code> ou{" "}
+            personalizar cada envio — por exemplo <code className="font-mono">{"{{nome}}"}</code> ou{" "}
             <code className="font-mono">{"{{empresa}}"}</code>.
           </p>
           {columns.length > 0 && (

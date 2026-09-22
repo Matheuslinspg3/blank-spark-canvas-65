@@ -71,8 +71,7 @@ export function dossierToText(dossier: CompanyDossier): string {
     dossier.servicos.length > 0 && `Serviços/produtos: ${dossier.servicos.join("; ")}`,
     dossier.publico && `Público atendido: ${dossier.publico}`,
     dossier.diferenciais.length > 0 && `Diferenciais: ${dossier.diferenciais.join("; ")}`,
-    dossier.sinais_recentes.length > 0 &&
-      `Sinais recentes: ${dossier.sinais_recentes.join("; ")}`,
+    dossier.sinais_recentes.length > 0 && `Sinais recentes: ${dossier.sinais_recentes.join("; ")}`,
   ].filter(Boolean);
   return lines.join("\n");
 }

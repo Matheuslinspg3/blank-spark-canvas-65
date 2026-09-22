@@ -58,7 +58,6 @@ export function clampDailyLimit(value: number): number {
   return Math.min(5000, Math.max(1, Math.round(value)));
 }
 
-
 export function clampInterval(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_SCHEDULE.intervalSeconds;
   return Math.min(3600, Math.max(1, Math.round(value)));
@@ -215,7 +214,14 @@ export function isWithinWindowTz(
 
 const TZ = "America/Sao_Paulo";
 
-type TzParts = { year: number; month: number; day: number; hour: number; minute: number; weekday: number };
+type TzParts = {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  weekday: number;
+};
 
 function tzParts(date: Date, timeZone = TZ): TzParts {
   const fmt = new Intl.DateTimeFormat("en-US", {
@@ -229,7 +235,15 @@ function tzParts(date: Date, timeZone = TZ): TzParts {
     hour12: false,
   });
   const parts = Object.fromEntries(fmt.formatToParts(date).map((p) => [p.type, p.value]));
-  const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const weekdayMap: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
   return {
     year: Number(parts["year"]),
     month: Number(parts["month"]),
@@ -278,8 +292,15 @@ function inPause(schedule: SendSchedule, current: number): boolean {
 export function dayBlocks(schedule: SendSchedule): { start: number; end: number }[] {
   const start = minutesOf(schedule.startTime);
   const end = minutesOf(schedule.endTime);
-  const window = start > end ? [{ start, end: 24 * 60 }, { start: 0, end }] : [{ start, end }];
-  if (!isTime(schedule.pauseStart) || !isTime(schedule.pauseEnd)) return window.filter((b) => b.end > b.start);
+  const window =
+    start > end
+      ? [
+          { start, end: 24 * 60 },
+          { start: 0, end },
+        ]
+      : [{ start, end }];
+  if (!isTime(schedule.pauseStart) || !isTime(schedule.pauseEnd))
+    return window.filter((b) => b.end > b.start);
   const ps = minutesOf(schedule.pauseStart);
   const pe = minutesOf(schedule.pauseEnd);
   const blocks: { start: number; end: number }[] = [];
@@ -331,7 +352,10 @@ export function nextSlotAt(schedule: SendSchedule, from = new Date(), skipToday 
 /** Quantos e-mails cabem por dia (janela, intervalo e limite diário). */
 export function dailyCapacity(schedule: SendSchedule): number {
   if (!schedule.enabled) return Number.MAX_SAFE_INTEGER;
-  const minutes = dayBlocks(schedule).reduce((total, block) => total + (block.end - block.start), 0);
+  const minutes = dayBlocks(schedule).reduce(
+    (total, block) => total + (block.end - block.start),
+    0,
+  );
   const bySchedule = Math.floor((minutes * 60) / Math.max(1, schedule.intervalSeconds));
   return Math.max(0, Math.min(bySchedule, schedule.dailyLimit));
 }
@@ -342,9 +366,10 @@ export function describePlan(schedule: SendSchedule, pending: number): string {
   const perDay = dailyCapacity(schedule);
   if (perDay === 0) return "A janela escolhida não tem duração — nenhum e-mail seria enviado.";
   const days = Math.max(1, Math.ceil(pending / perDay));
-  const dias = schedule.weekdays.length === 7
-    ? "todos os dias"
-    : schedule.weekdays.map((d) => WEEKDAY_LABELS[d]).join(", ");
+  const dias =
+    schedule.weekdays.length === 7
+      ? "todos os dias"
+      : schedule.weekdays.map((d) => WEEKDAY_LABELS[d]).join(", ");
   const pausa =
     isTime(schedule.pauseStart) && isTime(schedule.pauseEnd)
       ? ` (pausa das ${schedule.pauseStart} às ${schedule.pauseEnd})`

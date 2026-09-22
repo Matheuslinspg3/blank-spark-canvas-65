@@ -119,7 +119,6 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
     }
   }
 
-
   async function handleFile(file: File) {
     try {
       const text = await file.text();
@@ -270,7 +269,7 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
               </TableHeader>
               <TableBody>
                 {recipients.map((row, index) => (
-                  <TableRow key={`${row['email']}-${index}`}>
+                  <TableRow key={`${row["email"]}-${index}`}>
                     {columns.map((column) => (
                       <TableCell key={column} className="max-w-md whitespace-pre-wrap">
                         {row[column]}
@@ -282,8 +281,8 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
                         variant="ghost"
                         size="icon"
                         disabled={disabled}
-                        aria-label={`Remover ${row['email']}`}
-                        onClick={() => removeRecipient(row['email'] ?? "")}
+                        aria-label={`Remover ${row["email"]}`}
+                        onClick={() => removeRecipient(row["email"] ?? "")}
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -296,7 +295,6 @@ export function CSVUploader({ recipients, columns, disabled, onLoaded }: CSVUplo
           <p className="text-muted-foreground text-xs">
             Mostrando {recipients.length} linhas do CSV.
           </p>
-
         </div>
       )}
     </div>

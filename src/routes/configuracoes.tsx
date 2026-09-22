@@ -101,8 +101,8 @@ function ConfiguracoesPage() {
           Configurações de IA
         </h1>
         <p className="text-muted-foreground text-sm">
-          Conecte qualquer API compatível com OpenAI (OpenAI, OpenRouter, Groq, Together, LM Studio…)
-          para gerar um trecho personalizado para cada destinatário do CSV.
+          Conecte qualquer API compatível com OpenAI (OpenAI, OpenRouter, Groq, Together, LM
+          Studio…) para gerar um trecho personalizado para cada destinatário do CSV.
         </p>
       </header>
 
@@ -124,7 +124,8 @@ function ConfiguracoesPage() {
               onChange={(e) => update({ baseUrl: e.target.value })}
             />
             <p className="text-muted-foreground text-xs">
-              O endpoint chamado será <code className="font-mono">{"{base URL}/chat/completions"}</code>.
+              O endpoint chamado será{" "}
+              <code className="font-mono">{"{base URL}/chat/completions"}</code>.
             </p>
           </div>
 
@@ -318,4 +319,3 @@ function SendersCard() {
     </Card>
   );
 }
-

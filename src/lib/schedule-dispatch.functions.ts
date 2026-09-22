@@ -10,7 +10,6 @@ import type { Recipient } from "./bulk-email";
 import { brtDateKey, nextSlotAt, parseSchedule, type SendSchedule } from "./send-schedule";
 import { requireTrackableLink } from "./trackable-link";
 
-
 export type QueuedMessage = { email: string; subject: string; html: string };
 
 export type ScheduleInput = {
@@ -79,7 +78,6 @@ export const setCampaignPausedFn = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true, paused: data.paused };
   });
-
 
 /** Cancela um disparo programado e devolve a campanha para rascunho. */
 export const cancelScheduleFn = createServerFn({ method: "POST" })

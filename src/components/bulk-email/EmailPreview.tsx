@@ -22,7 +22,7 @@ export function EmailPreview({ formData, recipient }: EmailPreviewProps) {
           <p className="text-muted-foreground text-xs uppercase tracking-wide">Assunto</p>
           <p className="truncate font-medium">{subject || "—"}</p>
           <p className="text-muted-foreground mt-1 truncate text-xs">
-            Para: {recipient?.['email'] ?? "carregue um CSV para ver o preview"}
+            Para: {recipient?.["email"] ?? "carregue um CSV para ver o preview"}
           </p>
         </div>
         <Button

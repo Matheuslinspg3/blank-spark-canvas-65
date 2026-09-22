@@ -16,7 +16,8 @@ export const Route = createFileRoute("/auth")({
       { title: "Entrar — Disparo Tracker" },
       {
         name: "description",
-        content: "Acesse sua conta do Disparo Tracker para criar e acompanhar seus disparos de e-mail.",
+        content:
+          "Acesse sua conta do Disparo Tracker para criar e acompanhar seus disparos de e-mail.",
       },
       { property: "og:title", content: "Entrar — Disparo Tracker" },
       {

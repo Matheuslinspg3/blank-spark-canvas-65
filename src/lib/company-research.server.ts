@@ -43,7 +43,6 @@ export function isFreeEmailDomain(domain: string): boolean {
   return FREE_EMAIL_DOMAINS.has(domain.trim().toLowerCase());
 }
 
-
 function dedupe(pages: ScrapedPage[]): ScrapedPage[] {
   const seen = new Set<string>();
   const out: ScrapedPage[] = [];
@@ -114,7 +113,6 @@ export async function collectResearch(input: {
         : "Nenhuma fonte encontrada sobre a empresa",
     };
   }
-
 
   const material = pages
     .map((page) => `## ${page.title}\n(${page.url})\n${page.text}`)

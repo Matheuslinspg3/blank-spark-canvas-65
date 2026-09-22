@@ -29,7 +29,6 @@ export type CsvRowEventInput = {
   error_message?: string | null;
 };
 
-
 export type RunSummary = {
   run_id: string;
   started_at: string;
@@ -41,10 +40,18 @@ export type RunSummary = {
 
 /** Agrupa eventos por execução (run_id) para o resumo de auditoria. */
 export function summarizeRuns(events: CsvRowEvent[]): RunSummary[] {
-  const map = new Map<string, { rows: Set<string>; times: string[]; gerado: number; erro: number }>();
+  const map = new Map<
+    string,
+    { rows: Set<string>; times: string[]; gerado: number; erro: number }
+  >();
   for (const event of events) {
     if (!event.run_id) continue;
-    const entry = map.get(event.run_id) ?? { rows: new Set<string>(), times: [], gerado: 0, erro: 0 };
+    const entry = map.get(event.run_id) ?? {
+      rows: new Set<string>(),
+      times: [],
+      gerado: 0,
+      erro: 0,
+    };
     entry.rows.add(event.csv_row_id);
     entry.times.push(event.created_at);
     if (event.to_status === "gerado") entry.gerado += 1;

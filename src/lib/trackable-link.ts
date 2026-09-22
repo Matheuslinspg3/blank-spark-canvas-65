@@ -12,7 +12,7 @@ export function hasTrackableLink(...contents: (string | null | undefined)[]): bo
 }
 
 export const NO_LINK_MESSAGE =
-  "Este e-mail não tem nenhum link (http/https). Inclua pelo menos um link — ele vira um endereço único por destinatário para rastrear o clique. Use o botão \"Criar link rastreado\".";
+  'Este e-mail não tem nenhum link (http/https). Inclua pelo menos um link — ele vira um endereço único por destinatário para rastrear o clique. Use o botão "Criar link rastreado".';
 
 /** Lança erro em português quando nenhum conteúdo tem link rastreável. */
 export function requireTrackableLink(...contents: (string | null | undefined)[]): void {

@@ -99,8 +99,7 @@ export async function searchWeb(query: string, limit = 3): Promise<ScrapedPage[]
         const url = typeof entry["url"] === "string" ? entry["url"] : "";
         const title = typeof entry["title"] === "string" ? entry["title"] : url;
         const markdown = typeof entry["markdown"] === "string" ? entry["markdown"] : "";
-        const description =
-          typeof entry["description"] === "string" ? entry["description"] : "";
+        const description = typeof entry["description"] === "string" ? entry["description"] : "";
         const text = clean(markdown || description, 2500);
         return url ? { url, title, text } : null;
       })
@@ -120,4 +119,3 @@ export async function searchWeb(query: string, limit = 3): Promise<ScrapedPage[]
     return [];
   }
 }
-
