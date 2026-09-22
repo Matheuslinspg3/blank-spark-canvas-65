@@ -15,6 +15,8 @@ import {
   Users,
   XCircle,
   Zap,
+  Pause,
+  Play,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -234,7 +236,8 @@ function CampaignsPage() {
               const schedule = campaign.schedule ? parseSchedule(campaign.schedule) : null;
               const pending = Math.max(0, (campaign.total_count ?? 0) - (campaign.sent_count ?? 0));
               const today = brtDateKey();
-              const sentToday = campaign.daily_sent_date === today ? (campaign.daily_sent_count ?? 0) : 0;
+              const sentToday =
+                campaign.daily_sent_date === today ? (campaign.daily_sent_count ?? 0) : 0;
               const paused = Boolean(campaign.paused);
               return (
                 <div
