@@ -13,7 +13,9 @@ export type SupabaseOperationResult<T> = {
 };
 
 export function isClockSkewError(message: string | undefined | null): boolean {
-  return !!message && /jwt issued at future|jwt not yet valid/i.test(message);
+  // Consultas com `head: true` não trazem corpo, então o erro pode vir sem texto.
+  if (!message || !message.trim()) return true;
+  return /jwt issued at future|jwt not yet valid|jwt expired/i.test(message);
 }
 
 export async function runUserScopedOperation<R extends SupabaseOperationResult<any>>(

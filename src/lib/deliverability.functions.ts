@@ -33,7 +33,8 @@ export const getDailyUsage = createServerFn({ method: "GET" })
         .eq("user_id", context.userId)
         .gte("sent_at", since),
     );
-    if (error) throw new Error(error.message);
+    // Contagem é apenas informativa: nunca derruba a tela.
+    if (error) return { sentLast24h: 0, unavailable: true as const };
     return { sentLast24h: count ?? 0 };
   });
 
