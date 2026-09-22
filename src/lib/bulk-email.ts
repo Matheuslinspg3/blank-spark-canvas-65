@@ -96,7 +96,15 @@ export function parseCsv(text: string): ParsedCsv {
   }
 
   const delimiter = detectDelimiter(lines[0]!);
-  const columns = splitCsvLine(lines[0]!, delimiter).map((c) => c.toLowerCase());
+  // Padroniza os nomes: "E-mail" vira "email", "Razão Social" vira "empresa" etc.
+  const rawColumns = splitCsvLine(lines[0]!, delimiter);
+  const seenColumns = new Set<string>();
+  const columns = rawColumns.map((c) => {
+    const key = canonicalKey(c);
+    if (seenColumns.has(key)) return c.toLowerCase();
+    seenColumns.add(key);
+    return key;
+  });
 
   if (!columns.includes("email")) {
     throw new Error("Coluna obrigatória 'email' não encontrada no CSV.");
