@@ -130,7 +130,8 @@ async function run(request: Request): Promise<Response> {
       "id, user_id, schedule, queue, results, sent_count, sender_name, sender_email, daily_sent_count, daily_sent_date",
     )
     .eq("status", "agendado")
-    .eq("paused", false)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .eq("paused" as any, false as any)
     .lte("next_send_at", new Date().toISOString())
     .order("next_send_at", { ascending: true })
     .limit(MAX_CAMPAIGNS);
