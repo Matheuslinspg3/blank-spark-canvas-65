@@ -7,7 +7,6 @@
  * cinza que o Gmail mostra ao lado do assunto).
  */
 
-import { CAFCM_HTML_EMAIL } from "./cafcm-html-template";
 import { escapeHtml, interpolate, type Recipient } from "./bulk-email";
 import { simpleLetterHtml } from "./simple-dispatch";
 
@@ -421,63 +420,4 @@ Rebeca — CAFCM`;
 /** Moldes prontos da CAFCM (variáveis já no padrão do sistema). */
 export type TemplatePreset = { label: string; build: () => MoldeTemplate };
 
-const CONSTRUTORAS_A = `Olá, {{nome}},
-
-Sou consultor da CAFCM e trabalho com construtoras da Baixada Santista na contratação de jovens aprendizes.
-
-Empresas com 7 ou mais funcionários precisam manter a cota de aprendizagem (Lei 10.097/2000). Quando a cota fica em aberto, a fiscalização costuma cobrar valores altos por aprendiz não contratado — e o ajuste é simples de fazer antes disso.
-
-Como funciona com a gente:
-- Cuidamos do recrutamento, do curso e de toda a documentação
-- Você recebe candidatos já pré-aprovados
-- Contratação em poucos dias, com acompanhamento pedagógico durante todo o contrato
-
-Faz sentido conversarmos 15 minutos esta semana para eu mostrar como está a cota da {{empresa}}?
-
-Atenciosamente,
-{{remetente}}
-CAFCM — (13) 3222-1233`;
-
-const CONSTRUTORAS_B = `Olá, {{nome}},
-
-Uma pergunta rápida: como a {{empresa}} tem formado a equipe de obra e de escritório hoje?
-
-Pergunto porque ajudamos construtoras da região a preencher a cota de aprendizes com jovens já preparados para a rotina do canteiro e do administrativo. Na prática, a empresa ganha gente formada do jeito dela e resolve a exigência legal no mesmo movimento.
-
-Nós assumimos recrutamento, curso, documentação e o acompanhamento durante o contrato. O RH só escolhe entre os candidatos aprovados.
-
-Tem 15 minutos esta semana para eu te mostrar como ficaria na prática?
-
-Atenciosamente,
-{{remetente}}
-CAFCM — (13) 3222-1233`;
-
-export const TEMPLATE_PRESETS: TemplatePreset[] = [
-  {
-    label: "HTML CAFCM — cota de aprendizagem",
-    build: () => ({
-      id: newTemplateId(),
-      name: "Construtoras HTML",
-      subject: "Sua empresa está preparada para a cota de aprendizagem?",
-      previewText:
-        "A CAFCM ajuda a organizar a cota, a contratação e o acompanhamento dos aprendizes.",
-      body: CAFCM_HTML_EMAIL,
-      html: true,
-    }),
-  },
-  {
-    label: "Construtoras e incorporadoras (A/B)",
-    build: () => ({
-      id: newTemplateId(),
-      name: "Construtoras",
-      subject: "Cota de aprendizes da {{empresa}} está em dia?",
-      previewText:
-        "Empresas com 7 ou mais funcionários precisam contratar aprendizes. Veja como regularizar.",
-      body: CONSTRUTORAS_A,
-      ab: true,
-      subjectB: "Como a {{empresa}} forma a equipe hoje?",
-      previewTextB: "Aprendizes prontos para o canteiro e para o administrativo, sem burocracia.",
-      bodyB: CONSTRUTORAS_B,
-    }),
-  },
-];
+export const TEMPLATE_PRESETS: TemplatePreset[] = [];
