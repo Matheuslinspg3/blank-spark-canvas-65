@@ -249,6 +249,7 @@ function tidyInterpolated(text: string): string {
 
 /** Colunas alternativas do CSV que representam a mesma variável. */
 const COLUMN_ALIASES: Record<string, string[]> = {
+  email: ["email", "e-mail", "e mail", "mail", "correio eletronico", "correio eletrônico"],
   empresa: [
     "empresa",
     "nome_empresa",
