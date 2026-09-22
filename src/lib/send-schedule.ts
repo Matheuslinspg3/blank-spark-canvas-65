@@ -13,6 +13,13 @@ export type SendSchedule = {
   endTime: string;
   /** Intervalo entre e-mails, em segundos. */
   intervalSeconds: number;
+  /** Dias da semana permitidos (0 = domingo … 6 = sábado). */
+  weekdays: number[];
+  /** Pausa dentro da janela (ex.: almoço). "HH:MM" ou vazio. */
+  pauseStart: string;
+  pauseEnd: string;
+  /** Máximo de e-mails por dia. */
+  dailyLimit: number;
 };
 
 export const DEFAULT_SCHEDULE: SendSchedule = {
@@ -20,18 +27,37 @@ export const DEFAULT_SCHEDULE: SendSchedule = {
   startTime: "09:00",
   endTime: "18:00",
   intervalSeconds: 30,
+  weekdays: [1, 2, 3, 4, 5],
+  pauseStart: "",
+  pauseEnd: "",
+  dailyLimit: 200,
 };
+
+export const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 export function parseSchedule(value: unknown): SendSchedule {
   if (!value || typeof value !== "object") return { ...DEFAULT_SCHEDULE };
   const raw = value as Partial<SendSchedule>;
+  const weekdays = Array.isArray(raw.weekdays)
+    ? raw.weekdays.map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
+    : [];
   return {
     enabled: Boolean(raw.enabled),
     startTime: isTime(raw.startTime) ? raw.startTime : DEFAULT_SCHEDULE.startTime,
     endTime: isTime(raw.endTime) ? raw.endTime : DEFAULT_SCHEDULE.endTime,
     intervalSeconds: clampInterval(Number(raw.intervalSeconds)),
+    weekdays: weekdays.length > 0 ? [...new Set(weekdays)].sort() : [...DEFAULT_SCHEDULE.weekdays],
+    pauseStart: isTime(raw.pauseStart) ? raw.pauseStart : "",
+    pauseEnd: isTime(raw.pauseEnd) ? raw.pauseEnd : "",
+    dailyLimit: clampDailyLimit(Number(raw.dailyLimit)),
   };
 }
+
+export function clampDailyLimit(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return DEFAULT_SCHEDULE.dailyLimit;
+  return Math.min(5000, Math.max(1, Math.round(value)));
+}
+
 
 export function clampInterval(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_SCHEDULE.intervalSeconds;
