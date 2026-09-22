@@ -79,7 +79,7 @@ export const createTrackedLinkFn = createServerFn({ method: "POST" })
       );
       if (campaignError) throw new Error(campaignError.message);
       if (!campaign) throw new Error("Disparo não encontrado.");
-      campaignName = campaign.name;
+      campaignName = (campaign as { name: string }).name;
     }
     const token = crypto.randomUUID().replaceAll("-", "");
     const { data: row, error } = await runUserScopedOperation(supabase, (client) =>
@@ -135,8 +135,11 @@ export const listTrackedLinksFn = createServerFn({ method: "GET" })
     );
     if (error) throw new Error(error.message);
 
+    const typedRows = (rows ?? []) as (Omit<TrackedLink, "tracking_url" | "campaign_name"> & {
+      token: string;
+    })[];
     const campaignIds = [
-      ...new Set((rows ?? []).map((r) => r.campaign_id).filter(Boolean)),
+      ...new Set(typedRows.map((row) => row.campaign_id).filter(Boolean)),
     ] as string[];
     const campaignNames = new Map<string, string>();
     if (campaignIds.length > 0) {
@@ -150,10 +153,12 @@ export const listTrackedLinksFn = createServerFn({ method: "GET" })
             .in("id", campaignIds),
       );
       if (campaignsError) throw new Error(campaignsError.message);
-      for (const c of campaigns ?? []) campaignNames.set(c.id, c.name);
+      for (const campaign of (campaigns ?? []) as { id: string; name: string }[]) {
+        campaignNames.set(campaign.id, campaign.name);
+      }
     }
 
-    const links: TrackedLink[] = (rows ?? []).map((row) => ({
+    const links: TrackedLink[] = typedRows.map((row) => ({
       id: row.id,
       destination_url: row.destination_url,
       recipient_email: row.recipient_email,
