@@ -209,13 +209,16 @@ export const listMarketingCampaignClicksFn = createServerFn({ method: "GET" })
   .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }): Promise<CampaignClick[]> => {
     const supabase = context.supabase as unknown as LooseClient;
-    const { data: rows, error } = await supabase
-      .from("email_link_tracks")
-      .select("recipient_email,destination_url,click_count,last_clicked_at,campaign_id")
-      .eq("marketing_campaign_id", data.id)
-      .gt("click_count", 0)
-      .order("last_clicked_at", { ascending: false })
-      .limit(1000);
+    const { data: rows, error } = await runUserScopedOperation(supabase, (client) =>
+      client
+        .from("email_link_tracks")
+        .select("recipient_email,destination_url,click_count,last_clicked_at,campaign_id")
+        .eq("marketing_campaign_id", data.id)
+        .eq("user_id", context.userId)
+        .gt("click_count", 0)
+        .order("last_clicked_at", { ascending: false })
+        .limit(1000),
+    );
     if (error) throw new Error(error.message);
 
     const list = (rows ?? []) as (CampaignClick & { campaign_id: string | null })[];
@@ -224,10 +227,16 @@ export const listMarketingCampaignClicksFn = createServerFn({ method: "GET" })
     ] as string[];
     const names = new Map<string, string>();
     if (dispatchIds.length > 0) {
-      const { data: dispatches } = await supabase
-        .from("campaigns")
-        .select("id,name")
-        .in("id", dispatchIds);
+      const { data: dispatches, error: dispatchesError } = await runUserScopedOperation(
+        supabase,
+        (client) =>
+          client
+            .from("campaigns")
+            .select("id,name")
+            .eq("user_id", context.userId)
+            .in("id", dispatchIds),
+      );
+      if (dispatchesError) throw new Error(dispatchesError.message);
       for (const row of (dispatches ?? []) as { id: string; name: string }[]) {
         names.set(row.id, row.name);
       }
