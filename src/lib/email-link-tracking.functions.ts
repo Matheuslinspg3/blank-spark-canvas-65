@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { runUserScopedOperation } from "./user-scoped-query";
 
 export type CampaignLinkTracking = {
   id: string;
@@ -22,14 +23,16 @@ export const listCampaignLinkTracking = createServerFn({ method: "GET" })
   .inputValidator((data: { campaignId: string }) => data)
   .handler(async ({ data, context }): Promise<CampaignLinkTrackingResult> => {
     const configured = (process.env["TRACKING_ORIGIN"] ?? "").trim().startsWith("https://");
-    const { data: rows, error } = await (context.supabase as any)
-      .from("email_link_tracks")
-      .select(
-        "id,recipient_email,destination_url,click_count,first_clicked_at,last_clicked_at,created_at",
-      )
-      .eq("campaign_id", data.campaignId)
-      .order("created_at", { ascending: false })
-      .limit(2000);
+    const { data: rows, error } = await runUserScopedOperation(context.supabase, (client) =>
+      client
+        .from("email_link_tracks")
+        .select(
+          "id,recipient_email,destination_url,click_count,first_clicked_at,last_clicked_at,created_at",
+        )
+        .eq("campaign_id", data.campaignId)
+        .order("created_at", { ascending: false })
+        .limit(2000),
+    );
     if (error) throw new Error(error.message);
     return { configured, links: (rows ?? []) as CampaignLinkTracking[] };
   });

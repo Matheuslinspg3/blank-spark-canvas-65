@@ -2,17 +2,21 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { EmailEvent, Suppression, SuppressionReason } from "./deliverability";
+import { runUserScopedOperation } from "./user-scoped-query";
 
 /** Eventos de uma campanha (base do relatório de entregabilidade). */
 export const listCampaignEvents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { campaignId: string }) => input)
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase
-      .from("email_events")
-      .select("id, campaign_id, email, message_id, status, reason, sent_at, updated_status_at")
-      .eq("campaign_id", data.campaignId)
-      .order("sent_at", { ascending: false });
+    const { data: rows, error } = await runUserScopedOperation(context.supabase, (client) =>
+      client
+        .from("email_events")
+        .select("id, campaign_id, email, message_id, status, reason, sent_at, updated_status_at")
+        .eq("user_id", context.userId)
+        .eq("campaign_id", data.campaignId)
+        .order("sent_at", { ascending: false }),
+    );
     if (error) throw new Error(error.message);
     return (rows ?? []) as unknown as EmailEvent[];
   });
@@ -22,11 +26,13 @@ export const getDailyUsage = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { count, error } = await context.supabase
-      .from("email_events")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", context.userId)
-      .gte("sent_at", since);
+    const { count, error } = await runUserScopedOperation(context.supabase, (client) =>
+      client
+        .from("email_events")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", context.userId)
+        .gte("sent_at", since),
+    );
     if (error) throw new Error(error.message);
     return { sentLast24h: count ?? 0 };
   });
@@ -34,11 +40,13 @@ export const getDailyUsage = createServerFn({ method: "GET" })
 export const listSuppressions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("suppressions")
-      .select("id, email, reason, source, detail, created_at")
-      .eq("user_id", context.userId)
-      .order("created_at", { ascending: false });
+    const { data, error } = await runUserScopedOperation(context.supabase, (client) =>
+      client
+        .from("suppressions")
+        .select("id, email, reason, source, detail, created_at")
+        .eq("user_id", context.userId)
+        .order("created_at", { ascending: false }),
+    );
     if (error) throw new Error(error.message);
     return (data ?? []) as unknown as Suppression[];
   });
