@@ -3,6 +3,26 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LooseClient = { from: (table: string) => any };
+
+type SupabaseOperationResult<T> = {
+  data: T;
+  error: { message: string } | null;
+};
+
+async function runUserScopedOperation<T>(
+  client: LooseClient,
+  operation: (scopedClient: LooseClient) => PromiseLike<SupabaseOperationResult<T>>,
+): Promise<SupabaseOperationResult<T>> {
+  let result = await operation(client);
+  if (result.error && /jwt issued at future/i.test(result.error.message)) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    result = await operation(supabaseAdmin as unknown as LooseClient);
+  }
+  return result;
+}
+
 export type TrackedLink = {
   id: string;
   destination_url: string;
@@ -44,32 +64,39 @@ export const createTrackedLinkFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => createSchema.parse(data))
   .handler(async ({ data, context }): Promise<TrackedLink> => {
+    const supabase = context.supabase as unknown as LooseClient;
     let campaignName: string | null = null;
     if (data.campaignId) {
-      const { data: campaign, error: campaignError } = await context.supabase
-        .from("campaigns")
-        .select("id,name")
-        .eq("id", data.campaignId)
-        .eq("user_id", context.userId)
-        .maybeSingle();
+      const { data: campaign, error: campaignError } = await runUserScopedOperation(
+        supabase,
+        (client) =>
+          client
+            .from("campaigns")
+            .select("id,name")
+            .eq("id", data.campaignId)
+            .eq("user_id", context.userId)
+            .maybeSingle(),
+      );
       if (campaignError) throw new Error(campaignError.message);
       if (!campaign) throw new Error("Disparo não encontrado.");
-      campaignName = campaign.name;
+      campaignName = (campaign as { name: string }).name;
     }
     const token = crypto.randomUUID().replaceAll("-", "");
-    const { data: row, error } = await context.supabase
-      .from("email_link_tracks")
-      .insert({
-        user_id: context.userId,
-        recipient_email: data.recipientEmail || "",
-        destination_url: data.destinationUrl,
-        campaign_id: data.campaignId ?? null,
-        token,
-      })
-      .select(
-        "id,destination_url,recipient_email,campaign_id,click_count,first_clicked_at,last_clicked_at,created_at",
-      )
-      .single();
+    const { data: row, error } = await runUserScopedOperation(supabase, (client) =>
+      client
+        .from("email_link_tracks")
+        .insert({
+          user_id: context.userId,
+          recipient_email: data.recipientEmail || "",
+          destination_url: data.destinationUrl,
+          campaign_id: data.campaignId ?? null,
+          token,
+        })
+        .select(
+          "id,destination_url,recipient_email,campaign_id,click_count,first_clicked_at,last_clicked_at,created_at",
+        )
+        .single(),
+    );
     if (error) throw new Error(error.message);
     const origin = trackingOrigin();
     return {
@@ -83,11 +110,10 @@ export const deleteTrackedLinkFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("email_link_tracks")
-      .delete()
-      .eq("id", data.id)
-      .eq("user_id", context.userId);
+    const supabase = context.supabase as unknown as LooseClient;
+    const { error } = await runUserScopedOperation(supabase, (client) =>
+      client.from("email_link_tracks").delete().eq("id", data.id).eq("user_id", context.userId),
+    );
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -96,28 +122,43 @@ export const listTrackedLinksFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<TrackedLinksResult> => {
     const origin = trackingOrigin();
-    const { data: rows, error } = await context.supabase
-      .from("email_link_tracks")
-      .select(
-        "id,destination_url,recipient_email,campaign_id,click_count,first_clicked_at,last_clicked_at,created_at,token",
-      )
-      .order("created_at", { ascending: false })
-      .limit(500);
+    const supabase = context.supabase as unknown as LooseClient;
+    const { data: rows, error } = await runUserScopedOperation(supabase, (client) =>
+      client
+        .from("email_link_tracks")
+        .select(
+          "id,destination_url,recipient_email,campaign_id,click_count,first_clicked_at,last_clicked_at,created_at,token",
+        )
+        .eq("user_id", context.userId)
+        .order("created_at", { ascending: false })
+        .limit(500),
+    );
     if (error) throw new Error(error.message);
 
+    const typedRows = (rows ?? []) as (Omit<TrackedLink, "tracking_url" | "campaign_name"> & {
+      token: string;
+    })[];
     const campaignIds = [
-      ...new Set((rows ?? []).map((r) => r.campaign_id).filter(Boolean)),
+      ...new Set(typedRows.map((row) => row.campaign_id).filter(Boolean)),
     ] as string[];
     const campaignNames = new Map<string, string>();
     if (campaignIds.length > 0) {
-      const { data: campaigns } = await context.supabase
-        .from("campaigns")
-        .select("id,name")
-        .in("id", campaignIds);
-      for (const c of campaigns ?? []) campaignNames.set(c.id, c.name);
+      const { data: campaigns, error: campaignsError } = await runUserScopedOperation(
+        supabase,
+        (client) =>
+          client
+            .from("campaigns")
+            .select("id,name")
+            .eq("user_id", context.userId)
+            .in("id", campaignIds),
+      );
+      if (campaignsError) throw new Error(campaignsError.message);
+      for (const campaign of (campaigns ?? []) as { id: string; name: string }[]) {
+        campaignNames.set(campaign.id, campaign.name);
+      }
     }
 
-    const links: TrackedLink[] = (rows ?? []).map((row) => ({
+    const links: TrackedLink[] = typedRows.map((row) => ({
       id: row.id,
       destination_url: row.destination_url,
       recipient_email: row.recipient_email,
