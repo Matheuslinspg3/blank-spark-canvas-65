@@ -11,7 +11,7 @@ import { sendSimpleCampaignViaBrevo } from "@/lib/brevo.server";
 import type { SendResult } from "@/lib/bulk-email";
 import { blockedResult, buildGuard, logSendResults } from "@/lib/deliverability.server";
 import type { QueuedMessage } from "@/lib/schedule-dispatch.functions";
-import { isWithinWindowTz, parseSchedule } from "@/lib/send-schedule";
+import { brtDateKey, isWithinPlanTz, nextSlotAt, parseSchedule } from "@/lib/send-schedule";
 
 /** Quantas campanhas são atendidas por chamada. */
 const MAX_CAMPAIGNS = 5;
@@ -25,6 +25,8 @@ type Row = {
   sent_count: number;
   sender_name: string;
   sender_email: string;
+  daily_sent_count: number | null;
+  daily_sent_date: string | null;
 };
 
 async function processCampaign(row: Row): Promise<string> {
@@ -40,13 +42,26 @@ async function processCampaign(row: Row): Promise<string> {
     return "vazio";
   }
 
-  if (!isWithinWindowTz(schedule)) {
+  const today = brtDateKey();
+  const sentToday = row.daily_sent_date === today ? (row.daily_sent_count ?? 0) : 0;
+
+  if (!isWithinPlanTz(schedule)) {
     await supabaseAdmin
       .from("campaigns")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .update({ next_send_at: new Date(Date.now() + 5 * 60_000).toISOString() } as any)
+      .update({ next_send_at: nextSlotAt(schedule).toISOString() } as any)
       .eq("id", row.id);
     return "fora-da-janela";
+  }
+
+  // Cota do dia atingida: retoma no primeiro horário permitido do próximo dia.
+  if (schedule.enabled && sentToday >= schedule.dailyLimit) {
+    await supabaseAdmin
+      .from("campaigns")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update({ next_send_at: nextSlotAt(schedule, new Date(), true).toISOString() } as any)
+      .eq("id", row.id);
+    return "cota-diaria";
   }
 
   const [message, ...rest] = queue;
@@ -62,7 +77,7 @@ async function processCampaign(row: Row): Promise<string> {
     await supabaseAdmin
       .from("campaigns")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .update({ next_send_at: new Date(Date.now() + 30 * 60_000).toISOString() } as any)
+      .update({ next_send_at: nextSlotAt(schedule, new Date(), true).toISOString() } as any)
       .eq("id", row.id);
     return "limite-diario";
   } else {
@@ -79,6 +94,7 @@ async function processCampaign(row: Row): Promise<string> {
   const sentCount = results.filter((item) => item.success).length;
   const done = rest.length === 0;
   const intervalMs = (schedule.enabled ? schedule.intervalSeconds : 1) * 1000;
+  const nextAt = done ? null : nextSlotAt(schedule, new Date(Date.now() + intervalMs)).toISOString();
 
   await supabaseAdmin
     .from("campaigns")
@@ -87,7 +103,9 @@ async function processCampaign(row: Row): Promise<string> {
       results,
       sent_count: sentCount,
       status: done ? (sentCount > 0 ? "concluido" : "erro") : "agendado",
-      next_send_at: done ? null : new Date(Date.now() + intervalMs).toISOString(),
+      next_send_at: nextAt,
+      daily_sent_count: sentToday + 1,
+      daily_sent_date: today,
       finished_at: done ? new Date().toISOString() : null,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
@@ -108,8 +126,11 @@ async function run(request: Request): Promise<Response> {
 
   const { data, error } = await supabaseAdmin
     .from("campaigns")
-    .select("id, user_id, schedule, queue, results, sent_count, sender_name, sender_email")
+    .select(
+      "id, user_id, schedule, queue, results, sent_count, sender_name, sender_email, daily_sent_count, daily_sent_date",
+    )
     .eq("status", "agendado")
+    .eq("paused", false)
     .lte("next_send_at", new Date().toISOString())
     .order("next_send_at", { ascending: true })
     .limit(MAX_CAMPAIGNS);
