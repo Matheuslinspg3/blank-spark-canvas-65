@@ -36,7 +36,7 @@ async function processCampaign(row: Row): Promise<string> {
   if (queue.length === 0) {
     await supabaseAdmin
       .from("campaigns")
-
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .update({
         status: "concluido",
         finished_at: new Date().toISOString(),
