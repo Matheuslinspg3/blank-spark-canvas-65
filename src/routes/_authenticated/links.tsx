@@ -17,6 +17,7 @@ import {
   listTrackedLinksFn,
   createTrackedLinkFn,
 } from "@/lib/tracked-links.functions";
+import { LinkConversions } from "@/components/bridge/LinkConversions";
 import { listCampaigns } from "@/lib/campaigns.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -312,7 +313,14 @@ function LinksPage() {
                       )}
                     </TableCell>
                     <TableCell className="max-w-[220px] truncate" title={link.destination_url}>
-                      {link.destination_url}
+                      {link.mode === "bridge" ? (
+                        <span className="bg-primary/10 text-primary mr-1.5 rounded px-1.5 py-0.5 text-xs font-medium">
+                          Ponte
+                        </span>
+                      ) : null}
+                      {link.mode === "bridge"
+                        ? link.bridge_config.title || link.destination_url
+                        : link.destination_url}
                     </TableCell>
                     <TableCell className="max-w-[160px] truncate" title={link.campaign_name ?? ""}>
                       {link.campaign_name ?? <span className="text-muted-foreground">—</span>}
@@ -335,7 +343,11 @@ function LinksPage() {
                         <span className="text-muted-foreground text-xs">Indisponível</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">{link.click_count}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {link.mode === "bridge"
+                        ? `${link.click_count} visitas · ${link.lead_count} leads`
+                        : link.click_count}
+                    </TableCell>
                     <TableCell>{formatDate(link.last_clicked_at)}</TableCell>
                     <TableCell>
                       <Button
@@ -355,6 +367,8 @@ function LinksPage() {
           )}
         </CardContent>
       </Card>
+
+      <LinkConversions />
     </main>
   );
 }
