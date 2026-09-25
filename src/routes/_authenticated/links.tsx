@@ -5,6 +5,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import {
+  BridgeLinkFields,
+  DEFAULT_WA_MESSAGE,
+  resolveBridgeDestination,
+  type BridgeDraft,
+} from "@/components/bridge/BridgeLinkFields";
+import { DEFAULT_BRIDGE_CONFIG, type BridgeConfig } from "@/lib/bridge-page";
+
+import {
   deleteTrackedLinkFn,
   listTrackedLinksFn,
   createTrackedLinkFn,
@@ -60,6 +68,14 @@ function LinksPage() {
   const [url, setUrl] = useState("");
   const [recipient, setRecipient] = useState("");
   const [campaignId, setCampaignId] = useState<string>("none");
+  const [mode, setMode] = useState<"redirect" | "bridge">("redirect");
+  const [bridge, setBridge] = useState<BridgeDraft>({
+    config: DEFAULT_BRIDGE_CONFIG,
+    destType: "whatsapp",
+    waNumber: "",
+    waMessage: DEFAULT_WA_MESSAGE,
+    url: "",
+  });
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -74,7 +90,7 @@ function LinksPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (input: { destinationUrl: string; recipientEmail?: string; campaignId?: string }) =>
+    mutationFn: (input: { destinationUrl: string; recipientEmail?: string; campaignId?: string; mode?: "redirect" | "bridge"; bridgeConfig?: BridgeConfig }) =>
       createTrackedLinkFn({ data: input }),
     onSuccess: () => {
       setUrl("");
@@ -96,8 +112,19 @@ function LinksPage() {
   });
 
   const handleCreate = () => {
-    const trimmed = url.trim();
-    if (!/^https?:\/\//i.test(trimmed)) {
+    let trimmed = url.trim();
+    if (mode === "bridge") {
+      const dest = resolveBridgeDestination(bridge);
+      if (!dest.url) {
+        toast.error(dest.error ?? "Destino inválido");
+        return;
+      }
+      if (!bridge.config.title.trim() || bridge.config.fields.length === 0) {
+        toast.error("Informe o título e ao menos um dado a pedir");
+        return;
+      }
+      trimmed = dest.url;
+    } else if (!/^https?:\/\//i.test(trimmed)) {
       toast.error("Cole um endereço começando com http:// ou https://");
       return;
     }
@@ -106,11 +133,15 @@ function LinksPage() {
       toast.error("E-mail do destinatário inválido");
       return;
     }
-    const input: { destinationUrl: string; recipientEmail?: string; campaignId?: string } = {
+    const input: { destinationUrl: string; recipientEmail?: string; campaignId?: string; mode?: "redirect" | "bridge"; bridgeConfig?: BridgeConfig } = {
       destinationUrl: trimmed,
     };
     if (email) input.recipientEmail = email;
     if (campaignId !== "none") input.campaignId = campaignId;
+    if (mode === "bridge") {
+      input.mode = "bridge";
+      input.bridgeConfig = bridge.config;
+    }
     createMutation.mutate(input);
   };
 
@@ -171,6 +202,26 @@ function LinksPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+<div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === "redirect" ? "default" : "outline"}
+              onClick={() => setMode("redirect")}
+            >
+              Redirecionamento direto
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === "bridge" ? "default" : "outline"}
+              onClick={() => setMode("bridge")}
+            >
+              Página Ponte (captura)
+            </Button>
+          </div>
+          {mode === "bridge" ? <BridgeLinkFields value={bridge} onChange={setBridge} /> : null}
+          {mode === "redirect" ? (
           <div className="space-y-2">
             <Label htmlFor="new-link-url">Endereço de destino</Label>
             <Input

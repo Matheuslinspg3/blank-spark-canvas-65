@@ -3,6 +3,14 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Check, Copy, Link2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  BridgeLinkFields,
+  DEFAULT_WA_MESSAGE,
+  resolveBridgeDestination,
+  type BridgeDraft,
+} from "@/components/bridge/BridgeLinkFields";
+import { DEFAULT_BRIDGE_CONFIG, type BridgeConfig } from "@/lib/bridge-page";
+
 import { createTrackedLinkFn, type TrackedLink } from "@/lib/tracked-links.functions";
 import { listCampaigns } from "@/lib/campaigns.functions";
 import { Button } from "@/components/ui/button";
@@ -48,6 +56,14 @@ export function LinkCreatorDialog({
   const [url, setUrl] = useState(defaultUrl);
   const [recipient, setRecipient] = useState(defaultRecipient);
   const [campaignId, setCampaignId] = useState(defaultCampaignId || "none");
+  const [mode, setMode] = useState<"redirect" | "bridge">("redirect");
+  const [bridge, setBridge] = useState<BridgeDraft>({
+    config: DEFAULT_BRIDGE_CONFIG,
+    destType: "whatsapp",
+    waNumber: "",
+    waMessage: DEFAULT_WA_MESSAGE,
+    url: "",
+  });
   const [created, setCreated] = useState<TrackedLink | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -58,7 +74,7 @@ export function LinkCreatorDialog({
   });
 
   const createMutation = useMutation({
-    mutationFn: (input: { destinationUrl: string; recipientEmail?: string; campaignId?: string }) =>
+    mutationFn: (input: { destinationUrl: string; recipientEmail?: string; campaignId?: string; mode?: "redirect" | "bridge"; bridgeConfig?: BridgeConfig }) =>
       createTrackedLinkFn({ data: input }),
     onSuccess: (link) => {
       setCreated(link);
@@ -68,8 +84,19 @@ export function LinkCreatorDialog({
   });
 
   const handleCreate = () => {
-    const trimmed = url.trim();
-    if (!/^https?:\/\//i.test(trimmed)) {
+    let trimmed = url.trim();
+    if (mode === "bridge") {
+      const dest = resolveBridgeDestination(bridge);
+      if (!dest.url) {
+        toast.error(dest.error ?? "Destino inválido");
+        return;
+      }
+      if (!bridge.config.title.trim() || bridge.config.fields.length === 0) {
+        toast.error("Informe o título e ao menos um dado a pedir");
+        return;
+      }
+      trimmed = dest.url;
+    } else if (!/^https?:\/\//i.test(trimmed)) {
       toast.error("Cole um endereço começando com http:// ou https://");
       return;
     }
@@ -78,11 +105,15 @@ export function LinkCreatorDialog({
       toast.error("E-mail do destinatário inválido");
       return;
     }
-    const input: { destinationUrl: string; recipientEmail?: string; campaignId?: string } = {
+    const input: { destinationUrl: string; recipientEmail?: string; campaignId?: string; mode?: "redirect" | "bridge"; bridgeConfig?: BridgeConfig } = {
       destinationUrl: trimmed,
     };
     if (email) input.recipientEmail = email;
     if (campaignId !== "none") input.campaignId = campaignId;
+    if (mode === "bridge") {
+      input.mode = "bridge";
+      input.bridgeConfig = bridge.config;
+    }
     createMutation.mutate(input);
   };
 
@@ -124,6 +155,26 @@ export function LinkCreatorDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+<div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === "redirect" ? "default" : "outline"}
+              onClick={() => setMode("redirect")}
+            >
+              Redirecionamento direto
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === "bridge" ? "default" : "outline"}
+              onClick={() => setMode("bridge")}
+            >
+              Página Ponte (captura)
+            </Button>
+          </div>
+          {mode === "bridge" ? <BridgeLinkFields value={bridge} onChange={setBridge} /> : null}
+          {mode === "redirect" ? (
           <div className="space-y-2">
             <Label htmlFor="tracked-link-destination">Endereço de destino</Label>
             <Input
