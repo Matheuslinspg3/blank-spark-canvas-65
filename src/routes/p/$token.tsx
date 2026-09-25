@@ -4,6 +4,7 @@ import { BridgeCard } from "@/components/bridge/BridgeCard";
 import { getBridgePageFn, submitBridgeLeadFn } from "@/lib/bridge.functions";
 
 export const Route = createFileRoute("/p/$token")({
+  shouldReload: false,
   loader: ({ params }) =>
     /^[A-Za-z0-9]{24,64}$/.test(params.token)
       ? getBridgePageFn({ data: { token: params.token } })
