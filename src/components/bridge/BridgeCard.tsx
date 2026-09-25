@@ -97,9 +97,7 @@ export function BridgeCard({
                   }))
                 }
               />
-              {errors[field] ? (
-                <p className="text-destructive text-xs">{errors[field]}</p>
-              ) : null}
+              {errors[field] ? <p className="text-destructive text-xs">{errors[field]}</p> : null}
             </div>
           ))}
         </div>

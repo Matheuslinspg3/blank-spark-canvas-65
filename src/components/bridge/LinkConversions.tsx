@@ -78,9 +78,7 @@ export function LinkConversions({ campaignId }: { campaignId?: string }) {
             <UserCheck className="text-primary size-4" />
             Conversões
           </CardTitle>
-          <CardDescription>
-            {filtered.length} leads capturados pelas Páginas Ponte
-          </CardDescription>
+          <CardDescription>{filtered.length} leads capturados pelas Páginas Ponte</CardDescription>
         </div>
         <div className="flex gap-2">
           {linkOptions.length > 1 ? (

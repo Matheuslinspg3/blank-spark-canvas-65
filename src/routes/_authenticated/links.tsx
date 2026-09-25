@@ -91,8 +91,13 @@ function LinksPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (input: { destinationUrl: string; recipientEmail?: string; campaignId?: string; mode?: "redirect" | "bridge"; bridgeConfig?: BridgeConfig }) =>
-      createTrackedLinkFn({ data: input }),
+    mutationFn: (input: {
+      destinationUrl: string;
+      recipientEmail?: string;
+      campaignId?: string;
+      mode?: "redirect" | "bridge";
+      bridgeConfig?: BridgeConfig;
+    }) => createTrackedLinkFn({ data: input }),
     onSuccess: () => {
       setUrl("");
       setRecipient("");
@@ -134,7 +139,13 @@ function LinksPage() {
       toast.error("E-mail do destinatário inválido");
       return;
     }
-    const input: { destinationUrl: string; recipientEmail?: string; campaignId?: string; mode?: "redirect" | "bridge"; bridgeConfig?: BridgeConfig } = {
+    const input: {
+      destinationUrl: string;
+      recipientEmail?: string;
+      campaignId?: string;
+      mode?: "redirect" | "bridge";
+      bridgeConfig?: BridgeConfig;
+    } = {
       destinationUrl: trimmed,
     };
     if (email) input.recipientEmail = email;
@@ -203,7 +214,7 @@ function LinksPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-<div className="flex gap-2">
+          <div className="flex gap-2">
             <Button
               type="button"
               size="sm"
@@ -223,18 +234,18 @@ function LinksPage() {
           </div>
           {mode === "bridge" ? <BridgeLinkFields value={bridge} onChange={setBridge} /> : null}
           {mode === "redirect" ? (
-          <div className="space-y-2">
-            <Label htmlFor="new-link-url">Endereço de destino</Label>
-            <Input
-              id="new-link-url"
-              placeholder="https://wa.me/5513… ou https://seusite.com.br"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") handleCreate();
-              }}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-link-url">Endereço de destino</Label>
+              <Input
+                id="new-link-url"
+                placeholder="https://wa.me/5513… ou https://seusite.com.br"
+                value={url}
+                onChange={(event) => setUrl(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") handleCreate();
+                }}
+              />
+            </div>
           ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">

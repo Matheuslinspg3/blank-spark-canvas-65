@@ -62,23 +62,25 @@ function trackingOrigin(): string | null {
   return origin.startsWith("https://") ? origin : null;
 }
 
-const createSchema = z.object({
-  destinationUrl: z
-    .string()
-    .trim()
-    .min(1, "Informe o endereço de destino")
-    .refine((v) => /^https?:\/\//i.test(v), "O endereço precisa começar com http:// ou https://"),
-  recipientEmail: z
-    .string()
-    .trim()
-    .optional()
-    .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "E-mail do destinatário inválido"),
-  campaignId: z.string().uuid().optional(),
-  mode: z.enum(["redirect", "bridge"]).default("redirect"),
-  bridgeConfig: bridgeConfigSchema.optional(),
-}).refine((v) => v.mode === "redirect" || !!v.bridgeConfig, {
-  message: "Configure a Página Ponte",
-});
+const createSchema = z
+  .object({
+    destinationUrl: z
+      .string()
+      .trim()
+      .min(1, "Informe o endereço de destino")
+      .refine((v) => /^https?:\/\//i.test(v), "O endereço precisa começar com http:// ou https://"),
+    recipientEmail: z
+      .string()
+      .trim()
+      .optional()
+      .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "E-mail do destinatário inválido"),
+    campaignId: z.string().uuid().optional(),
+    mode: z.enum(["redirect", "bridge"]).default("redirect"),
+    bridgeConfig: bridgeConfigSchema.optional(),
+  })
+  .refine((v) => v.mode === "redirect" || !!v.bridgeConfig, {
+    message: "Configure a Página Ponte",
+  });
 
 export const createTrackedLinkFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -196,7 +198,10 @@ export const listTrackedLinksFn = createServerFn({ method: "GET" })
           .limit(5000),
       );
       for (const lead of (leadRows ?? []) as { email_link_track_id: string }[]) {
-        leadCounts.set(lead.email_link_track_id, (leadCounts.get(lead.email_link_track_id) ?? 0) + 1);
+        leadCounts.set(
+          lead.email_link_track_id,
+          (leadCounts.get(lead.email_link_track_id) ?? 0) + 1,
+        );
       }
     }
 
@@ -228,7 +233,9 @@ export const listLinkLeadsFn = createServerFn({ method: "GET" })
     const { data: rows, error } = await runUserScopedOperation(supabase, (client) => {
       let query = client
         .from("link_leads")
-        .select("id,created_at,name,whatsapp,company,recipient_email,email_link_track_id,campaign_id")
+        .select(
+          "id,created_at,name,whatsapp,company,recipient_email,email_link_track_id,campaign_id",
+        )
         .eq("user_id", context.userId)
         .order("created_at", { ascending: false })
         .limit(1000);

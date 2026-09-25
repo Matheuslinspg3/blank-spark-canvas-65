@@ -74,8 +74,13 @@ export function LinkCreatorDialog({
   });
 
   const createMutation = useMutation({
-    mutationFn: (input: { destinationUrl: string; recipientEmail?: string; campaignId?: string; mode?: "redirect" | "bridge"; bridgeConfig?: BridgeConfig }) =>
-      createTrackedLinkFn({ data: input }),
+    mutationFn: (input: {
+      destinationUrl: string;
+      recipientEmail?: string;
+      campaignId?: string;
+      mode?: "redirect" | "bridge";
+      bridgeConfig?: BridgeConfig;
+    }) => createTrackedLinkFn({ data: input }),
     onSuccess: (link) => {
       setCreated(link);
       setCopied(false);
@@ -105,7 +110,13 @@ export function LinkCreatorDialog({
       toast.error("E-mail do destinatário inválido");
       return;
     }
-    const input: { destinationUrl: string; recipientEmail?: string; campaignId?: string; mode?: "redirect" | "bridge"; bridgeConfig?: BridgeConfig } = {
+    const input: {
+      destinationUrl: string;
+      recipientEmail?: string;
+      campaignId?: string;
+      mode?: "redirect" | "bridge";
+      bridgeConfig?: BridgeConfig;
+    } = {
       destinationUrl: trimmed,
     };
     if (email) input.recipientEmail = email;
@@ -155,7 +166,7 @@ export function LinkCreatorDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-<div className="flex gap-2">
+          <div className="flex gap-2">
             <Button
               type="button"
               size="sm"
@@ -175,15 +186,15 @@ export function LinkCreatorDialog({
           </div>
           {mode === "bridge" ? <BridgeLinkFields value={bridge} onChange={setBridge} /> : null}
           {mode === "redirect" ? (
-          <div className="space-y-2">
-            <Label htmlFor="tracked-link-destination">Endereço de destino</Label>
-            <Input
-              id="tracked-link-destination"
-              placeholder="https://wa.me/5513… ou https://seusite.com.br"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="tracked-link-destination">Endereço de destino</Label>
+              <Input
+                id="tracked-link-destination"
+                placeholder="https://wa.me/5513… ou https://seusite.com.br"
+                value={url}
+                onChange={(event) => setUrl(event.target.value)}
+              />
+            </div>
           ) : null}
           <div className="space-y-2">
             <Label htmlFor="tracked-link-recipient">Destinatário (opcional)</Label>

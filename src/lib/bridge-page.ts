@@ -32,7 +32,10 @@ export const bridgeConfigSchema = z.object({
     .trim()
     .max(MAX_LOGO_DATA_URL, "Logo muito pesada (máx. ~150 KB)")
     .refine(
-      (v) => !v || /^https:\/\//i.test(v) || /^data:image\/(png|jpeg|webp|gif|svg\+xml);base64,/i.test(v),
+      (v) =>
+        !v ||
+        /^https:\/\//i.test(v) ||
+        /^data:image\/(png|jpeg|webp|gif|svg\+xml);base64,/i.test(v),
       "A logo precisa ser um endereço https:// ou uma imagem enviada",
     )
     .default(""),
