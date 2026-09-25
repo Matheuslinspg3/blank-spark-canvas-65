@@ -41,12 +41,40 @@ async function loadTrack(token: string): Promise<TrackRow | null> {
   return track;
 }
 
+async function recordVisit(trackId: string) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const admin = supabaseAdmin as any;
+    const { data } = await admin
+      .from("email_link_tracks")
+      .select("click_count,first_clicked_at")
+      .eq("id", trackId)
+      .single();
+    const now = new Date().toISOString();
+    await Promise.all([
+      admin.from("email_link_click_events").insert({ email_link_track_id: trackId }),
+      admin
+        .from("email_link_tracks")
+        .update({
+          click_count: Number(data?.click_count || 0) + 1,
+          first_clicked_at: data?.first_clicked_at ?? now,
+          last_clicked_at: now,
+        })
+        .eq("id", trackId),
+    ]);
+  } catch {
+    /* visit metadata is best-effort; no IP/location stored */
+  }
+}
+
 /** Public: returns only the visual configuration — never e-mails or ids. */
 export const getBridgePageFn = createServerFn({ method: "GET" })
   .inputValidator((data: { token: string }) => z.object({ token: tokenSchema }).parse(data))
   .handler(async ({ data }): Promise<BridgeConfig | null> => {
     const track = await loadTrack(data.token);
     if (!track) return null;
+    await recordVisit(track.id);
     const parsed = bridgeConfigSchema.safeParse(track.bridge_config);
     return parsed.success ? parsed.data : null;
   });

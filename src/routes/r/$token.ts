@@ -36,6 +36,9 @@ export const Route = createFileRoute("/r/$token")({
           return unavailable();
         }
         if (!/^https?:$/.test(destination.protocol)) return unavailable();
+        if (track.mode === "bridge") {
+          return Response.redirect(new URL(`/p/${token}`, request.url).toString(), 302);
+        }
 
         let referrerOrigin: string | null = null;
         try {
@@ -60,9 +63,6 @@ export const Route = createFileRoute("/r/$token")({
             })
             .eq("id", track.id),
         ]).catch(() => undefined);
-        if (track.mode === "bridge") {
-          return Response.redirect(new URL(`/p/${token}`, request.url).toString(), 302);
-        }
         return Response.redirect(destination.toString(), 302);
       },
     },
