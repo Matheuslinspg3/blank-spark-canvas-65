@@ -9,6 +9,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Recipient } from "./bulk-email";
 import { brtDateKey, nextSlotAt, parseSchedule, type SendSchedule } from "./send-schedule";
 import { requireTrackableLink } from "./trackable-link";
+import { runUserScopedOperation } from "./user-scoped-query";
 
 export type QueuedMessage = { email: string; subject: string; html: string };
 
@@ -56,12 +57,14 @@ export const scheduleCampaignFn = createServerFn({ method: "POST" })
     let lastMessage = "";
     for (let attempt = 0; attempt < 4; attempt += 1) {
       if (attempt > 0) await new Promise((r) => setTimeout(r, 1500 * attempt));
-      const { error } = await context.supabase
-        .from("campaigns")
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .update(patch as any)
-        .eq("id", data.campaignId)
-        .eq("user_id", context.userId);
+      const { error } = await runUserScopedOperation(context.supabase, (client) =>
+        client
+          .from("campaigns")
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .update(patch as any)
+          .eq("id", data.campaignId)
+          .eq("user_id", context.userId),
+      );
       if (!error) return { ok: true, queued: data.messages.length };
       lastMessage = error.message ?? "";
       const transient = /50[234]|bad gateway|gateway|timeout|<html/i.test(lastMessage);
@@ -80,12 +83,14 @@ export const setCampaignPausedFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const patch: Record<string, unknown> = { paused: data.paused };
     if (!data.paused) patch["next_send_at"] = new Date().toISOString();
-    const { error } = await context.supabase
-      .from("campaigns")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .update(patch as any)
-      .eq("id", data.campaignId)
-      .eq("user_id", context.userId);
+    const { error } = await runUserScopedOperation(context.supabase, (client) =>
+      client
+        .from("campaigns")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update(patch as any)
+        .eq("id", data.campaignId)
+        .eq("user_id", context.userId),
+    );
     if (error) throw new Error(error.message);
     return { ok: true, paused: data.paused };
   });
@@ -95,12 +100,14 @@ export const cancelScheduleFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { campaignId: string }) => data)
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("campaigns")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .update({ status: "rascunho", queue: [], next_send_at: null } as any)
-      .eq("id", data.campaignId)
-      .eq("user_id", context.userId);
+    const { error } = await runUserScopedOperation(context.supabase, (client) =>
+      client
+        .from("campaigns")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update({ status: "rascunho", queue: [], next_send_at: null } as any)
+        .eq("id", data.campaignId)
+        .eq("user_id", context.userId),
+    );
     if (error) throw new Error(error.message);
     return { ok: true };
   });
