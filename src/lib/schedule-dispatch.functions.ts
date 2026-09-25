@@ -52,13 +52,25 @@ export const scheduleCampaignFn = createServerFn({ method: "POST" })
     if (data.recipients) patch["recipients"] = data.recipients;
     if (data.brief !== undefined) patch["brief"] = data.brief;
 
-    const { error } = await context.supabase
-      .from("campaigns")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .update(patch as any)
-      .eq("id", data.campaignId)
-      .eq("user_id", context.userId);
-    if (error) throw new Error(error.message);
+    // O banco às vezes responde 502/503/504 (instabilidade temporária). Tenta de novo.
+    let lastMessage = "";
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 1500 * attempt));
+      const { error } = await context.supabase
+        .from("campaigns")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update(patch as any)
+        .eq("id", data.campaignId)
+        .eq("user_id", context.userId);
+      if (!error) return { ok: true, queued: data.messages.length };
+      lastMessage = error.message ?? "";
+      const transient = /50[234]|bad gateway|gateway|timeout|<html/i.test(lastMessage);
+      if (!transient) throw new Error(lastMessage);
+    }
+    console.error("[scheduleCampaign] falha temporária persistente:", lastMessage.slice(0, 200));
+    throw new Error(
+      "O servidor ficou instável ao salvar a programação. Aguarde alguns segundos e tente de novo.",
+    );
     return { ok: true, queued: data.messages.length };
   });
 
