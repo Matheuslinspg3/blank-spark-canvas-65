@@ -72,10 +72,16 @@ export function BridgeLinkFields({
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) return toast.error("Envie uma imagem");
+    if (!file.type.startsWith("image/")) {
+      toast.error("Envie uma imagem");
+      return;
+    }
     try {
       const dataUrl = await fileToDataUrl(file);
-      if (dataUrl.length > 200_000) return toast.error("Logo muito pesada. Use uma imagem menor.");
+      if (dataUrl.length > 200_000) {
+        toast.error("Logo muito pesada. Use uma imagem menor.");
+        return;
+      }
       setCfg({ logo_url: dataUrl });
     } catch {
       toast.error("Não consegui ler essa imagem");
