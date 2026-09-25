@@ -20,7 +20,7 @@ export const Route = createFileRoute("/r/$token")({
         if (!/^[A-Za-z0-9]{24,64}$/.test(token)) return unavailable();
         const { data: track } = await admin
           .from("email_link_tracks")
-          .select("id,destination_url,is_active,expires_at,click_count,first_clicked_at")
+          .select("id,destination_url,is_active,expires_at,click_count,first_clicked_at,mode")
           .eq("token", token)
           .maybeSingle();
         if (
@@ -60,6 +60,9 @@ export const Route = createFileRoute("/r/$token")({
             })
             .eq("id", track.id),
         ]).catch(() => undefined);
+        if (track.mode === "bridge") {
+          return Response.redirect(new URL(`/p/${token}`, request.url).toString(), 302);
+        }
         return Response.redirect(destination.toString(), 302);
       },
     },
