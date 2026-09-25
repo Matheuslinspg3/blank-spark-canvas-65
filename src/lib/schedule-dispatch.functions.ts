@@ -71,7 +71,6 @@ export const scheduleCampaignFn = createServerFn({ method: "POST" })
     throw new Error(
       "O servidor ficou instável ao salvar a programação. Aguarde alguns segundos e tente de novo.",
     );
-    return { ok: true, queued: data.messages.length };
   });
 
 /** Pausa ou retoma um disparo programado, sem perder a fila. */
