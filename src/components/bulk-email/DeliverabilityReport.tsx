@@ -46,6 +46,8 @@ function statusVariant(status: EmailEventStatus): "default" | "secondary" | "des
   return "destructive";
 }
 
+import { LinkConversions } from "@/components/bridge/LinkConversions";
+
 export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
   const fetchEvents = useServerFn(listCampaignEvents);
   const syncBrevo = useServerFn(syncBrevoEventsFn);
@@ -150,6 +152,7 @@ export function DeliverabilityReport({ campaignId }: { campaignId: string }) {
       </CardHeader>
 
       <CardContent className="space-y-5">
+        <LinkConversions campaignId={campaignId} />
         <section className="space-y-3 rounded-lg border p-4">
           <div>
             <h3 className="font-medium">Cliques nos links</h3>

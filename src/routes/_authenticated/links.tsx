@@ -5,10 +5,19 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import {
+  BridgeLinkFields,
+  DEFAULT_WA_MESSAGE,
+  resolveBridgeDestination,
+  type BridgeDraft,
+} from "@/components/bridge/BridgeLinkFields";
+import { DEFAULT_BRIDGE_CONFIG, type BridgeConfig } from "@/lib/bridge-page";
+
+import {
   deleteTrackedLinkFn,
   listTrackedLinksFn,
   createTrackedLinkFn,
 } from "@/lib/tracked-links.functions";
+import { LinkConversions } from "@/components/bridge/LinkConversions";
 import { listCampaigns } from "@/lib/campaigns.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +69,14 @@ function LinksPage() {
   const [url, setUrl] = useState("");
   const [recipient, setRecipient] = useState("");
   const [campaignId, setCampaignId] = useState<string>("none");
+  const [mode, setMode] = useState<"redirect" | "bridge">("redirect");
+  const [bridge, setBridge] = useState<BridgeDraft>({
+    config: DEFAULT_BRIDGE_CONFIG,
+    destType: "whatsapp",
+    waNumber: "",
+    waMessage: DEFAULT_WA_MESSAGE,
+    url: "",
+  });
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -74,8 +91,13 @@ function LinksPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (input: { destinationUrl: string; recipientEmail?: string; campaignId?: string }) =>
-      createTrackedLinkFn({ data: input }),
+    mutationFn: (input: {
+      destinationUrl: string;
+      recipientEmail?: string;
+      campaignId?: string;
+      mode?: "redirect" | "bridge";
+      bridgeConfig?: BridgeConfig;
+    }) => createTrackedLinkFn({ data: input }),
     onSuccess: () => {
       setUrl("");
       setRecipient("");
@@ -96,8 +118,19 @@ function LinksPage() {
   });
 
   const handleCreate = () => {
-    const trimmed = url.trim();
-    if (!/^https?:\/\//i.test(trimmed)) {
+    let trimmed = url.trim();
+    if (mode === "bridge") {
+      const dest = resolveBridgeDestination(bridge);
+      if (!dest.url) {
+        toast.error(dest.error ?? "Destino inválido");
+        return;
+      }
+      if (!bridge.config.title.trim() || bridge.config.fields.length === 0) {
+        toast.error("Informe o título e ao menos um dado a pedir");
+        return;
+      }
+      trimmed = dest.url;
+    } else if (!/^https?:\/\//i.test(trimmed)) {
       toast.error("Cole um endereço começando com http:// ou https://");
       return;
     }
@@ -106,11 +139,21 @@ function LinksPage() {
       toast.error("E-mail do destinatário inválido");
       return;
     }
-    const input: { destinationUrl: string; recipientEmail?: string; campaignId?: string } = {
+    const input: {
+      destinationUrl: string;
+      recipientEmail?: string;
+      campaignId?: string;
+      mode?: "redirect" | "bridge";
+      bridgeConfig?: BridgeConfig;
+    } = {
       destinationUrl: trimmed,
     };
     if (email) input.recipientEmail = email;
     if (campaignId !== "none") input.campaignId = campaignId;
+    if (mode === "bridge") {
+      input.mode = "bridge";
+      input.bridgeConfig = bridge.config;
+    }
     createMutation.mutate(input);
   };
 
@@ -171,18 +214,39 @@ function LinksPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="new-link-url">Endereço de destino</Label>
-            <Input
-              id="new-link-url"
-              placeholder="https://wa.me/5513… ou https://seusite.com.br"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") handleCreate();
-              }}
-            />
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === "redirect" ? "default" : "outline"}
+              onClick={() => setMode("redirect")}
+            >
+              Redirecionamento direto
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === "bridge" ? "default" : "outline"}
+              onClick={() => setMode("bridge")}
+            >
+              Página Ponte (captura)
+            </Button>
           </div>
+          {mode === "bridge" ? <BridgeLinkFields value={bridge} onChange={setBridge} /> : null}
+          {mode === "redirect" ? (
+            <div className="space-y-2">
+              <Label htmlFor="new-link-url">Endereço de destino</Label>
+              <Input
+                id="new-link-url"
+                placeholder="https://wa.me/5513… ou https://seusite.com.br"
+                value={url}
+                onChange={(event) => setUrl(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") handleCreate();
+                }}
+              />
+            </div>
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="new-link-recipient">Destinatário (opcional)</Label>
@@ -260,7 +324,14 @@ function LinksPage() {
                       )}
                     </TableCell>
                     <TableCell className="max-w-[220px] truncate" title={link.destination_url}>
-                      {link.destination_url}
+                      {link.mode === "bridge" ? (
+                        <span className="bg-primary/10 text-primary mr-1.5 rounded px-1.5 py-0.5 text-xs font-medium">
+                          Ponte
+                        </span>
+                      ) : null}
+                      {link.mode === "bridge"
+                        ? link.bridge_config.title || link.destination_url
+                        : link.destination_url}
                     </TableCell>
                     <TableCell className="max-w-[160px] truncate" title={link.campaign_name ?? ""}>
                       {link.campaign_name ?? <span className="text-muted-foreground">—</span>}
@@ -283,7 +354,11 @@ function LinksPage() {
                         <span className="text-muted-foreground text-xs">Indisponível</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">{link.click_count}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {link.mode === "bridge"
+                        ? `${link.click_count} visitas · ${link.lead_count} leads`
+                        : link.click_count}
+                    </TableCell>
                     <TableCell>{formatDate(link.last_clicked_at)}</TableCell>
                     <TableCell>
                       <Button
@@ -303,6 +378,8 @@ function LinksPage() {
           )}
         </CardContent>
       </Card>
+
+      <LinkConversions />
     </main>
   );
 }

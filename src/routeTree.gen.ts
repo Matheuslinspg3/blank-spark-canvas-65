@@ -17,6 +17,7 @@ import { Route as AuthenticatedCampanhasRouteImport } from './routes/_authentica
 import { Route as AuthenticatedContatosRouteImport } from './routes/_authenticated/contatos'
 import { Route as AuthenticatedLinksRouteImport } from './routes/_authenticated/links'
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
+import { Route as PTokenRouteImport } from './routes/p/$token'
 import { Route as RTokenRouteImport } from './routes/r/$token'
 import { Route as AuthenticatedDisparosIndexRouteImport } from './routes/_authenticated/disparos/index'
 import { Route as AuthenticatedDisparosIdRouteImport } from './routes/_authenticated/disparos/$id'
@@ -62,6 +63,11 @@ const AuthenticatedRevisaoRoute = AuthenticatedRevisaoRouteImport.update({
   path: '/revisao',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const PTokenRoute = PTokenRouteImport.update({
+  id: '/p/$token',
+  path: '/p/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RTokenRoute = RTokenRouteImport.update({
   id: '/r/$token',
   path: '/r/$token',
@@ -97,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/contatos': typeof AuthenticatedContatosRoute
   '/links': typeof AuthenticatedLinksRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
+  '/p/$token': typeof PTokenRoute
   '/r/$token': typeof RTokenRoute
   '/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/disparos/': typeof AuthenticatedDisparosIndexRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/contatos': typeof AuthenticatedContatosRoute
   '/links': typeof AuthenticatedLinksRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
+  '/p/$token': typeof PTokenRoute
   '/r/$token': typeof RTokenRoute
   '/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/disparos': typeof AuthenticatedDisparosIndexRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/_authenticated/contatos': typeof AuthenticatedContatosRoute
   '/_authenticated/links': typeof AuthenticatedLinksRoute
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
+  '/p/$token': typeof PTokenRoute
   '/r/$token': typeof RTokenRoute
   '/_authenticated/disparos/$id': typeof AuthenticatedDisparosIdRoute
   '/_authenticated/disparos/': typeof AuthenticatedDisparosIndexRoute
@@ -143,6 +152,7 @@ export interface FileRouteTypes {
     | '/contatos'
     | '/links'
     | '/revisao'
+    | '/p/$token'
     | '/r/$token'
     | '/disparos/$id'
     | '/disparos/'
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/contatos'
     | '/links'
     | '/revisao'
+    | '/p/$token'
     | '/r/$token'
     | '/disparos/$id'
     | '/disparos'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/_authenticated/contatos'
     | '/_authenticated/links'
     | '/_authenticated/revisao'
+    | '/p/$token'
     | '/r/$token'
     | '/_authenticated/disparos/$id'
     | '/_authenticated/disparos/'
@@ -184,6 +196,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
+  PTokenRoute: typeof PTokenRoute
   RTokenRoute: typeof RTokenRoute
   ApiPublicCronDispatchRoute: typeof ApiPublicCronDispatchRoute
   ApiPublicHooksBrevoRoute: typeof ApiPublicHooksBrevoRoute
@@ -246,6 +259,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/revisao'
       preLoaderRoute: typeof AuthenticatedRevisaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/p/$token': {
+      id: '/p/$token'
+      path: '/p/$token'
+      fullPath: '/p/$token'
+      preLoaderRoute: typeof PTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/r/$token': {
       id: '/r/$token'
@@ -311,6 +331,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
+  PTokenRoute: PTokenRoute,
   RTokenRoute: RTokenRoute,
   ApiPublicCronDispatchRoute: ApiPublicCronDispatchRoute,
   ApiPublicHooksBrevoRoute: ApiPublicHooksBrevoRoute,
