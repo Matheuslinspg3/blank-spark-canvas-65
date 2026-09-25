@@ -234,6 +234,7 @@ function LinksPage() {
               }}
             />
           </div>
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="new-link-recipient">Destinatário (opcional)</Label>

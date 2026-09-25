@@ -184,6 +184,7 @@ export function LinkCreatorDialog({
               onChange={(event) => setUrl(event.target.value)}
             />
           </div>
+          ) : null}
           <div className="space-y-2">
             <Label htmlFor="tracked-link-recipient">Destinatário (opcional)</Label>
             <Input
