@@ -2,11 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+// Links already sent in older campaigns may reference tokens that no longer
+// exist in the database. Instead of a dead page, send those visitors to the
+// main CAFCM site so the e-mail links keep working.
+const FALLBACK_DESTINATION = "https://cafcm.org.br/";
+
 function unavailable() {
-  return new Response("Este link não está mais disponível.", {
-    status: 404,
-    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
-  });
+  return Response.redirect(FALLBACK_DESTINATION, 302);
 }
 
 export const Route = createFileRoute("/r/$token")({
