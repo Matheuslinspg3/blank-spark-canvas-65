@@ -5,7 +5,8 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 // Links already sent in older campaigns may reference tokens that no longer
 // exist in the database. Instead of a dead page, send those visitors to the
 // main CAFCM site so the e-mail links keep working.
-const FALLBACK_DESTINATION = "https://cafcm.org.br/";
+const FALLBACK_DESTINATION =
+  "https://api.whatsapp.com/send/?phone=5513997138381&text=Ol%C3%A1%2C%20Recebi%20o%20e-mail%20da%20CAFCM%20e%20quero%20entender%20melhor%20o%20Programa%20Melhor%20Aprendiz.&type=phone_number&app_absent=0";
 
 function unavailable() {
   return Response.redirect(FALLBACK_DESTINATION, 302);
