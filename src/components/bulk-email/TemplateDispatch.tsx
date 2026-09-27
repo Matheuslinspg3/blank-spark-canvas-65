@@ -453,6 +453,20 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     }
   }
 
+  /** Atualiza limite diário/horário sem cancelar a programação nem perder a fila. */
+  async function handleUpdatePlan(next: SendSchedule) {
+    setUpdatingPlan(true);
+    try {
+      await updatePlan({ data: { campaignId: campaign.id, schedule: next } });
+      setSavedDailyLimit(next.dailyLimit);
+      toast.success(`Limite diário atualizado para ${next.dailyLimit} e-mails.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao atualizar o limite.");
+    } finally {
+      setUpdatingPlan(false);
+    }
+  }
+
   async function handleSend() {
     const messages = messagesFor(readyRows);
     if (messages.length === 0) {
@@ -1264,6 +1278,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
             nextSendAt={campaign.next_send_at}
             onCancelSchedule={() => void handleCancelSchedule()}
             cancelling={cancelling}
+            savedDailyLimit={savedDailyLimit}
+            onUpdatePlan={(next) => void handleUpdatePlan(next)}
+            updatingPlan={updatingPlan}
           />
 
           <DailyLimitBanner
