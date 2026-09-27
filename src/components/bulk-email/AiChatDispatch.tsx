@@ -373,6 +373,20 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
     }
   }
 
+  /** Atualiza limite diário/horário sem cancelar a programação nem perder a fila. */
+  async function handleUpdatePlan(next: SendSchedule) {
+    setUpdatingPlan(true);
+    try {
+      await updatePlan({ data: { campaignId: campaign.id, schedule: next } });
+      setSavedDailyLimit(next.dailyLimit);
+      toast.success(`Limite diário atualizado para ${next.dailyLimit} e-mails.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao atualizar o limite.");
+    } finally {
+      setUpdatingPlan(false);
+    }
+  }
+
   async function runSendAll() {
     const ready = latest.current.filter(isReady);
     if (ready.length === 0) {
