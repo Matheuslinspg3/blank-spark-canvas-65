@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   AlertTriangle,
   CalendarCheck2,
@@ -55,6 +56,7 @@ export function ScheduleFields({
   cancelling,
   contentToCheck,
 }: Props) {
+  const [limitDraft, setLimitDraft] = useState<string | null>(null);
   const perDay = dailyCapacity(schedule);
   const spansDays = schedule.enabled && pending > perDay;
   const warning = spansDays ? null : windowWarning(schedule, pending);

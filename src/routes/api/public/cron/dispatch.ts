@@ -104,7 +104,10 @@ async function processCampaign(row: Row): Promise<string> {
   const intervalMs = (schedule.enabled ? schedule.intervalSeconds : 1) * 1000;
   const nextAt = done
     ? null
-    : nextSlotAt(schedule, new Date(Date.now() + intervalMs)).toISOString();
+    : result.success
+      ? nextSlotAt(schedule, new Date(Date.now() + intervalMs)).toISOString()
+      : // Falhou: segue logo para o próximo, sem esperar o intervalo inteiro.
+        nextSlotAt(schedule, new Date(Date.now() + 5000)).toISOString();
 
   await supabaseAdmin
     .from("campaigns")
@@ -114,7 +117,8 @@ async function processCampaign(row: Row): Promise<string> {
       sent_count: sentCount,
       status: done ? (sentCount > 0 ? "concluido" : "erro") : "agendado",
       next_send_at: nextAt,
-      daily_sent_count: sentToday + 1,
+      // Só e-mails entregues contam para a cota: falhas não gastam o limite do dia.
+      daily_sent_count: sentToday + (result.success ? 1 : 0),
       daily_sent_date: today,
       finished_at: done ? new Date().toISOString() : null,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
