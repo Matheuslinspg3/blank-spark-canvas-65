@@ -11,7 +11,7 @@ import { brtDateKey, nextSlotAt, parseSchedule, type SendSchedule } from "./send
 import { requireTrackableLink } from "./trackable-link";
 import { runUserScopedOperation } from "./user-scoped-query";
 
-export type QueuedMessage = { email: string; subject: string; html: string };
+export type QueuedMessage = { email: string; subject: string; html: string; tags?: string[] };
 
 export type ScheduleInput = {
   campaignId: string;

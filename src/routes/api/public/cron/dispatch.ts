@@ -71,7 +71,7 @@ async function processCampaign(row: Row): Promise<string> {
   const [message, ...rest] = queue;
   if (!message) return "vazio";
 
-  const guard = await buildGuard(supabaseAdmin, row.user_id, undefined);
+  const guard = await buildGuard(supabaseAdmin, row.user_id, schedule.dailyLimit);
   let result: SendResult;
 
   if (guard.suppressed.has(message.email.trim().toLowerCase())) {
@@ -89,10 +89,11 @@ async function processCampaign(row: Row): Promise<string> {
       {
         senderName: row.sender_name,
         senderEmail: row.sender_email,
-        messages: [message],
+        messages: [{ email: message.email, subject: message.subject, html: message.html }],
       },
       { supabase: supabaseAdmin, userId: row.user_id, campaignId: row.id },
-      row.id,
+      // Tags extras do e-mail (campanha, categoria, variação…) separadas por "|".
+      [row.id, ...(Array.isArray(message.tags) ? message.tags : [])].join("|"),
     );
     result = sent ?? { email: message.email, success: false, error: "Sem resposta do provedor." };
     await logSendResults(supabaseAdmin, row.user_id, row.id, [result]);
