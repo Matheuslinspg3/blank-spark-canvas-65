@@ -76,9 +76,9 @@ async function postEmail(
   return { ok: false, error: lastError };
 }
 
-function missingKey(messages: { email: string }[]): SendResult[] {
+function missingKey(messages: { email?: string }[]): SendResult[] {
   return messages.map((message) => ({
-    email: message.email,
+    email: message.email ?? "",
     success: false,
     error: "Conexão com a Resend não configurada.",
   }));
