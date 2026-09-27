@@ -167,6 +167,33 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
     return variantByRow.get(row) ?? "A";
   }
 
+  // Listas grandes: mostra a lista aos poucos para não travar o navegador.
+  const [visibleCount, setVisibleCount] = useState(50);
+
+  /**
+   * Uma amostra por molde/variação (em vez de montar o HTML de todas as
+   * empresas a cada tecla): basta para conferir peso e link rastreável.
+   */
+  const sampleMessages = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { email: string; subject: string; html: string }[] = [];
+    for (const row of readyRows) {
+      const template = resolveTemplate(row, templates);
+      if (!template) continue;
+      const variant = variantByRow.get(row) ?? "A";
+      const key = `${template.id}:${variant}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        email: row["email"] ?? "",
+        subject: renderSubject(template, row, variant),
+        html: renderTemplateHtml(template, row, variant),
+      });
+    }
+    return out;
+  }, [readyRows, templates, variantByRow]);
+  const sampleHtml = useMemo(() => sampleMessages.map((m) => m.html), [sampleMessages]);
+
   const backupKey = `molde-draft:${campaign.id}`;
 
   // Backup local imediato: se a aba recarregar antes do autosave, nada se perde.
@@ -536,9 +563,10 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   }
 
   const missingCount = recipients.length - readyRows.length;
-  const oversizedCount = messagesFor(readyRows).filter(
+  const oversizedCount = sampleMessages.filter(
     (message) => htmlSizeBytes(message.html) >= GMAIL_SAFE_HTML_BYTES,
   ).length;
+  const visibleRecipients = recipients.slice(0, visibleCount);
 
   return (
     <main className="mx-auto w-full max-w-[900px] space-y-6 px-4 py-8">
@@ -1121,7 +1149,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
             </Alert>
           )}
 
-          {recipients.map((row, index) => {
+          {visibleRecipients.map((row, index) => {
             const template = resolveTemplate(row, templates);
             const ready = isRowReady(row, templates);
             return (
@@ -1167,6 +1195,17 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
             );
           })}
 
+          {recipients.length > visibleCount && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => setVisibleCount((count) => count + 100)}
+            >
+              Mostrar mais ({recipients.length - visibleCount} restantes)
+            </Button>
+          )}
+
           {recipients.length === 0 && (
             <p className="text-muted-foreground text-sm">Carregue o CSV para montar a lista.</p>
           )}
@@ -1208,7 +1247,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
           <ScheduleFields
             schedule={schedule}
             pending={readyRows.length}
-            contentToCheck={messagesFor(readyRows).map((message) => message.html)}
+            contentToCheck={sampleHtml}
             disabled={locked || oversizedCount > 0}
             onChange={setSchedule}
             onSchedule={() => void handleSchedule()}
