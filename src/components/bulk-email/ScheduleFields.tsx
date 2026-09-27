@@ -38,6 +38,11 @@ type Props = {
   nextSendAt?: string | null;
   onCancelSchedule?: () => void;
   cancelling?: boolean;
+  /** Limite diário gravado no servidor (para detectar mudança). */
+  savedDailyLimit?: number;
+  /** Salva o novo plano (limite/horário) sem cancelar a programação. */
+  onUpdatePlan?: (schedule: SendSchedule) => void;
+  updatingPlan?: boolean;
   /** Conteúdo do e-mail para conferir se existe link rastreável. */
   contentToCheck?: (string | null | undefined)[];
 };
