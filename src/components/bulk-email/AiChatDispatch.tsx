@@ -942,6 +942,9 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
               nextSendAt={campaign.next_send_at}
               onCancelSchedule={() => void handleCancelSchedule()}
               cancelling={cancelling}
+              savedDailyLimit={savedDailyLimit}
+              onUpdatePlan={(next) => void handleUpdatePlan(next)}
+              updatingPlan={updatingPlan}
             />
             {waiting && (
               <p className="text-muted-foreground text-xs">

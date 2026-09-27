@@ -753,6 +753,9 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
             nextSendAt={campaign.next_send_at}
             onCancelSchedule={() => void handleCancelSchedule()}
             cancelling={cancelling}
+            savedDailyLimit={savedDailyLimit}
+            onUpdatePlan={(next) => void handleUpdatePlan(next)}
+            updatingPlan={updatingPlan}
           />
 
           <DailyLimitBanner
