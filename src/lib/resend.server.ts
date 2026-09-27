@@ -1,6 +1,12 @@
 /**
- * Server-only Brevo sender. Calls are routed through the Lovable connector
- * gateway, which injects the Brevo credentials of the linked connection.
+ * Server-only Resend sender. Preparado para quando o conector Resend for
+ * vinculado ao projeto: as chamadas passam pelo gateway da Lovable, que
+ * injeta as credenciais da conexão. Enquanto a conexão não existir, o
+ * provedor ativo continua sendo a Brevo (ver email-provider.server.ts).
+ *
+ * Plano free da Resend: só entrega a partir de onboarding@resend.dev e
+ * apenas para o e-mail do dono da conta. Para enviar aos usuários do app,
+ * verifique um domínio no painel da Resend e use-o como remetente.
  */
 import {
   htmlToPlainText,
@@ -11,8 +17,8 @@ import {
 } from "./bulk-email";
 import { createTrackedHtml, type EmailTrackingContext } from "./email-link-tracking.server";
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/brevo";
-/** Brevo is called at most once per second to respect the campaign rate limit. */
+const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+/** Mesmo ritmo da Brevo: no máximo 1 envio por segundo. */
 const DELAY_MS = 1000;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -24,31 +30,23 @@ function isEmail(value: string): boolean {
 /** Quantas tentativas extras em falhas temporárias (429 / 5xx / rede). */
 const MAX_RETRIES = 3;
 
-/**
- * Envia um e-mail pela Brevo com novas tentativas automáticas quando a falha é
- * temporária (limite de taxa, instabilidade 5xx ou queda de conexão).
- */
 async function postEmail(
   lovableApiKey: string,
-  brevoKey: string,
+  resendKey: string,
   body: Record<string, unknown>,
-  tag?: string,
 ): Promise<{ ok: true; messageId?: string } | { ok: false; error: string }> {
-  // Marca cada envio com a tag do disparo: aparece nos relatórios da Brevo
-  // (Estatísticas > Transacional) e permite filtrar por campanha.
-  const payload = tag ? { ...body, tags: [tag] } : body;
   let lastError = "Erro desconhecido";
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
     if (attempt > 0) await sleep(2000 * attempt);
 
     try {
-      const response = await fetch(`${GATEWAY_URL}/smtp/email`, {
+      const response = await fetch(`${GATEWAY_URL}/emails`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${lovableApiKey}`,
-          "X-Connection-Api-Key": brevoKey,
+          "X-Connection-Api-Key": resendKey,
         },
         body: JSON.stringify(body),
       });
@@ -58,15 +56,15 @@ async function postEmail(
       if (response.ok) {
         let messageId: string | undefined;
         try {
-          messageId = (JSON.parse(text) as { messageId?: string }).messageId;
+          messageId = (JSON.parse(text) as { id?: string }).id;
         } catch {
           messageId = undefined;
         }
         return { ok: true, ...(messageId ? { messageId } : {}) };
       }
 
-      console.error(`Brevo send failed [${response.status}]: ${text}`);
-      lastError = `Brevo ${response.status}: ${text}`;
+      console.error(`Resend send failed [${response.status}]: ${text}`);
+      lastError = `Resend ${response.status}: ${text}`;
 
       const retryable = response.status === 429 || response.status >= 500;
       if (!retryable) return { ok: false, error: lastError };
@@ -78,21 +76,23 @@ async function postEmail(
   return { ok: false, error: lastError };
 }
 
-export async function sendCampaignViaBrevo(
+function missingKey(messages: { email?: string }[]): SendResult[] {
+  return messages.map((message) => ({
+    email: message.email ?? "",
+    success: false,
+    error: "Conexão com a Resend não configurada.",
+  }));
+}
+
+export async function sendCampaignViaResend(
   payload: SendBulkPayload,
   tracking?: EmailTrackingContext,
   tag?: string,
 ): Promise<SendResult[]> {
   const lovableApiKey = process.env["LOVABLE_API_KEY"];
-  const brevoKey = process.env["BREVO_API_KEY"];
+  const resendKey = process.env["RESEND_API_KEY"];
 
-  if (!lovableApiKey || !brevoKey) {
-    return payload.recipients.map((recipient) => ({
-      email: recipient["email"] ?? "",
-      success: false,
-      error: "Conexão com a Brevo não configurada.",
-    }));
-  }
+  if (!lovableApiKey || !resendKey) return missingKey(payload.recipients);
 
   if (!isEmail(payload.senderEmail)) {
     return payload.recipients.map((recipient) => ({
@@ -103,6 +103,8 @@ export async function sendCampaignViaBrevo(
   }
 
   const results: SendResult[] = [];
+  const from = `${payload.senderName} <${payload.senderEmail}>`;
+  const tags = tag ? [{ name: "campaign", value: tag }] : undefined;
 
   for (const [index, recipient] of payload.recipients.entries()) {
     const email = (recipient["email"] ?? "").trim();
@@ -118,20 +120,14 @@ export async function sendCampaignViaBrevo(
     const tracked = await createTrackedHtml(rendered, recipient, tracking);
     const htmlContent = tracked.html;
 
-    const outcome = await postEmail(
-      lovableApiKey,
-      brevoKey,
-      {
-        sender: { name: payload.senderName, email: payload.senderEmail },
-        to: [{ email }],
-        subject: interpolate(payload.subject, recipient),
-        htmlContent,
-        // Versão em texto puro + sem rastreio: sinais que ajudam o e-mail a
-        // cair na caixa principal em vez da aba Promoções.
-        textContent: htmlToPlainText(htmlContent),
-      },
-      tag,
-    );
+    const outcome = await postEmail(lovableApiKey, resendKey, {
+      from,
+      to: [email],
+      subject: interpolate(payload.subject, recipient),
+      html: htmlContent,
+      text: htmlToPlainText(htmlContent),
+      ...(tags ? { tags } : {}),
+    });
 
     results.push(
       outcome.ok
@@ -151,29 +147,18 @@ export async function sendCampaignViaBrevo(
 export type SimpleSendPayload = {
   senderName: string;
   senderEmail: string;
-  /** Um item por destinatário, com assunto e HTML já prontos. */
   messages: { email: string; subject: string; html: string }[];
 };
 
-/**
- * Disparo simples: cada destinatário tem assunto e corpo próprios, gerados
- * pela IA. Mesmo rate limit de 1 e-mail por segundo.
- */
-export async function sendSimpleCampaignViaBrevo(
+export async function sendSimpleCampaignViaResend(
   payload: SimpleSendPayload,
   tracking?: EmailTrackingContext,
   tag?: string,
 ): Promise<SendResult[]> {
   const lovableApiKey = process.env["LOVABLE_API_KEY"];
-  const brevoKey = process.env["BREVO_API_KEY"];
+  const resendKey = process.env["RESEND_API_KEY"];
 
-  if (!lovableApiKey || !brevoKey) {
-    return payload.messages.map((message) => ({
-      email: message.email,
-      success: false,
-      error: "Conexão com a Brevo não configurada.",
-    }));
-  }
+  if (!lovableApiKey || !resendKey) return missingKey(payload.messages);
 
   if (!isEmail(payload.senderEmail)) {
     return payload.messages.map((message) => ({
@@ -184,6 +169,8 @@ export async function sendSimpleCampaignViaBrevo(
   }
 
   const results: SendResult[] = [];
+  const from = `${payload.senderName} <${payload.senderEmail}>`;
+  const tags = tag ? [{ name: "campaign", value: tag }] : undefined;
 
   for (const [index, message] of payload.messages.entries()) {
     const email = message.email.trim();
@@ -200,18 +187,14 @@ export async function sendSimpleCampaignViaBrevo(
     if (index > 0) await sleep(DELAY_MS);
 
     const tracked = await createTrackedHtml(message.html, { email }, tracking);
-    const outcome = await postEmail(
-      lovableApiKey,
-      brevoKey,
-      {
-        sender: { name: payload.senderName, email: payload.senderEmail },
-        to: [{ email }],
-        subject: message.subject.trim(),
-        htmlContent: tracked.html,
-        textContent: htmlToPlainText(tracked.html),
-      },
-      tag,
-    );
+    const outcome = await postEmail(lovableApiKey, resendKey, {
+      from,
+      to: [email],
+      subject: message.subject.trim(),
+      html: tracked.html,
+      text: htmlToPlainText(tracked.html),
+      ...(tags ? { tags } : {}),
+    });
 
     results.push(
       outcome.ok

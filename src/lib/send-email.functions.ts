@@ -1,16 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  sendCampaignViaBrevo,
-  sendSimpleCampaignViaBrevo,
-  type SimpleSendPayload,
-} from "./brevo.server";
 import type { Recipient, SendBulkPayload, SendResult } from "./bulk-email";
 import { blockedResult, buildGuard, logSendResults } from "./deliverability.server";
+import { sendCampaign, sendSimpleCampaign } from "./email-provider.server";
 
 /** Campos extras aceitos por todos os disparos. */
 type GuardInput = { campaignId?: string; dailyLimit?: number };
+
+type SimpleSendPayload = {
+  senderName: string;
+  senderEmail: string;
+  messages: { email: string; subject: string; html: string }[];
+};
 
 export const sendBulkEmailsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -35,9 +37,10 @@ export const sendBulkEmailsFn = createServerFn({ method: "POST" })
 
     const sent =
       allowed.length > 0
-        ? await sendCampaignViaBrevo(
+        ? await sendCampaign(
             { ...data, recipients: allowed },
             { supabase: context.supabase, userId: context.userId, campaignId: data.campaignId },
+            data.campaignId,
           )
         : [];
     await logSendResults(context.supabase, context.userId, data.campaignId ?? null, sent);
@@ -68,9 +71,10 @@ export const sendSimpleEmailsFn = createServerFn({ method: "POST" })
 
     const sent =
       allowed.length > 0
-        ? await sendSimpleCampaignViaBrevo(
+        ? await sendSimpleCampaign(
             { ...data, messages: allowed },
             { supabase: context.supabase, userId: context.userId, campaignId: data.campaignId },
+            data.campaignId,
           )
         : [];
     await logSendResults(context.supabase, context.userId, data.campaignId ?? null, sent);
@@ -91,12 +95,16 @@ export const sendTestEmailFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: SendTestPayload) => data)
   .handler(async ({ data }) => {
-    const [result] = await sendCampaignViaBrevo({
-      senderName: data.senderName,
-      senderEmail: data.senderEmail,
-      subject: `[TESTE] ${data.subject}`,
-      htmlTemplate: data.htmlTemplate,
-      recipients: [{ ...data.recipient, email: data.to }],
-    });
+    const [result] = await sendCampaign(
+      {
+        senderName: data.senderName,
+        senderEmail: data.senderEmail,
+        subject: `[TESTE] ${data.subject}`,
+        htmlTemplate: data.htmlTemplate,
+        recipients: [{ ...data.recipient, email: data.to }],
+      },
+      undefined,
+      "teste",
+    );
     return result ?? { email: data.to, success: false, error: "Sem resposta do provedor." };
   });

@@ -7,7 +7,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { sendSimpleCampaignViaBrevo } from "@/lib/brevo.server";
+import { sendSimpleCampaign } from "@/lib/email-provider.server";
 import type { SendResult } from "@/lib/bulk-email";
 import { blockedResult, buildGuard, logSendResults } from "@/lib/deliverability.server";
 import type { QueuedMessage } from "@/lib/schedule-dispatch.functions";
@@ -85,13 +85,14 @@ async function processCampaign(row: Row): Promise<string> {
       .eq("id", row.id);
     return "limite-diario";
   } else {
-    const [sent] = await sendSimpleCampaignViaBrevo(
+    const [sent] = await sendSimpleCampaign(
       {
         senderName: row.sender_name,
         senderEmail: row.sender_email,
         messages: [message],
       },
       { supabase: supabaseAdmin, userId: row.user_id, campaignId: row.id },
+      row.id,
     );
     result = sent ?? { email: message.email, success: false, error: "Sem resposta do provedor." };
     await logSendResults(supabaseAdmin, row.user_id, row.id, [result]);
