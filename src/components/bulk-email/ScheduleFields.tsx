@@ -207,7 +207,7 @@ export function ScheduleFields({
                 max={5000}
                 className="h-9 w-[140px]"
                 value={limitDraft ?? String(schedule.dailyLimit)}
-                disabled={disabled || scheduled}
+                disabled={!limitEditable}
                 onChange={(event) => {
                   const raw = event.target.value;
                   setLimitDraft(raw);
