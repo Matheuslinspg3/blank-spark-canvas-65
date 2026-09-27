@@ -76,6 +76,34 @@ export const scheduleCampaignFn = createServerFn({ method: "POST" })
     );
   });
 
+/**
+ * Atualiza o plano de envio (horário, dias, limite diário) de um disparo já
+ * programado, sem cancelar nem perder a fila. Recalcula o próximo envio para
+ * o robô respeitar o novo plano já no dia de hoje, se a janela permitir.
+ */
+export const updateSchedulePlanFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { campaignId: string; schedule: SendSchedule }) => data)
+  .handler(async ({ data, context }) => {
+    const schedule = parseSchedule(data.schedule);
+    const patch: Record<string, unknown> = {
+      schedule,
+      send_plan: schedule,
+      next_send_at: nextSlotAt(schedule).toISOString(),
+    };
+    const { error } = await runUserScopedOperation(context.supabase, (client) =>
+      client
+        .from("campaigns")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update(patch as any)
+        .eq("id", data.campaignId)
+        .eq("user_id", context.userId)
+        .eq("status", "agendado"),
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true, dailyLimit: schedule.dailyLimit };
+  });
+
 /** Pausa ou retoma um disparo programado, sem perder a fila. */
 export const setCampaignPausedFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
