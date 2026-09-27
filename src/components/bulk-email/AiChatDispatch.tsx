@@ -59,10 +59,20 @@ import {
   type CampaignStatus,
 } from "@/lib/campaigns";
 import { listCampaigns, updateCampaign } from "@/lib/campaigns.functions";
-import { cancelScheduleFn, scheduleCampaignFn, updateSchedulePlanFn } from "@/lib/schedule-dispatch.functions";
+import {
+  cancelScheduleFn,
+  scheduleCampaignFn,
+  updateSchedulePlanFn,
+} from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
-import { DEFAULT_SCHEDULE, parseSchedule, sleep, waitForWindow, type SendSchedule } from "@/lib/send-schedule";
+import {
+  DEFAULT_SCHEDULE,
+  parseSchedule,
+  sleep,
+  waitForWindow,
+  type SendSchedule,
+} from "@/lib/send-schedule";
 import {
   TEMPLATE_PRESETS,
   parseTemplatePlan,
@@ -130,11 +140,9 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
   const [pendingSend, setPendingSend] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   // Ao reabrir um disparo já programado, carrega o plano salvo no servidor.
-  const [schedule, setSchedule] = useState<SendSchedule>(() =>
-    parseSchedule(campaign.send_plan ?? campaign.schedule),
-  );
+  const [schedule, setSchedule] = useState<SendSchedule>(() => parseSchedule(campaign.schedule));
   const [savedDailyLimit, setSavedDailyLimit] = useState(
-    () => parseSchedule(campaign.send_plan ?? campaign.schedule).dailyLimit,
+    () => parseSchedule(campaign.schedule).dailyLimit,
   );
   const [updatingPlan, setUpdatingPlan] = useState(false);
   const [waiting, setWaiting] = useState(false);

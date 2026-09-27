@@ -58,10 +58,20 @@ import {
   type CampaignStatus,
 } from "@/lib/campaigns";
 import { updateCampaign } from "@/lib/campaigns.functions";
-import { cancelScheduleFn, scheduleCampaignFn, updateSchedulePlanFn } from "@/lib/schedule-dispatch.functions";
+import {
+  cancelScheduleFn,
+  scheduleCampaignFn,
+  updateSchedulePlanFn,
+} from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
-import { DEFAULT_SCHEDULE, parseSchedule, sleep, waitForWindow, type SendSchedule } from "@/lib/send-schedule";
+import {
+  DEFAULT_SCHEDULE,
+  parseSchedule,
+  sleep,
+  waitForWindow,
+  type SendSchedule,
+} from "@/lib/send-schedule";
 import {
   SAMPLE_TEMPLATE_BODY,
   TEMPLATE_ID_COLUMN,
@@ -120,11 +130,9 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   // Ao reabrir um disparo já programado, carrega o plano salvo no servidor.
-  const [schedule, setSchedule] = useState<SendSchedule>(() =>
-    parseSchedule(campaign.send_plan ?? campaign.schedule),
-  );
+  const [schedule, setSchedule] = useState<SendSchedule>(() => parseSchedule(campaign.schedule));
   const [savedDailyLimit, setSavedDailyLimit] = useState(
-    () => parseSchedule(campaign.send_plan ?? campaign.schedule).dailyLimit,
+    () => parseSchedule(campaign.schedule).dailyLimit,
   );
   const [updatingPlan, setUpdatingPlan] = useState(false);
   const [waiting, setWaiting] = useState(false);

@@ -308,9 +308,7 @@ export function ScheduleFields({
                 ) : (
                   <CalendarClock className="size-4" />
                 )}
-                {updatingPlan
-                  ? "Salvando…"
-                  : `Salvar novo limite (${schedule.dailyLimit}/dia)`}
+                {updatingPlan ? "Salvando…" : `Salvar novo limite (${schedule.dailyLimit}/dia)`}
               </Button>
             )}
             {onCancelSchedule && (
