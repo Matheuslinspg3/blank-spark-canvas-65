@@ -48,10 +48,10 @@ import {
   type CampaignStatus,
 } from "@/lib/campaigns";
 import { updateCampaign } from "@/lib/campaigns.functions";
-import { cancelScheduleFn, scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
+import { cancelScheduleFn, scheduleCampaignFn, updateSchedulePlanFn } from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
-import { DEFAULT_SCHEDULE, sleep, waitForWindow, type SendSchedule } from "@/lib/send-schedule";
+import { DEFAULT_SCHEDULE, parseSchedule, sleep, waitForWindow, type SendSchedule } from "@/lib/send-schedule";
 import {
   SIMPLE_BODY_COLUMN,
   SIMPLE_SUBJECT_COLUMN,
@@ -80,6 +80,7 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
   const sendSimple = useServerFn(sendSimpleEmailsFn);
   const scheduleCampaign = useServerFn(scheduleCampaignFn);
   const cancelSchedule = useServerFn(cancelScheduleFn);
+  const updatePlan = useServerFn(updateSchedulePlanFn);
   const guard = useSendGuard(campaign.id);
 
   const [name, setName] = useState(campaign.name);
@@ -98,7 +99,14 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [schedule, setSchedule] = useState<SendSchedule>(DEFAULT_SCHEDULE);
+  // Ao reabrir um disparo já programado, carrega o plano salvo no servidor.
+  const [schedule, setSchedule] = useState<SendSchedule>(() =>
+    parseSchedule(campaign.send_plan ?? campaign.schedule),
+  );
+  const [savedDailyLimit, setSavedDailyLimit] = useState(
+    () => parseSchedule(campaign.send_plan ?? campaign.schedule).dailyLimit,
+  );
+  const [updatingPlan, setUpdatingPlan] = useState(false);
   const [waitingWindow, setWaitingWindow] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [testing, setTesting] = useState(false);

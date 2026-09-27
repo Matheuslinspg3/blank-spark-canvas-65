@@ -59,10 +59,10 @@ import {
   type CampaignStatus,
 } from "@/lib/campaigns";
 import { listCampaigns, updateCampaign } from "@/lib/campaigns.functions";
-import { cancelScheduleFn, scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
+import { cancelScheduleFn, scheduleCampaignFn, updateSchedulePlanFn } from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
-import { DEFAULT_SCHEDULE, sleep, waitForWindow, type SendSchedule } from "@/lib/send-schedule";
+import { DEFAULT_SCHEDULE, parseSchedule, sleep, waitForWindow, type SendSchedule } from "@/lib/send-schedule";
 import {
   TEMPLATE_PRESETS,
   parseTemplatePlan,
@@ -109,6 +109,7 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
   const sendSimple = useServerFn(sendSimpleEmailsFn);
   const scheduleCampaign = useServerFn(scheduleCampaignFn);
   const cancelSchedule = useServerFn(cancelScheduleFn);
+  const updatePlan = useServerFn(updateSchedulePlanFn);
   const guard = useSendGuard(campaign.id);
 
   const [status, setStatus] = useState<CampaignStatus>(campaign.status);
@@ -128,7 +129,14 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
   const [progress, setProgress] = useState(0);
   const [pendingSend, setPendingSend] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [schedule, setSchedule] = useState<SendSchedule>(DEFAULT_SCHEDULE);
+  // Ao reabrir um disparo já programado, carrega o plano salvo no servidor.
+  const [schedule, setSchedule] = useState<SendSchedule>(() =>
+    parseSchedule(campaign.send_plan ?? campaign.schedule),
+  );
+  const [savedDailyLimit, setSavedDailyLimit] = useState(
+    () => parseSchedule(campaign.send_plan ?? campaign.schedule).dailyLimit,
+  );
+  const [updatingPlan, setUpdatingPlan] = useState(false);
   const [waiting, setWaiting] = useState(false);
 
   // Moldes já criados nos disparos "com molde" + moldes prontos da CAFCM.
