@@ -295,17 +295,42 @@ export function ScheduleFields({
               ? ` · próximo envio ${new Date(nextSendAt).toLocaleString("pt-BR")}`
               : " · começa assim que a janela abrir"}
           </p>
-          {onCancelSchedule && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={cancelling}
-              onClick={onCancelSchedule}
-            >
-              <XCircle className="size-4" />
-              {cancelling ? "Cancelando…" : "Cancelar agendamento"}
-            </Button>
+          <div className="flex flex-wrap gap-2">
+            {onUpdatePlan && limitChanged && (
+              <Button
+                type="button"
+                size="sm"
+                disabled={updatingPlan}
+                onClick={() => onUpdatePlan(schedule)}
+              >
+                {updatingPlan ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <CalendarClock className="size-4" />
+                )}
+                {updatingPlan
+                  ? "Salvando…"
+                  : `Salvar novo limite (${schedule.dailyLimit}/dia)`}
+              </Button>
+            )}
+            {onCancelSchedule && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={cancelling}
+                onClick={onCancelSchedule}
+              >
+                <XCircle className="size-4" />
+                {cancelling ? "Cancelando…" : "Cancelar agendamento"}
+              </Button>
+            )}
+          </div>
+          {onUpdatePlan && (
+            <p className="text-muted-foreground text-xs">
+              Para mudar o limite diário, edite o campo "Máximo por dia" acima e clique em salvar —
+              não precisa cancelar a programação.
+            </p>
           )}
         </div>
       )}
