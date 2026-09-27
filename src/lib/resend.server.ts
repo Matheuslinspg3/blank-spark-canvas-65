@@ -104,7 +104,9 @@ export async function sendCampaignViaResend(
 
   const results: SendResult[] = [];
   const from = `${payload.senderName} <${payload.senderEmail}>`;
-  const tags = tag ? [{ name: "campaign", value: tag }] : undefined;
+  const tags = tag
+    ? [{ name: "campaign", value: tag.split("|")[0]!.replace(/[^A-Za-z0-9_-]/g, "_") }]
+    : undefined;
 
   for (const [index, recipient] of payload.recipients.entries()) {
     const email = (recipient["email"] ?? "").trim();
@@ -170,7 +172,9 @@ export async function sendSimpleCampaignViaResend(
 
   const results: SendResult[] = [];
   const from = `${payload.senderName} <${payload.senderEmail}>`;
-  const tags = tag ? [{ name: "campaign", value: tag }] : undefined;
+  const tags = tag
+    ? [{ name: "campaign", value: tag.split("|")[0]!.replace(/[^A-Za-z0-9_-]/g, "_") }]
+    : undefined;
 
   for (const [index, message] of payload.messages.entries()) {
     const email = message.email.trim();

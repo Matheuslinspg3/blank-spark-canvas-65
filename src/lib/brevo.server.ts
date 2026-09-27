@@ -36,7 +36,15 @@ async function postEmail(
 ): Promise<{ ok: true; messageId?: string } | { ok: false; error: string }> {
   // Marca cada envio com a tag do disparo: aparece nos relatórios da Brevo
   // (Estatísticas > Transacional) e permite filtrar por campanha.
-  const payload = tag ? { ...body, tags: [tag] } : body;
+  const payload = tag
+    ? {
+        ...body,
+        tags: tag
+          .split("|")
+          .map((item) => item.trim())
+          .filter(Boolean),
+      }
+    : body;
   let lastError = "Erro desconhecido";
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {

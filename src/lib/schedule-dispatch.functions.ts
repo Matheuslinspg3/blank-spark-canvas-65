@@ -11,7 +11,18 @@ import { brtDateKey, nextSlotAt, parseSchedule, type SendSchedule } from "./send
 import { requireTrackableLink } from "./trackable-link";
 import { runUserScopedOperation } from "./user-scoped-query";
 
-export type QueuedMessage = { email: string; subject: string; html: string };
+export type QueuedMessage = {
+  email: string;
+  subject: string;
+  /** HTML pronto. Pode vir vazio quando a fila guarda só o molde + variáveis. */
+  html: string;
+  tags?: string[];
+  /** Fila compacta: id do molde (no plano da campanha) e variação usada. */
+  templateId?: string;
+  variant?: "A" | "B";
+  /** Valores das variáveis {{coluna}} do molde para este destinatário. */
+  vars?: Record<string, string>;
+};
 
 export type ScheduleInput = {
   campaignId: string;

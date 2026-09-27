@@ -11,7 +11,26 @@ import { sendSimpleCampaign } from "@/lib/email-provider.server";
 import type { SendResult } from "@/lib/bulk-email";
 import { blockedResult, buildGuard, logSendResults } from "@/lib/deliverability.server";
 import type { QueuedMessage } from "@/lib/schedule-dispatch.functions";
+import { escapeHtml } from "@/lib/bulk-email";
+import { parseTemplatePlan } from "@/lib/template-dispatch";
 import { brtDateKey, isWithinPlanTz, nextSlotAt, parseSchedule } from "@/lib/send-schedule";
+
+/**
+ * Fila compacta: quando a mensagem não traz o HTML pronto, monta a partir do
+ * molde guardado no plano da campanha (brief), trocando as variáveis {{coluna}}.
+ */
+function resolveHtml(row: Row, message: QueuedMessage): string {
+  if (message.html || !message.templateId) return message.html;
+  const template = parseTemplatePlan(row.brief).templates.find(
+    (item) => item.id === message.templateId,
+  );
+  if (!template) return message.html;
+  const body = message.variant === "B" && template.bodyB ? template.bodyB : template.body;
+  const vars = message.vars ?? {};
+  return body.replace(/\{\{\s*([\w]+)\s*\}\}/g, (match, key: string) =>
+    key in vars ? escapeHtml(vars[key] ?? "") : match,
+  );
+}
 
 /** Quantas campanhas são atendidas por chamada. */
 const MAX_CAMPAIGNS = 5;
@@ -20,6 +39,7 @@ type Row = {
   id: string;
   user_id: string;
   schedule: unknown;
+  brief: string | null;
   queue: QueuedMessage[] | null;
   results: SendResult[] | null;
   sent_count: number;
@@ -71,7 +91,7 @@ async function processCampaign(row: Row): Promise<string> {
   const [message, ...rest] = queue;
   if (!message) return "vazio";
 
-  const guard = await buildGuard(supabaseAdmin, row.user_id, undefined);
+  const guard = await buildGuard(supabaseAdmin, row.user_id, schedule.dailyLimit);
   let result: SendResult;
 
   if (guard.suppressed.has(message.email.trim().toLowerCase())) {
@@ -89,10 +109,13 @@ async function processCampaign(row: Row): Promise<string> {
       {
         senderName: row.sender_name,
         senderEmail: row.sender_email,
-        messages: [message],
+        messages: [
+          { email: message.email, subject: message.subject, html: resolveHtml(row, message) },
+        ],
       },
       { supabase: supabaseAdmin, userId: row.user_id, campaignId: row.id },
-      row.id,
+      // Tags extras do e-mail (campanha, categoria, variação…) separadas por "|".
+      [row.id, ...(Array.isArray(message.tags) ? message.tags : [])].join("|"),
     );
     result = sent ?? { email: message.email, success: false, error: "Sem resposta do provedor." };
     await logSendResults(supabaseAdmin, row.user_id, row.id, [result]);
@@ -141,7 +164,7 @@ async function run(request: Request): Promise<Response> {
   const { data, error } = await supabaseAdmin
     .from("campaigns")
     .select(
-      "id, user_id, schedule, queue, results, sent_count, sender_name, sender_email, daily_sent_count, daily_sent_date",
+      "id, user_id, schedule, brief, queue, results, sent_count, sender_name, sender_email, daily_sent_count, daily_sent_date",
     )
     .eq("status", "agendado")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
