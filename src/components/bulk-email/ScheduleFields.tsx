@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   AlertTriangle,
   CalendarCheck2,
@@ -55,6 +56,7 @@ export function ScheduleFields({
   cancelling,
   contentToCheck,
 }: Props) {
+  const [limitDraft, setLimitDraft] = useState<string | null>(null);
   const perDay = dailyCapacity(schedule);
   const spansDays = schedule.enabled && pending > perDay;
   const warning = spansDays ? null : windowWarning(schedule, pending);
@@ -192,11 +194,17 @@ export function ScheduleFields({
                 min={1}
                 max={5000}
                 className="h-9 w-[140px]"
-                value={schedule.dailyLimit}
+                value={limitDraft ?? String(schedule.dailyLimit)}
                 disabled={disabled || scheduled}
-                onChange={(event) =>
-                  onChange({ ...schedule, dailyLimit: clampDailyLimit(Number(event.target.value)) })
-                }
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  setLimitDraft(raw);
+                  const num = Number(raw);
+                  if (raw !== "" && Number.isFinite(num) && num > 0) {
+                    onChange({ ...schedule, dailyLimit: clampDailyLimit(num) });
+                  }
+                }}
+                onBlur={() => setLimitDraft(null)}
               />
             </div>
           </div>
