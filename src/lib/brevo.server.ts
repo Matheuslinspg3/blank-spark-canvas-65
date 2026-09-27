@@ -81,6 +81,7 @@ async function postEmail(
 export async function sendCampaignViaBrevo(
   payload: SendBulkPayload,
   tracking?: EmailTrackingContext,
+  tag?: string,
 ): Promise<SendResult[]> {
   const lovableApiKey = process.env["LOVABLE_API_KEY"];
   const brevoKey = process.env["BREVO_API_KEY"];
@@ -117,15 +118,20 @@ export async function sendCampaignViaBrevo(
     const tracked = await createTrackedHtml(rendered, recipient, tracking);
     const htmlContent = tracked.html;
 
-    const outcome = await postEmail(lovableApiKey, brevoKey, {
-      sender: { name: payload.senderName, email: payload.senderEmail },
-      to: [{ email }],
-      subject: interpolate(payload.subject, recipient),
-      htmlContent,
-      // Versão em texto puro + sem rastreio: sinais que ajudam o e-mail a
-      // cair na caixa principal em vez da aba Promoções.
-      textContent: htmlToPlainText(htmlContent),
-    });
+    const outcome = await postEmail(
+      lovableApiKey,
+      brevoKey,
+      {
+        sender: { name: payload.senderName, email: payload.senderEmail },
+        to: [{ email }],
+        subject: interpolate(payload.subject, recipient),
+        htmlContent,
+        // Versão em texto puro + sem rastreio: sinais que ajudam o e-mail a
+        // cair na caixa principal em vez da aba Promoções.
+        textContent: htmlToPlainText(htmlContent),
+      },
+      tag,
+    );
 
     results.push(
       outcome.ok
@@ -156,6 +162,7 @@ export type SimpleSendPayload = {
 export async function sendSimpleCampaignViaBrevo(
   payload: SimpleSendPayload,
   tracking?: EmailTrackingContext,
+  tag?: string,
 ): Promise<SendResult[]> {
   const lovableApiKey = process.env["LOVABLE_API_KEY"];
   const brevoKey = process.env["BREVO_API_KEY"];
@@ -193,13 +200,18 @@ export async function sendSimpleCampaignViaBrevo(
     if (index > 0) await sleep(DELAY_MS);
 
     const tracked = await createTrackedHtml(message.html, { email }, tracking);
-    const outcome = await postEmail(lovableApiKey, brevoKey, {
-      sender: { name: payload.senderName, email: payload.senderEmail },
-      to: [{ email }],
-      subject: message.subject.trim(),
-      htmlContent: tracked.html,
-      textContent: htmlToPlainText(tracked.html),
-    });
+    const outcome = await postEmail(
+      lovableApiKey,
+      brevoKey,
+      {
+        sender: { name: payload.senderName, email: payload.senderEmail },
+        to: [{ email }],
+        subject: message.subject.trim(),
+        htmlContent: tracked.html,
+        textContent: htmlToPlainText(tracked.html),
+      },
+      tag,
+    );
 
     results.push(
       outcome.ok
