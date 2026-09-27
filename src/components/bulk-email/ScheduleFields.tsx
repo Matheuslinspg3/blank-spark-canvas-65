@@ -59,6 +59,9 @@ export function ScheduleFields({
   nextSendAt,
   onCancelSchedule,
   cancelling,
+  savedDailyLimit,
+  onUpdatePlan,
+  updatingPlan,
   contentToCheck,
 }: Props) {
   const [limitDraft, setLimitDraft] = useState<string | null>(null);
@@ -67,6 +70,10 @@ export function ScheduleFields({
   const warning = spansDays ? null : windowWarning(schedule, pending);
   const linkChecked = Array.isArray(contentToCheck) && contentToCheck.some((item) => Boolean(item));
   const missingLink = linkChecked && !hasTrackableLink(...contentToCheck!);
+  // Com o disparo já programado, só o limite diário continua editável.
+  const limitEditable = !disabled && (!scheduled || Boolean(onUpdatePlan));
+  const limitChanged =
+    scheduled && savedDailyLimit !== undefined && schedule.dailyLimit !== savedDailyLimit;
 
   const toggleWeekday = (day: number) => {
     const next = schedule.weekdays.includes(day)
