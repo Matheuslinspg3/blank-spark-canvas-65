@@ -48,10 +48,20 @@ import {
   type CampaignStatus,
 } from "@/lib/campaigns";
 import { updateCampaign } from "@/lib/campaigns.functions";
-import { cancelScheduleFn, scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
+import {
+  cancelScheduleFn,
+  scheduleCampaignFn,
+  updateSchedulePlanFn,
+} from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
-import { DEFAULT_SCHEDULE, sleep, waitForWindow, type SendSchedule } from "@/lib/send-schedule";
+import {
+  DEFAULT_SCHEDULE,
+  parseSchedule,
+  sleep,
+  waitForWindow,
+  type SendSchedule,
+} from "@/lib/send-schedule";
 import {
   SIMPLE_BODY_COLUMN,
   SIMPLE_SUBJECT_COLUMN,
@@ -80,6 +90,7 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
   const sendSimple = useServerFn(sendSimpleEmailsFn);
   const scheduleCampaign = useServerFn(scheduleCampaignFn);
   const cancelSchedule = useServerFn(cancelScheduleFn);
+  const updatePlan = useServerFn(updateSchedulePlanFn);
   const guard = useSendGuard(campaign.id);
 
   const [name, setName] = useState(campaign.name);
@@ -98,7 +109,12 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [schedule, setSchedule] = useState<SendSchedule>(DEFAULT_SCHEDULE);
+  // Ao reabrir um disparo já programado, carrega o plano salvo no servidor.
+  const [schedule, setSchedule] = useState<SendSchedule>(() => parseSchedule(campaign.schedule));
+  const [savedDailyLimit, setSavedDailyLimit] = useState(
+    () => parseSchedule(campaign.schedule).dailyLimit,
+  );
+  const [updatingPlan, setUpdatingPlan] = useState(false);
   const [waitingWindow, setWaitingWindow] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [testing, setTesting] = useState(false);
@@ -291,6 +307,20 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
       toast.error(error instanceof Error ? error.message : "Falha ao cancelar.");
     } finally {
       setCancelling(false);
+    }
+  }
+
+  /** Atualiza limite diário/horário sem cancelar a programação nem perder a fila. */
+  async function handleUpdatePlan(next: SendSchedule) {
+    setUpdatingPlan(true);
+    try {
+      await updatePlan({ data: { campaignId: campaign.id, schedule: next } });
+      setSavedDailyLimit(next.dailyLimit);
+      toast.success(`Limite diário atualizado para ${next.dailyLimit} e-mails.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao atualizar o limite.");
+    } finally {
+      setUpdatingPlan(false);
     }
   }
 
@@ -731,6 +761,9 @@ export function SimpleDispatch({ campaign }: { campaign: Campaign }) {
             nextSendAt={campaign.next_send_at}
             onCancelSchedule={() => void handleCancelSchedule()}
             cancelling={cancelling}
+            savedDailyLimit={savedDailyLimit}
+            onUpdatePlan={(next) => void handleUpdatePlan(next)}
+            updatingPlan={updatingPlan}
           />
 
           <DailyLimitBanner

@@ -38,6 +38,11 @@ type Props = {
   nextSendAt?: string | null;
   onCancelSchedule?: () => void;
   cancelling?: boolean;
+  /** Limite diário gravado no servidor (para detectar mudança). */
+  savedDailyLimit?: number;
+  /** Salva o novo plano (limite/horário) sem cancelar a programação. */
+  onUpdatePlan?: (schedule: SendSchedule) => void;
+  updatingPlan?: boolean;
   /** Conteúdo do e-mail para conferir se existe link rastreável. */
   contentToCheck?: (string | null | undefined)[];
 };
@@ -54,6 +59,9 @@ export function ScheduleFields({
   nextSendAt,
   onCancelSchedule,
   cancelling,
+  savedDailyLimit,
+  onUpdatePlan,
+  updatingPlan,
   contentToCheck,
 }: Props) {
   const [limitDraft, setLimitDraft] = useState<string | null>(null);
@@ -62,6 +70,10 @@ export function ScheduleFields({
   const warning = spansDays ? null : windowWarning(schedule, pending);
   const linkChecked = Array.isArray(contentToCheck) && contentToCheck.some((item) => Boolean(item));
   const missingLink = linkChecked && !hasTrackableLink(...contentToCheck!);
+  // Com o disparo já programado, só o limite diário continua editável.
+  const limitEditable = !disabled && (!scheduled || Boolean(onUpdatePlan));
+  const limitChanged =
+    scheduled && savedDailyLimit !== undefined && schedule.dailyLimit !== savedDailyLimit;
 
   const toggleWeekday = (day: number) => {
     const next = schedule.weekdays.includes(day)
@@ -195,7 +207,7 @@ export function ScheduleFields({
                 max={5000}
                 className="h-9 w-[140px]"
                 value={limitDraft ?? String(schedule.dailyLimit)}
-                disabled={disabled || scheduled}
+                disabled={!limitEditable}
                 onChange={(event) => {
                   const raw = event.target.value;
                   setLimitDraft(raw);
@@ -283,17 +295,40 @@ export function ScheduleFields({
               ? ` · próximo envio ${new Date(nextSendAt).toLocaleString("pt-BR")}`
               : " · começa assim que a janela abrir"}
           </p>
-          {onCancelSchedule && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={cancelling}
-              onClick={onCancelSchedule}
-            >
-              <XCircle className="size-4" />
-              {cancelling ? "Cancelando…" : "Cancelar agendamento"}
-            </Button>
+          <div className="flex flex-wrap gap-2">
+            {onUpdatePlan && limitChanged && (
+              <Button
+                type="button"
+                size="sm"
+                disabled={updatingPlan}
+                onClick={() => onUpdatePlan(schedule)}
+              >
+                {updatingPlan ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <CalendarClock className="size-4" />
+                )}
+                {updatingPlan ? "Salvando…" : `Salvar novo limite (${schedule.dailyLimit}/dia)`}
+              </Button>
+            )}
+            {onCancelSchedule && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={cancelling}
+                onClick={onCancelSchedule}
+              >
+                <XCircle className="size-4" />
+                {cancelling ? "Cancelando…" : "Cancelar agendamento"}
+              </Button>
+            )}
+          </div>
+          {onUpdatePlan && (
+            <p className="text-muted-foreground text-xs">
+              Para mudar o limite diário, edite o campo "Máximo por dia" acima e clique em salvar —
+              não precisa cancelar a programação.
+            </p>
           )}
         </div>
       )}

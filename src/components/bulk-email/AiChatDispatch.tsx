@@ -59,10 +59,20 @@ import {
   type CampaignStatus,
 } from "@/lib/campaigns";
 import { listCampaigns, updateCampaign } from "@/lib/campaigns.functions";
-import { cancelScheduleFn, scheduleCampaignFn } from "@/lib/schedule-dispatch.functions";
+import {
+  cancelScheduleFn,
+  scheduleCampaignFn,
+  updateSchedulePlanFn,
+} from "@/lib/schedule-dispatch.functions";
 import { sendSimpleEmailsFn } from "@/lib/send-email.functions";
 import { defaultSender, loadSenders } from "@/lib/senders";
-import { DEFAULT_SCHEDULE, sleep, waitForWindow, type SendSchedule } from "@/lib/send-schedule";
+import {
+  DEFAULT_SCHEDULE,
+  parseSchedule,
+  sleep,
+  waitForWindow,
+  type SendSchedule,
+} from "@/lib/send-schedule";
 import {
   TEMPLATE_PRESETS,
   parseTemplatePlan,
@@ -109,6 +119,7 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
   const sendSimple = useServerFn(sendSimpleEmailsFn);
   const scheduleCampaign = useServerFn(scheduleCampaignFn);
   const cancelSchedule = useServerFn(cancelScheduleFn);
+  const updatePlan = useServerFn(updateSchedulePlanFn);
   const guard = useSendGuard(campaign.id);
 
   const [status, setStatus] = useState<CampaignStatus>(campaign.status);
@@ -128,7 +139,12 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
   const [progress, setProgress] = useState(0);
   const [pendingSend, setPendingSend] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [schedule, setSchedule] = useState<SendSchedule>(DEFAULT_SCHEDULE);
+  // Ao reabrir um disparo já programado, carrega o plano salvo no servidor.
+  const [schedule, setSchedule] = useState<SendSchedule>(() => parseSchedule(campaign.schedule));
+  const [savedDailyLimit, setSavedDailyLimit] = useState(
+    () => parseSchedule(campaign.schedule).dailyLimit,
+  );
+  const [updatingPlan, setUpdatingPlan] = useState(false);
   const [waiting, setWaiting] = useState(false);
 
   // Moldes já criados nos disparos "com molde" + moldes prontos da CAFCM.
@@ -362,6 +378,20 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
       toast.error(error instanceof Error ? error.message : "Falha ao cancelar.");
     } finally {
       setCancelling(false);
+    }
+  }
+
+  /** Atualiza limite diário/horário sem cancelar a programação nem perder a fila. */
+  async function handleUpdatePlan(next: SendSchedule) {
+    setUpdatingPlan(true);
+    try {
+      await updatePlan({ data: { campaignId: campaign.id, schedule: next } });
+      setSavedDailyLimit(next.dailyLimit);
+      toast.success(`Limite diário atualizado para ${next.dailyLimit} e-mails.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao atualizar o limite.");
+    } finally {
+      setUpdatingPlan(false);
     }
   }
 
@@ -920,6 +950,9 @@ export function AiChatDispatch({ campaign }: { campaign: Campaign }) {
               nextSendAt={campaign.next_send_at}
               onCancelSchedule={() => void handleCancelSchedule()}
               cancelling={cancelling}
+              savedDailyLimit={savedDailyLimit}
+              onUpdatePlan={(next) => void handleUpdatePlan(next)}
+              updatingPlan={updatingPlan}
             />
             {waiting && (
               <p className="text-muted-foreground text-xs">
