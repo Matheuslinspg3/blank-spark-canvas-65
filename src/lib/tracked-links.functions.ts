@@ -148,17 +148,25 @@ export const listTrackedLinksFn = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<TrackedLinksResult> => {
     const origin = trackingOrigin();
     const supabase = context.supabase as unknown as LooseClient;
-    const { data: rows, error } = await runUserScopedOperation(supabase, (client) =>
-      client
-        .from("email_link_tracks")
-        .select(
-          "id,destination_url,recipient_email,campaign_id,click_count,first_clicked_at,last_clicked_at,created_at,token,mode,bridge_config",
-        )
-        .eq("user_id", context.userId)
-        .order("created_at", { ascending: false })
-        .limit(500),
-    );
-    if (error) throw new Error(error.message);
+    // Busca todos os links em lotes (o Supabase limita cada consulta a 1000 linhas)
+    const PAGE_SIZE = 1000;
+    const rows: unknown[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data: page, error } = await runUserScopedOperation(supabase, (client) =>
+        client
+          .from("email_link_tracks")
+          .select(
+            "id,destination_url,recipient_email,campaign_id,click_count,first_clicked_at,last_clicked_at,created_at,token,mode,bridge_config",
+          )
+          .eq("user_id", context.userId)
+          .order("created_at", { ascending: false })
+          .range(from, from + PAGE_SIZE - 1),
+      );
+      if (error) throw new Error(error.message);
+      const batch = (page ?? []) as unknown[];
+      rows.push(...batch);
+      if (batch.length < PAGE_SIZE) break;
+    }
 
     const typedRows = (rows ?? []) as (Omit<
       TrackedLink,
