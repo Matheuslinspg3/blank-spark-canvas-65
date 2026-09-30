@@ -95,6 +95,22 @@ export const listClickersFn = createServerFn({ method: "GET" })
       );
       for (const c of (camps ?? []) as { id: string; name: string }[]) names.set(c.id, c.name);
     }
+    // Data de envio: vem do evento de e-mail vinculado ao link
+    const eventIds = [
+      ...new Set(tracks.map((t) => t.email_event_id).filter(Boolean)),
+    ] as string[];
+    const sentAt = new Map<string, string>();
+    for (let i = 0; i < eventIds.length; i += 200) {
+      const { data: events } = await runUserScopedOperation(supabase, (c) =>
+        c
+          .from("email_events")
+          .select("id,sent_at")
+          .eq("user_id", context.userId)
+          .in("id", eventIds.slice(i, i + 200)),
+      );
+      for (const e of (events ?? []) as { id: string; sent_at: string | null }[])
+        if (e.sent_at) sentAt.set(e.id, e.sent_at);
+    }
     return tracks.map((t) => ({
       id: t.id,
       recipient_email: t.recipient_email,
@@ -103,6 +119,7 @@ export const listClickersFn = createServerFn({ method: "GET" })
       click_count: t.click_count,
       first_clicked_at: t.first_clicked_at,
       last_clicked_at: t.last_clicked_at,
+      sent_at: t.email_event_id ? (sentAt.get(t.email_event_id) ?? null) : null,
       mode: t.mode === "bridge" ? "bridge" : "redirect",
       destination_url: t.destination_url,
     }));
