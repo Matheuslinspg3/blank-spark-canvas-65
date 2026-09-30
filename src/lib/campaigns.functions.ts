@@ -23,26 +23,36 @@ async function runUserScopedOperation<T>(
   return result;
 }
 
+// Lista leve: não traz fila, resultados, destinatários nem HTML (que em disparos
+// grandes somam vários MB e estouravam o tempo limite do banco).
+const LIST_COLUMNS =
+  "id, user_id, name, status, mode, sender_name, sender_email, subject, total_count, sent_count, started_at, finished_at, created_at, updated_at, schedule, next_send_at, marketing_campaign_id, paused, daily_sent_count, daily_sent_date";
+
 export const listCampaigns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    let { data, error } = await context.supabase
-      .from("campaigns")
-      .select("*")
-      .eq("user_id", context.userId)
-      .order("created_at", { ascending: false });
-
-    if (error && /jwt issued at future/i.test(error.message)) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      ({ data, error } = await supabaseAdmin
+    const run = (client: LooseClient) =>
+      client
         .from("campaigns")
-        .select("*")
+        .select(LIST_COLUMNS)
         .eq("user_id", context.userId)
-        .order("created_at", { ascending: false }));
-    }
+        .order("created_at", { ascending: false });
 
+    const { data, error } = await runUserScopedOperation(
+      context.supabase as unknown as LooseClient,
+      run,
+    );
     if (error) throw new Error(error.message);
-    return (data ?? []) as unknown as Campaign[];
+    return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      brief: "",
+      html_template: "",
+      recipients: [],
+      results: [],
+      reviews: {},
+      chat: [],
+      queue: [],
+      ...row,
+    })) as unknown as Campaign[];
   });
 
 export const getCampaign = createServerFn({ method: "GET" })
