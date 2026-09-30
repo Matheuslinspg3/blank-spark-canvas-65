@@ -111,6 +111,7 @@ export function ScheduleFields({
   onUpdatePlan,
   updatingPlan,
   contentToCheck,
+  sentToday,
 }: Props) {
   const [limitDraft, setLimitDraft] = useState<string | null>(null);
   const perDay = dailyCapacity(schedule);
