@@ -119,7 +119,7 @@ export const listClickersFn = createServerFn({ method: "GET" })
       click_count: t.click_count,
       first_clicked_at: t.first_clicked_at,
       last_clicked_at: t.last_clicked_at,
-      sent_at: t.email_event_id ? (sentAt.get(t.email_event_id) ?? null) : null,
+      sent_at: t.sent_at,
       mode: t.mode === "bridge" ? "bridge" : "redirect",
       destination_url: t.destination_url,
     }));
@@ -173,7 +173,7 @@ export const analyzeClickersFn = createServerFn({ method: "POST" })
         .slice(0, 15),
       amostra_mascarada: tracks.slice(0, 30).map((t) => ({
         email: maskEmail(t.recipient_email),
-        enviado_em: t.email_event_id ? (sentAtMap.get(t.email_event_id) ?? null) : null,
+        enviado_em: t.sent_at,
         cliques: t.click_count,
         primeiro_clique: t.first_clicked_at,
         tipo: t.mode,
