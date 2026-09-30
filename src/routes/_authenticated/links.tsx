@@ -351,6 +351,7 @@ function LinksPage() {
                   <TableHead>Destinatário</TableHead>
                   <TableHead>Destino</TableHead>
                   <TableHead>Disparo</TableHead>
+                  <TableHead>Criado em</TableHead>
                   <TableHead>Link rastreado</TableHead>
                   <TableHead className="text-right">Cliques</TableHead>
                   <TableHead>Último clique</TableHead>
@@ -377,6 +378,9 @@ function LinksPage() {
                     </TableCell>
                     <TableCell className="max-w-[160px] truncate" title={link.campaign_name ?? ""}>
                       {link.campaign_name ?? <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {formatDate(link.created_at)}
                     </TableCell>
                     <TableCell>
                       {link.tracking_url ? (
