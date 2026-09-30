@@ -21,9 +21,16 @@ export async function loadSuppressedSet(supabase: Client, userId: string): Promi
   return new Set((data ?? []).map((row: { email: string }) => row.email.trim().toLowerCase()));
 }
 
-/** Quantos e-mails saíram nas últimas 24h (base do limite diário). */
+/**
+ * Quantos e-mails saíram HOJE (desde a meia-noite de Brasília, UTC-3).
+ * Antes era uma janela móvel de 24h, que bloqueava o dia seguinte inteiro
+ * quando o limite era atingido no fim da tarde anterior.
+ */
 export async function countSentLast24h(supabase: Client, userId: string): Promise<number> {
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const brtNow = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const since = new Date(
+    Date.UTC(brtNow.getUTCFullYear(), brtNow.getUTCMonth(), brtNow.getUTCDate(), 3, 0, 0),
+  ).toISOString();
   const { count, error } = await supabase
     .from("email_events")
     .select("id", { count: "exact", head: true })
