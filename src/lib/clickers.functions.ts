@@ -39,6 +39,7 @@ type TrackRow = {
   first_clicked_at: string | null;
   last_clicked_at: string | null;
   email_event_id: string | null;
+  sent_at: string | null;
   mode: string;
   destination_url: string;
 };
@@ -74,6 +75,21 @@ async function fetchClickers(
     rows.push(...batch);
     if (batch.length < 1000) break;
   }
+  // Data de envio: vem do evento de e-mail vinculado ao link
+  const eventIds = [...new Set(rows.map((t) => t.email_event_id).filter(Boolean))] as string[];
+  const sentAt = new Map<string, string>();
+  for (let i = 0; i < eventIds.length; i += 200) {
+    const { data: events } = await runUserScopedOperation(supabase, (c) =>
+      c
+        .from("email_events")
+        .select("id,sent_at")
+        .eq("user_id", userId)
+        .in("id", eventIds.slice(i, i + 200)),
+    );
+    for (const e of (events ?? []) as { id: string; sent_at: string | null }[])
+      if (e.sent_at) sentAt.set(e.id, e.sent_at);
+  }
+  for (const t of rows) t.sent_at = t.email_event_id ? (sentAt.get(t.email_event_id) ?? null) : null;
   return rows;
 }
 
