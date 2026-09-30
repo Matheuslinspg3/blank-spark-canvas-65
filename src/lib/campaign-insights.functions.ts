@@ -100,7 +100,7 @@ export const analyzeCampaignFn = createServerFn({ method: "POST" })
     );
 
     const m = new Set(data.metrics);
-    const facts: Record<string, unknown> = {
+    const facts: Record<string, any> = { // eslint-disable-line @typescript-eslint/no-explicit-any
       disparo: {
         nome: (campaign as { name: string }).name,
         status: (campaign as { status: string }).status,
@@ -124,7 +124,7 @@ export const analyzeCampaignFn = createServerFn({ method: "POST" })
         domains[d].total++;
         if (fail) domains[d].falhas++;
       }
-      facts.entregas = {
+      facts["entregas"] = {
         total_eventos: events.length,
         por_status: byStatus,
         principais_motivos_falha: Object.entries(reasons)
@@ -142,7 +142,7 @@ export const analyzeCampaignFn = createServerFn({ method: "POST" })
         const d = t.recipient_email.split("@")[1]?.toLowerCase() ?? "?";
         domClicks[d] = (domClicks[d] ?? 0) + 1;
       }
-      facts.cliques = {
+      facts["cliques"] = {
         links_gerados: tracks.length,
         destinatarios_que_clicaram: clicked.length,
         cliques_totais: tracks.reduce((s, t) => s + t.click_count, 0),
@@ -178,7 +178,7 @@ export const analyzeCampaignFn = createServerFn({ method: "POST" })
           hours[`${d.getUTCHours()}h`] = (hours[`${d.getUTCHours()}h`] ?? 0) + 1;
           days[dn[d.getUTCDay()]!] = (days[dn[d.getUTCDay()]!] ?? 0) + 1;
         }
-        facts.horarios_clique_brt = { por_hora: hours, por_dia: days };
+        facts["horarios_clique_brt"] = { por_hora: hours, por_dia: days };
       }
       if (m.has("tempos")) {
         const mins: number[] = [];
@@ -189,7 +189,7 @@ export const analyzeCampaignFn = createServerFn({ method: "POST" })
         }
         const valid = mins.filter((x) => x >= 0);
         const bucket = (a: number, b: number) => valid.filter((x) => x >= a && x < b).length;
-        facts.tempo_envio_ate_clique_min = {
+        facts["tempo_envio_ate_clique_min"] = {
           amostras: valid.length,
           mediana: median(valid)?.toFixed(1) ?? null,
           ate_1h: bucket(0, 60),
@@ -212,7 +212,7 @@ export const analyzeCampaignFn = createServerFn({ method: "POST" })
         );
         leads += count ?? 0;
       }
-      facts.leads = {
+      facts["leads"] = {
         links_pagina_ponte: bridgeIds.length,
         leads_capturados: leads,
         conversao_clique_para_lead: clicked.length
@@ -221,7 +221,7 @@ export const analyzeCampaignFn = createServerFn({ method: "POST" })
       };
     }
     if (m.has("logs")) {
-      facts.logs_recentes = events.slice(-40).map((e) => ({
+      facts["logs_recentes"] = events.slice(-40).map((e) => ({
         email: maskEmail(e.email),
         status: e.status,
         motivo: e.reason?.slice(0, 80) ?? null,
@@ -258,5 +258,5 @@ export const analyzeCampaignFn = createServerFn({ method: "POST" })
         .flatMap((o) => o.content ?? [])
         .map((c) => c.text ?? "")
         .join("");
-    return { summary: text || "Sem resposta da IA.", facts };
+    return { summary: text || "Sem resposta da IA." };
   });
