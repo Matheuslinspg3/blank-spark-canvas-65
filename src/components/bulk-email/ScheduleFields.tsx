@@ -45,7 +45,55 @@ type Props = {
   updatingPlan?: boolean;
   /** Conteúdo do e-mail para conferir se existe link rastreável. */
   contentToCheck?: (string | null | undefined)[];
+  /** E-mails entregues hoje (horário de Brasília). */
+  sentToday?: number;
 };
+
+/** Medidor: quanto falta hoje e a que horas deve terminar. */
+function DailyProgress({
+  schedule,
+  sentToday,
+  pending,
+}: {
+  schedule: SendSchedule;
+  sentToday: number;
+  pending: number;
+}) {
+  const target = Math.min(schedule.dailyLimit, sentToday + pending);
+  const left = Math.max(0, target - sentToday);
+  const pct = target > 0 ? Math.min(100, Math.round((sentToday / target) * 100)) : 100;
+  const perMin = 60 / Math.max(1, schedule.intervalSeconds);
+  const minutesLeft = Math.ceil(left / perMin);
+  const now = new Date();
+  const brtMin = (now.getUTCHours() * 60 + now.getUTCMinutes() - 180 + 1440) % 1440;
+  const [eh, em] = schedule.endTime.split(":").map(Number);
+  const endMin = (eh ?? 18) * 60 + (em ?? 0);
+  const finishMin = brtMin + minutesLeft;
+  const fits = finishMin <= endMin;
+  const eta = new Date(now.getTime() + minutesLeft * 60_000).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  });
+  return (
+    <div className="bg-muted/40 space-y-1.5 rounded-md border p-3">
+      <div className="flex justify-between text-xs font-medium">
+        <span>Hoje: {sentToday} de {target} enviados</span>
+        <span>{pct}%</span>
+      </div>
+      <div className="bg-muted h-2 overflow-hidden rounded-full">
+        <div className="bg-primary h-full transition-all" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="text-muted-foreground text-xs">
+        {left === 0
+          ? "Meta do dia concluída."
+          : fits
+            ? `Faltam ${left} · previsão de terminar hoje por volta das ${eta}.`
+            : `Faltam ${left} · não cabe até ${schedule.endTime}; o restante fica para o próximo dia útil.`}
+      </p>
+    </div>
+  );
+}
 
 /** Janela de horário + intervalo entre e-mails, com salvamento no servidor. */
 export function ScheduleFields({
@@ -63,6 +111,7 @@ export function ScheduleFields({
   onUpdatePlan,
   updatingPlan,
   contentToCheck,
+  sentToday,
 }: Props) {
   const [limitDraft, setLimitDraft] = useState<string | null>(null);
   const perDay = dailyCapacity(schedule);
@@ -295,6 +344,9 @@ export function ScheduleFields({
               ? ` · próximo envio ${new Date(nextSendAt).toLocaleString("pt-BR")}`
               : " · começa assim que a janela abrir"}
           </p>
+          {schedule.enabled && (
+            <DailyProgress schedule={schedule} sentToday={sentToday ?? 0} pending={pending} />
+          )}
           <div className="flex flex-wrap gap-2">
             {onUpdatePlan && limitChanged && (
               <Button

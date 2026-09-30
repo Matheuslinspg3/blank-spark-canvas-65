@@ -148,6 +148,12 @@ async function processCampaign(row: Row): Promise<string> {
     } as any)
     .eq("id", row.id);
 
+  // Atualiza a cópia em memória para permitir mais envios na mesma execução.
+  row.queue = rest;
+  row.results = results;
+  row.daily_sent_count = sentToday + (result.success ? 1 : 0);
+  row.daily_sent_date = today;
+  if (done) return "concluido";
   return result.success ? "enviado" : "falha";
 }
 
@@ -175,14 +181,37 @@ async function run(request: Request): Promise<Response> {
 
   if (error) return new Response(error.message, { status: 500 });
 
+  // O robô roda 1x por minuto. Para intervalos menores que 60s (ex.: 30s),
+  // cada campanha envia várias mensagens na mesma execução, respeitando o intervalo.
+  const startedAt = Date.now();
+  const BUDGET_MS = 50_000;
+  const rows = (data ?? []) as unknown as Row[];
   const outcomes: Record<string, string> = {};
-  for (const row of (data ?? []) as unknown as Row[]) {
+  const nextDue = new Map<string, number>(rows.map((r) => [r.id, startedAt]));
+
+  while (nextDue.size > 0) {
+    const [id, due] = [...nextDue.entries()].sort((a, b) => a[1] - b[1])[0]!;
+    if (due - startedAt > BUDGET_MS) break;
+    const wait = due - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    const row = rows.find((r) => r.id === id)!;
+    let outcome: string;
     try {
-      outcomes[row.id] = await processCampaign(row);
+      outcome = await processCampaign(row);
     } catch (err) {
-      outcomes[row.id] = err instanceof Error ? err.message : "erro";
+      outcome = err instanceof Error ? err.message : "erro";
       console.error(`[cron-dispatch] campanha ${row.id} falhou`, err);
     }
+    outcomes[id] = outcome;
+    if (outcome !== "enviado" && outcome !== "falha") {
+      nextDue.delete(id);
+      continue;
+    }
+    const schedule = parseSchedule(row.schedule);
+    const intervalMs = (schedule.enabled ? schedule.intervalSeconds : 60) * 1000;
+    const gap = outcome === "falha" ? 5000 : intervalMs;
+    if (gap >= 60_000) nextDue.delete(id);
+    else nextDue.set(id, Date.now() + gap);
   }
 
   return new Response(JSON.stringify({ ok: true, processed: outcomes }), {
