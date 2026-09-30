@@ -33,6 +33,7 @@ function exportCsv(rows: Clicker[]) {
   const header = [
     "email",
     "disparo",
+    "data_envio",
     "primeiro_clique",
     "ultimo_clique",
     "total_cliques",
@@ -45,6 +46,7 @@ function exportCsv(rows: Clicker[]) {
       [
         r.recipient_email,
         r.campaign_name ?? "",
+        r.sent_at ?? "",
         r.first_clicked_at ?? "",
         r.last_clicked_at ?? "",
         r.click_count,
@@ -175,6 +177,7 @@ export function ClickersExplorer() {
               <tr>
                 <th className="p-2 text-left font-medium">E-mail</th>
                 <th className="p-2 text-left font-medium">Disparo</th>
+                <th className="p-2 text-left font-medium">Enviado em</th>
                 <th className="p-2 text-left font-medium">Primeiro clique</th>
                 <th className="p-2 text-left font-medium">Cliques</th>
                 <th className="p-2 text-left font-medium">Tipo</th>
@@ -185,6 +188,7 @@ export function ClickersExplorer() {
                 <tr key={r.id} className="border-t">
                   <td className="p-2">{r.recipient_email || "—"}</td>
                   <td className="p-2">{r.campaign_name ?? "—"}</td>
+                  <td className="p-2">{fmtDate(r.sent_at)}</td>
                   <td className="p-2">{fmtDate(r.first_clicked_at)}</td>
                   <td className="p-2">{r.click_count}</td>
                   <td className="p-2">
@@ -194,7 +198,7 @@ export function ClickersExplorer() {
               ))}
               {rows.length === 0 && !isFetching ? (
                 <tr>
-                  <td colSpan={5} className="text-muted-foreground p-4 text-center">
+                  <td colSpan={6} className="text-muted-foreground p-4 text-center">
                     Nenhum clique no período/filtro escolhido.
                   </td>
                 </tr>
