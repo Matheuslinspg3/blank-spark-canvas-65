@@ -12,6 +12,7 @@ export type Clicker = {
   click_count: number;
   first_clicked_at: string | null;
   last_clicked_at: string | null;
+  sent_at: string | null;
   mode: "redirect" | "bridge";
   destination_url: string;
 };
@@ -37,6 +38,7 @@ type TrackRow = {
   click_count: number;
   first_clicked_at: string | null;
   last_clicked_at: string | null;
+  email_event_id: string | null;
   mode: string;
   destination_url: string;
 };
@@ -55,7 +57,7 @@ async function fetchClickers(
       let q = c
         .from("email_link_tracks")
         .select(
-          "id,recipient_email,campaign_id,click_count,first_clicked_at,last_clicked_at,mode,destination_url",
+          "id,recipient_email,campaign_id,click_count,first_clicked_at,last_clicked_at,email_event_id,mode,destination_url",
         )
         .eq("user_id", userId)
         .gt("click_count", 0)
