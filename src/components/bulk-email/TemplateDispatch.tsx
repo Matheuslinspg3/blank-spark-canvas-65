@@ -1,3 +1,4 @@
+import { brtDateKey } from "@/lib/send-schedule";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -1287,6 +1288,7 @@ export function TemplateDispatch({ campaign }: { campaign: Campaign }) {
             onCancelSchedule={() => void handleCancelSchedule()}
             cancelling={cancelling}
             savedDailyLimit={savedDailyLimit}
+            sentToday={campaign.daily_sent_date === brtDateKey() ? (campaign.daily_sent_count ?? 0) : 0}
             onUpdatePlan={(next) => void handleUpdatePlan(next)}
             updatingPlan={updatingPlan}
           />
