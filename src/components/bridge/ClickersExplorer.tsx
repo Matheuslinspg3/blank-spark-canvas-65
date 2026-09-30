@@ -22,9 +22,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 const fmtDate = (iso: string | null) =>
-  iso
-    ? new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
-    : "—";
+  iso ? new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—";
 
 const csvEsc = (v: unknown) => {
   const s = v == null ? "" : String(v);
@@ -150,10 +148,7 @@ export function ClickersExplorer() {
           </div>
           <div className="flex items-end pb-2">
             <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={bridgeOnly}
-                onCheckedChange={(v) => setBridgeOnly(v === true)}
-              />
+              <Checkbox checked={bridgeOnly} onCheckedChange={(v) => setBridgeOnly(v === true)} />
               Só Página Ponte
             </label>
           </div>
@@ -218,7 +213,11 @@ export function ClickersExplorer() {
             rows={2}
           />
           <Button onClick={askAi} disabled={aiLoading || rows.length === 0} variant="secondary">
-            {aiLoading ? <Loader2 className="size-4 animate-spin" /> : <BrainCircuit className="size-4" />}
+            {aiLoading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <BrainCircuit className="size-4" />
+            )}
             {aiLoading ? "Analisando…" : "Perguntar à IA"}
           </Button>
           {aiResult ? (
