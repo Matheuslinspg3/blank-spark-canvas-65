@@ -173,6 +173,7 @@ export const analyzeClickersFn = createServerFn({ method: "POST" })
         .slice(0, 15),
       amostra_mascarada: tracks.slice(0, 30).map((t) => ({
         email: maskEmail(t.recipient_email),
+        enviado_em: t.email_event_id ? (sentAtMap.get(t.email_event_id) ?? null) : null,
         cliques: t.click_count,
         primeiro_clique: t.first_clicked_at,
         tipo: t.mode,
