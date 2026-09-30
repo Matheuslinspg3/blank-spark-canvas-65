@@ -351,6 +351,7 @@ function LinksPage() {
                   <TableHead>Destinatário</TableHead>
                   <TableHead>Destino</TableHead>
                   <TableHead>Disparo</TableHead>
+                  <TableHead>Criado em</TableHead>
                   <TableHead>Link rastreado</TableHead>
                   <TableHead className="text-right">Cliques</TableHead>
                   <TableHead>Último clique</TableHead>
