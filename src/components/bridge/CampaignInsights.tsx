@@ -25,7 +25,12 @@ import { listCampaigns } from "@/lib/campaigns.functions";
 
 export function CampaignInsights() {
   const [campaignId, setCampaignId] = useState("");
-  const [metrics, setMetrics] = useState<InsightMetricId[]>(["entregas", "cliques", "horarios", "tempos"]);
+  const [metrics, setMetrics] = useState<InsightMetricId[]>([
+    "entregas",
+    "cliques",
+    "horarios",
+    "tempos",
+  ]);
   const [question, setQuestion] = useState("");
   const { data: campaigns } = useQuery({ queryKey: ["campaigns"], queryFn: () => listCampaigns() });
 

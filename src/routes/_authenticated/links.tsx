@@ -1,6 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, Copy, Link2, Loader2, MousePointerClick, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Copy,
+  Download,
+  Link2,
+  Loader2,
+  MousePointerClick,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -14,10 +23,12 @@ import { DEFAULT_BRIDGE_CONFIG, type BridgeConfig } from "@/lib/bridge-page";
 
 import {
   deleteTrackedLinkFn,
+  exportTrackedLinksCsvFn,
   listTrackedLinksFn,
   createTrackedLinkFn,
 } from "@/lib/tracked-links.functions";
 import { LinkConversions } from "@/components/bridge/LinkConversions";
+import { CampaignInsights } from "@/components/bridge/CampaignInsights";
 import { listCampaigns } from "@/lib/campaigns.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -117,6 +128,20 @@ function LinksPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const exportMutation = useMutation({
+    mutationFn: () => exportTrackedLinksCsvFn(),
+    onSuccess: ({ csv, rows }) => {
+      const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `links-rastreados-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast.success(`${rows} linhas exportadas`);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const handleCreate = () => {
     let trimmed = url.trim();
     if (mode === "bridge") {
@@ -191,7 +216,21 @@ function LinksPage() {
             saber exatamente quem clicou.
           </p>
         </div>
+        <Button
+          variant="outline"
+          onClick={() => exportMutation.mutate()}
+          disabled={exportMutation.isPending}
+        >
+          {exportMutation.isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Download className="size-4" />
+          )}
+          Exportar CSV
+        </Button>
       </header>
+
+      <CampaignInsights />
 
       {data && !data.configured ? (
         <Card className="border-amber-500/50">

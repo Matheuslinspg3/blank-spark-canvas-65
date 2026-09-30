@@ -300,16 +300,27 @@ export const exportTrackedLinksCsvFn = createServerFn({ method: "GET" })
     const supabase = context.supabase as unknown as LooseClient;
     const origin = trackingOrigin();
     type Row = {
-      id: string; token: string; destination_url: string; recipient_email: string;
-      campaign_id: string | null; click_count: number; first_clicked_at: string | null;
-      last_clicked_at: string | null; created_at: string; mode: string;
+      id: string;
+      token: string;
+      destination_url: string;
+      recipient_email: string;
+      campaign_id: string | null;
+      click_count: number;
+      first_clicked_at: string | null;
+      last_clicked_at: string | null;
+      created_at: string;
+      mode: string;
     };
     const tracks: Row[] = [];
     for (let from = 0; ; from += 1000) {
       const { data, error } = await runUserScopedOperation(supabase, (c) =>
-        c.from("email_link_tracks")
-          .select("id,token,destination_url,recipient_email,campaign_id,click_count,first_clicked_at,last_clicked_at,created_at,mode")
-          .eq("user_id", context.userId).order("created_at", { ascending: false })
+        c
+          .from("email_link_tracks")
+          .select(
+            "id,token,destination_url,recipient_email,campaign_id,click_count,first_clicked_at,last_clicked_at,created_at,mode",
+          )
+          .eq("user_id", context.userId)
+          .order("created_at", { ascending: false })
           .range(from, from + 999),
       );
       if (error) throw new Error(error.message);
@@ -321,20 +332,42 @@ export const exportTrackedLinksCsvFn = createServerFn({ method: "GET" })
     const camps = new Map<string, { name: string; status: string; created_at: string }>();
     for (let i = 0; i < campIds.length; i += 200) {
       const { data } = await runUserScopedOperation(supabase, (c) =>
-        c.from("campaigns").select("id,name,status,created_at").eq("user_id", context.userId).in("id", campIds.slice(i, i + 200)),
+        c
+          .from("campaigns")
+          .select("id,name,status,created_at")
+          .eq("user_id", context.userId)
+          .in("id", campIds.slice(i, i + 200)),
       );
-      for (const c of (data ?? []) as { id: string; name: string; status: string; created_at: string }[]) camps.set(c.id, c);
+      for (const c of (data ?? []) as {
+        id: string;
+        name: string;
+        status: string;
+        created_at: string;
+      }[])
+        camps.set(c.id, c);
     }
     const clickedIds = tracks.filter((t) => t.click_count > 0).map((t) => t.id);
-    const clicks = new Map<string, { occurred_at: string; referrer_origin: string | null; user_agent: string | null }[]>();
+    const clicks = new Map<
+      string,
+      { occurred_at: string; referrer_origin: string | null; user_agent: string | null }[]
+    >();
     for (let i = 0; i < clickedIds.length; i += 200) {
       for (let from = 0; ; from += 1000) {
         const { data, error } = await runUserScopedOperation(supabase, (c) =>
-          c.from("email_link_click_events").select("email_link_track_id,occurred_at,referrer_origin,user_agent")
-            .in("email_link_track_id", clickedIds.slice(i, i + 200)).order("occurred_at").range(from, from + 999),
+          c
+            .from("email_link_click_events")
+            .select("email_link_track_id,occurred_at,referrer_origin,user_agent")
+            .in("email_link_track_id", clickedIds.slice(i, i + 200))
+            .order("occurred_at")
+            .range(from, from + 999),
         );
         if (error) throw new Error(error.message);
-        const b = (data ?? []) as { email_link_track_id: string; occurred_at: string; referrer_origin: string | null; user_agent: string | null }[];
+        const b = (data ?? []) as {
+          email_link_track_id: string;
+          occurred_at: string;
+          referrer_origin: string | null;
+          user_agent: string | null;
+        }[];
         for (const ev of b) {
           const arr = clicks.get(ev.email_link_track_id) ?? [];
           arr.push(ev);
@@ -348,9 +381,20 @@ export const exportTrackedLinksCsvFn = createServerFn({ method: "GET" })
       return /[",;\n\r]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
     };
     const header = [
-      "link_url", "tipo", "destino", "destinatario", "disparo", "status_disparo", "disparo_criado_em",
-      "link_criado_em", "total_cliques", "primeiro_clique", "ultimo_clique",
-      "clique_em", "clique_origem", "clique_navegador",
+      "link_url",
+      "tipo",
+      "destino",
+      "destinatario",
+      "disparo",
+      "status_disparo",
+      "disparo_criado_em",
+      "link_criado_em",
+      "total_cliques",
+      "primeiro_clique",
+      "ultimo_clique",
+      "clique_em",
+      "clique_origem",
+      "clique_navegador",
     ];
     const lines = [header.join(",")];
     for (const t of tracks) {
@@ -358,12 +402,25 @@ export const exportTrackedLinksCsvFn = createServerFn({ method: "GET" })
       const base = [
         origin ? `${origin}/${t.mode === "bridge" ? "p" : "r"}/${t.token}` : "",
         t.mode === "bridge" ? "Página Ponte" : "Redirecionamento",
-        t.destination_url, t.recipient_email, camp?.name ?? "", camp?.status ?? "", camp?.created_at ?? "",
-        t.created_at, t.click_count, t.first_clicked_at ?? "", t.last_clicked_at ?? "",
+        t.destination_url,
+        t.recipient_email,
+        camp?.name ?? "",
+        camp?.status ?? "",
+        camp?.created_at ?? "",
+        t.created_at,
+        t.click_count,
+        t.first_clicked_at ?? "",
+        t.last_clicked_at ?? "",
       ];
       const evs = clicks.get(t.id);
       if (!evs?.length) lines.push([...base, "", "", ""].map(esc).join(","));
-      else for (const ev of evs) lines.push([...base, ev.occurred_at, ev.referrer_origin ?? "", ev.user_agent ?? ""].map(esc).join(","));
+      else
+        for (const ev of evs)
+          lines.push(
+            [...base, ev.occurred_at, ev.referrer_origin ?? "", ev.user_agent ?? ""]
+              .map(esc)
+              .join(","),
+          );
     }
     return { csv: lines.join("\n"), rows: lines.length - 1 };
   });
