@@ -379,6 +379,7 @@ function LinksPage() {
                     <TableCell className="max-w-[160px] truncate" title={link.campaign_name ?? ""}>
                       {link.campaign_name ?? <span className="text-muted-foreground">—</span>}
                     </TableCell>
+                    <TableCell className="whitespace-nowrap">{formatDate(link.created_at)}</TableCell>
                     <TableCell>
                       {link.tracking_url ? (
                         <Button
