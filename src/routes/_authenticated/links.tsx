@@ -29,6 +29,7 @@ import {
 } from "@/lib/tracked-links.functions";
 import { LinkConversions } from "@/components/bridge/LinkConversions";
 import { CampaignInsights } from "@/components/bridge/CampaignInsights";
+import { ClickersExplorer } from "@/components/bridge/ClickersExplorer";
 import { listCampaigns } from "@/lib/campaigns.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -231,6 +232,8 @@ function LinksPage() {
       </header>
 
       <CampaignInsights />
+
+      <ClickersExplorer />
 
       {data && !data.configured ? (
         <Card className="border-amber-500/50">
