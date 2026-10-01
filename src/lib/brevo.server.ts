@@ -58,7 +58,7 @@ async function postEmail(
           Authorization: `Bearer ${lovableApiKey}`,
           "X-Connection-Api-Key": brevoKey,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
 
       const text = await response.text();
